@@ -2,7 +2,7 @@
 
 **Your own table of Claude, Codex, and Gemini agents — individually named and configured.**
 
-This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley), based on `parley-room@1.2.1`. It adds **1–8 agents per room**, individual model/effort/instructions, and a refreshed interface. See the [fork guide](docs/FORK.md) for the four-agent setup and [current-feature guide](docs/CURRENT-FEATURES.md) for what upstream 1.2.1 already offered.
+This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley), based on `parley-room@1.2.1`. It adds **named agents with no fixed roster limit**, individual model/effort/instructions, and a refreshed interface. Add or remove agents in Room Settings without losing the conversation. See the [fork guide](docs/FORK.md) for setup and [current-feature guide](docs/CURRENT-FEATURES.md) for what upstream 1.2.1 already offered.
 
 See the [full interface review](docs/UI-REVIEW.md) for the conversation, Settings, menus, and mobile layouts—not just the welcome screen.
 
@@ -15,7 +15,7 @@ See the [full interface review](docs/UI-REVIEW.md) for the conversation, Setting
 ![node: ≥20](https://img.shields.io/badge/node-%E2%89%A520-blue)
 [![license: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 
-Most multi-agent tools are work queues — worktrees, kanban boards, parallel terminals. Parley is a *conversation*: one local page, one shared thread, up to eight agents who hear each other. `@fable`, `@astra`, `@privacy`, `@all` — or just type, and it goes to whoever you were last talking to. Ask Claude something, then ask Codex what it thinks of the answer; they agree, disagree, and build on each other in one thread.
+Most multi-agent tools are work queues — worktrees, kanban boards, parallel terminals. Parley is a *conversation*: one local page, one shared thread, and a roster of agents who hear each other. `@fable`, `@astra`, `@privacy`, `@all` — or just type, and it goes to whoever you were last talking to. Ask Claude something, then ask Codex what it thinks of the answer; they agree, disagree, and build on each other in one thread.
 
 It drives the **official Claude Code and Codex CLIs through your existing CLI logins**. No API key, no proxy; Parley never reads or stores provider credentials — if a CLI isn't authenticated, you see its own error in the chat.
 
@@ -84,7 +84,7 @@ The fork's rooms, transcripts and settings live in `~/.parley-fork` (override wi
 |---|---|
 | `@claude <text>` | Claude only |
 | `@codex <text>` | Codex only |
-| `@both <text>` | Both, **in parallel** — replies stream in as they land |
+| `@all <text>` | Every agent in the current roster, **in parallel** — replies stream in as they land (`@both` remains an alias) |
 | `<text>` | Whoever you last addressed |
 
 Each agent has its own **lane**: tag them back-to-back and they genuinely work at the same time. Everything you send is accepted and posted the instant you send it — only *delivery* waits on a busy agent (⏳ badge, delivered in order). The badge opens the queue — one card per *dispatch*, the batch of deliveries one send created — and its ✕ withdraws whatever that dispatch still has waiting.
@@ -98,8 +98,8 @@ Each agent has its own **lane**: tag them back-to-back and they genuinely work a
 - **Automatic turns** — For ordinary use, leave the room default alone: new rooms allow four extra agent turns after the replies you asked for. Choose **Solo** for one selected responder, `0` to keep things to the initial replies, a number for a tighter cap, or **Until settled** for a longer discussion with a visible safety stop. Each message keeps the rule it started with through Retry or Wake; Pair rounds are separate. See [the full conversation-accounting reference](docs/conversation.md#automatic-turns-new-rooms).
 - **Pair mode 🔁** — `/pair start @claude build X`: one agent works, the other reviews by actually reading the files, then approves or sends it back for a fix round. A failed review is never treated as approval.
 - **Sleep a seat 😴** — hit a usage limit? Sleep that seat and the other keeps working. Nothing launches it — not your message, not a queued delivery, not an `@tag` from the other agent — until you wake it. Your requests are held in their original place and autonomous skips are recorded, so silence is never read as agreement. Waking alone replays nothing; if held requests exist, **Wake & deliver** handles them together in one turn, then rejoins the same causal scheduler as a live exchange. A recovered `@both` half reaches a sibling only when that sibling previously completed this exact user root; structural sibling delivery never auto-revives a failed or stopped half. A recovered single-seat exchange still honors enabled lurk, persisting catch-up when the listener is busy.
-- **Talk rooms and work rooms 🔨** — Talk is conversational with conservative permissions. Work lets agents edit files and run commands, rendered as inline chat lines (`✏️ Write server.js`, `▶ npm test`, `⚠ exited 1`) — the chat is the interface, your editor is the viewer. `@both` in a work room is a discussion, not a work order.
-- **Linked project folders 📁** — point a room at a real project; both agents work there and pick up its `CLAUDE.md` / `AGENTS.md`.
+- **Talk rooms and work rooms 🔨** — Talk is conversational with conservative permissions. Work lets agents edit files and run commands, rendered as inline chat lines (`✏️ Write server.js`, `▶ npm test`, `⚠ exited 1`) — the chat is the interface, your editor is the viewer. `@all` in a work room is a discussion, not a work order.
+- **Linked project folders 📁** — point a room at a real project; all agents work there and pick up its `CLAUDE.md` / `AGENTS.md`.
 - **Attachments 📎** — paste, drag or clip in images, patches, logs and docs; images use each CLI's native image input.
   *Personal highlight: that little attachment paperclip. Shoutout to Codex.*
 - **Receipt dots** — under every message: who heard it live, who lurked it, who is queued to catch up, who caught up later, where a causal answer was returned, and where a cap or structural terminal deliberately ended the exchange — including deliveries you cancelled and terminal lurk outcomes.

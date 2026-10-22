@@ -14,7 +14,7 @@ parley [--port N] [--root DIR] [--no-open] [--version] [--help]
 - `--version`, `-v` — print the version and exit.
 - `--help`, `-h` — print usage and exit.
 
-After updating, restart the running Parley process before reloading the page — builds pin the UI to the backend that served it, and an older server meeting a newer page blocks its controls and shows a persistent **Restart Parley** warning instead of silently mixing runtime versions. The current source uses internal runtime protocol **12**, covering versioned automatic-turn accounting, root-bound recovery, and delivery/outcome provenance. That number is a stale-tab compatibility fence, not Parley's package version or a public API version.
+After updating, restart the running Parley process before reloading the page — builds pin the UI to the backend that served it, and an older server meeting a newer page blocks its controls and shows a persistent **Restart Parley** warning instead of silently mixing runtime versions. The current source uses internal runtime protocol **13**, covering named agent rosters alongside versioned automatic-turn accounting, root-bound recovery, and delivery/outcome provenance. That number is a stale-tab compatibility fence, not Parley's package version or a public API version.
 
 ## The room folder
 
@@ -55,9 +55,11 @@ workspace/       shared folder; all seat CLIs run with this as cwd
 
 ## Rooms and seats
 
-A room has **one to eight agents**, chosen when you create it. The "+" form starts with Claude and Codex; add or remove rows to set the roster. For each seat, set its name, provider, optional model and effort, and standing instructions. Seats are fixed for that room's lifetime: Settings can change their configuration, but cannot add, remove, rename or reorder seats. Names must be unique. Multiple seats can use the same provider; each seat keeps its own native CLI session and settings. See [Seats and providers](#seats-and-providers).
+A room has **at least one agent, with no fixed roster limit**. The "+" form starts with Claude and Codex; add or remove rows to set the roster. For each seat, set its name, provider, optional model and effort, and standing instructions. **Settings → Agents in this room** can add or remove seats later. Save applies the draft; Cancel discards it. Conversation history and retained agents' sessions survive roster edits. A new seat starts a fresh session with access to the room history. Names must be unique, and removed names remain reserved so old messages and receipts cannot be confused with a new identity. Existing names and providers cannot be changed. Multiple seats can use the same provider; each seat keeps its own native CLI session and settings. See [Seats and providers](#seats-and-providers).
 
-Address a seat by name (`@builder`). `@all` sends the message to every seat; `@both` remains an alias for the whole roster. Tagging every seat by name also addresses the whole roster. In rooms with more than two agents, the UI uses `@all` to make this clear.
+Address a seat by name (`@builder`). `@all` sends the message to every current seat; `@both` remains an alias for the whole roster. Tagging every seat by name also addresses the whole roster. The composer always displays `@all` and one button per current agent, regardless of the roster size.
+
+Roster removal is refused while an exchange is in flight or the affected agent has queued work or an active Pair role. Wait for that work to finish or stop it first. Saving a draft whose roster changed in another tab is also refused; reopen Settings to see the current roster.
 
 Pair mode still uses two roles: the seat tagged in `/pair start @worker ...` is the worker, and the first other seat in roster order is the reviewer. Additional seats are not part of that Pair cycle.
 
@@ -129,7 +131,7 @@ historical error resolved. Causal failures do not offer an ordinary root Retry.
 
 ## Seats and providers
 
-A room has one to eight **seats**. A seat's **id** is its @mention name, its key in `room.json` and `state.json`, and the author on every transcript line and receipt — it is the primary key of everything durable in the room, so it is fixed for the room's life. Its **provider** (`agents.<id>.provider`) says which CLI drives it.
+A room has one or more **seats**, with no fixed roster limit. A seat's **id** is its @mention name, its key in `room.json` and `state.json`, and the author on every transcript line and receipt — it is the primary key of everything durable in the room. Membership is editable, but identities stay fixed and removed IDs remain reserved. Its **provider** (`agents.<id>.provider`) says which CLI drives it.
 
 The id defaults to the provider name for the default seats, which is why older rooms keep working. Any seats may share a provider as long as their names differ; each seat has a separate Parley session, cursor and configuration. For example, `alpha` and `beta` can both use Claude Code while selecting Opus and Sonnet respectively.
 

@@ -4,7 +4,7 @@ Why this shape, in brief.
 
 ## From terminal concept to local web app
 
-Parley began as a terminal REPL concept. The local web app keeps the useful core — the delta/cursor context protocol, native session resume per agent, room folders and conservative talk-room defaults — while making parallel replies, streaming, routing indicators and Markdown legible in one shared conversation with up to eight agent seats.
+Parley began as a terminal REPL concept. The local web app keeps the useful core — the delta/cursor context protocol, native session resume per agent, room folders and conservative talk-room defaults — while making parallel replies, streaming, routing indicators and Markdown legible in one shared conversation with an editable roster of agent seats.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ ui/styles.css         styles
 ui/app.js             browser behavior; versioned with the HTML and styles
 ```
 
-A **seat** is the @mention name, the key in `room.json` and `state.json`, and the author on every transcript line and receipt — the primary key of everything durable, fixed for the room's life. A room's roster has one to eight seats and is fixed after creation. Its **provider** is which CLI drives it. Keeping seat and provider separate lets any number of distinct seats use the same provider; each seat still has its own settings, cursor and native CLI session. Provider-specific differences — how sessions resume, which permission field is its scope, whether a protected turn is enforced by a flag or by prose, how a lost session announces itself — are declared once in the provider table. `@all` and `@both` both route to every seat in the room.
+A **seat** is the @mention name, the key in `room.json` and `state.json`, and the author on every transcript line and receipt — a stable identity. A room keeps at least one seat, with no fixed roster limit. Settings can add and remove seats while retaining the transcript and other seats' sessions. A seat's **provider** is which CLI drives it and stays fixed for that identity. Keeping seat and provider separate lets any number of distinct seats use the same provider; each seat still has its own settings, cursor and native CLI session. Provider-specific differences — how sessions resume, which permission field is its scope, whether a protected turn is enforced by a flag or by prose, how a lost session announces itself — are declared once in the provider table. The UI always displays `@all`; it and the compatibility alias `@both` route to every current seat in the room.
 
 ## The context protocol (the core idea)
 

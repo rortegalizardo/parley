@@ -1,8 +1,18 @@
 # UI review
 
-**Status:** 36 browser checks and the package check passed. This review covers the 15 user-facing surface groups below; it does not claim every possible state combination or real provider behavior was tested.
+**Status:** 37 browser checks and the package check passed. The strengthened Settings case also passed after the final new-card default correction. This review covers the 15 user-facing surface groups below; it does not claim every possible state combination or real provider behavior was tested.
 
-The screenshots were captured with an isolated fixture and fake-provider content. The actual fork on port 4142 was refreshed while idle and verified to serve the exact tested UI assets (`c26c0efb58c00b61f693`); its Settings panel was also checked in the in-app browser. The original session on 4141 was left untouched. Native OS folder-picker and browser permission UI are platform-owned and retain their platform appearance; their entry points were inventoried, and browser confirm/cancel flows were tested. Native OS pickers and permission prompts were not invoked.
+The screenshots were captured with an isolated fixture and fake-provider content. The actual fork on port 4142 was refreshed while idle and verified to serve the exact tested UI assets (`0420c2ef13ee5bd074c9`); its `@all` composer and editable Settings panel were also checked in the in-app browser. The original session on 4141 was left untouched. Native OS folder-picker and browser permission UI are platform-owned and retain their platform appearance; their entry points were inventoried, and browser confirm/cancel flows were tested. Native OS pickers and permission prompts were not invoked.
+
+## Editable roster follow-up
+
+Settings now supports draft additions and removals without clearing the conversation. Browser coverage seeds a transcript, preserves typed instructions across card changes, cancels a draft, then saves a replacement roster and receives actual fake-provider replies from the new named agent and `@all`. One-, two- and ten-agent rooms are covered. No fixed roster cap remains.
+
+The latest captures show the new card's themed fields and provider defaults, plus a composer with an updated roster. Earlier captures below document the broader interface audit.
+
+![Add an agent in Settings, dark theme](ui-review/editable-roster-dark.png)
+
+[Light theme](ui-review/editable-roster-light.png) · [Mobile composer with @all and updated agents](ui-review/editable-composer-mobile.png)
 
 | Surface | Reviewed states and fixes | Evidence (test; capture) |
 |---|---|---|
@@ -22,7 +32,7 @@ The screenshots were captured with an isolated fixture and fake-provider content
 | Runtime, setup, Pair and Work banners | Warning banner visibility, wrapping and themed foregrounds. | `test/browser-visual.mjs`; [runtime warning](ui-review/runtime-warning-dark-390.png), [setup warning](ui-review/setup-warning-dark-390.png) |
 | Confirm, prompt and native picker surfaces | Browser confirmation acceptance/cancellation; platform-owned picker and permission UI noted above. | `test/browser-dialogs.mjs`; no native picker capture |
 
-The full 36-check browser suite and package check passed. The conversation/banner suite passed again after the final Work contrast change, including long formatted code content at phone width. Captures disable transient animations so the reviewed images show settled states.
+The original full 36-check browser suite and package check passed; the editable-roster follow-up brings the suite to 37 checks. The conversation/banner suite passed again after the final Work contrast change, including long formatted code content at phone width. Captures disable transient animations so the reviewed images show settled states.
 
 ![Settings in dark mode](ui-review/settings-dark-1440.png)
 

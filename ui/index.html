@@ -69,7 +69,7 @@
           <div class="team-role role-critic"><span class="role-symbol" aria-hidden="true">↗</span><div><b>Adversary</b><span>Challenge assumptions</span></div><small>YOUR CHOICE</small></div>
           <div class="team-role role-privacy"><span class="role-symbol" aria-hidden="true">◇</span><div><b>Privacy</b><span>Protect sensitive data</span></div><small>YOUR CHOICE</small></div>
         </div>
-        <div class="welcome-detail"><span>1–8 agents</span><span>Individual @mentions</span><span>Persistent role instructions</span></div>
+        <div class="welcome-detail"><span>Any number of agents</span><span>Individual @mentions</span><span>Persistent role instructions</span></div>
         <div class="current-room-start"><div class="starter-label">Or start with this room's agents</div><div class="starters" id="starters"></div></div>
       </div>
     </div>
@@ -81,7 +81,7 @@
         <div class="chips" id="chipsRow">
           <button class="chip active" data-t="auto">Auto</button>
           <span id="seatChips" style="display:contents"></span>
-          <button class="chip" data-t="both">@both</button>
+          <button class="chip" data-t="both" title="Send to all agents">@all</button>
           <span id="hopWrap">
             <button id="hopBtn" type="button" aria-haspopup="menu" aria-expanded="false"
               title="Choose this room's agent-to-agent follow-up policy for the browser session">
@@ -123,7 +123,7 @@
         <div class="box">
           <input id="fileInput" type="file" multiple hidden aria-label="Choose files to attach">
           <button id="attachBtn" type="button" title="Attach files" aria-label="Attach files">📎</button>
-          <textarea id="input" rows="1" placeholder="Message the table…  (@claude, @codex, @all)"></textarea>
+          <textarea id="input" rows="1" placeholder="Message the table…  type @ to choose an agent"></textarea>
           <div id="stopWrap">
             <button id="stopBtn" title="Stop the running response">■</button>
             <button id="stopMore" title="Choose what to stop" aria-label="Stop options"
@@ -172,8 +172,9 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle">Room settings</h2>
     <div class="sub" id="roomPath"></div>
+    <div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">Add or remove agents while keeping the transcript.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
     <div class="mgrid" id="seatCards"></div>
-    <div class="fld" style="margin-top:14px"><label>Room note (standing instruction both agents see on every turn — also /note)</label>
+    <div class="fld" style="margin-top:14px"><label>Room note (standing instruction every agent sees on every turn — also /note)</label>
       <input id="s_roomnote" placeholder="e.g. We're building a YT-transcription app; keep answers short." spellcheck="false"></div>
     <div class="fld"><label>Notifications</label>
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-dim);cursor:pointer">
@@ -186,7 +187,7 @@
         <input id="s_projdir" placeholder="e.g. D:\Projects\my-app" spellcheck="false" style="flex:1">
         <button class="btn" id="s_browse" type="button" style="white-space:nowrap"><span data-picker-label>Browse…</span></button>
       </div>
-      <div class="note">Point this room at a real project — the agents work and read there, and pick up its CLAUDE.md / AGENTS.md automatically. Changing it resets both agents' sessions.</div></div>
+      <div class="note">Point this room at a real project — the agents work and read there, and pick up its CLAUDE.md / AGENTS.md automatically. Changing it resets linked sessions.</div></div>
     <div class="mgrid" style="margin-top:14px">
       <div class="fld"><label>Default agent (first message, before any tag)</label>
         <select id="s_default"></select></div>
