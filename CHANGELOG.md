@@ -1,5 +1,13 @@
 # Changelog
 
+## Personal fork — convergence and compact recipients
+
+- `@all` defaults to independent positions, a shared draft, and unanimous version-bound approval before one handoff. Parallel replies remains available.
+- Compact searchable agent selector, role-aware entries, review-round controls, and call usage replace the expanding recipient strip.
+- Persisted positions/drafts/votes, explicit Stop/Resume/Extend, restart recovery without automatic provider calls, and honest unresolved/incomplete outcomes.
+- Protocol 14 keeps old pages from sending incompatible requests.
+
+
 Notable changes per published version. Dates are release dates on npm.
 
 ## 1.3.0-personal.0 — personal fork, unpublished

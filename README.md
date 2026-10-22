@@ -4,6 +4,8 @@
 
 This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley), based on `parley-room@1.2.1`. It adds **named agents with no fixed roster limit**, individual model/effort/instructions, and a refreshed interface. Add or remove agents in Room Settings without losing the conversation. See the [fork guide](docs/FORK.md) for setup and [current-feature guide](docs/CURRENT-FEATURES.md) for what upstream 1.2.1 already offered.
 
+`@all` now works toward **one agreed handoff**: independent positions, one draft, and explicit approval from every named agent. The compact **Agents (N)** selector supports large rooms; Parallel replies remains available. See [convergence and recovery](docs/CONVERGENCE.md) and the [actual running composer](docs/convergence-live-4142.png).
+
 See the [full interface review](docs/UI-REVIEW.md) for the conversation, Settings, menus, and mobile layouts—not just the welcome screen.
 
 ![Parley Mine with a visible four-agent room setup](docs/fork-home.png)

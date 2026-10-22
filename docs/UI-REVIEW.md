@@ -37,3 +37,9 @@ The original full 36-check browser suite and package check passed; the editable-
 ![Settings in dark mode](ui-review/settings-dark-1440.png)
 
 ![Conversation in dark mode](ui-review/conversation-dark-1440.png)
+
+## Convergence composer follow-up — 22 October 2026
+
+Verified on the actual fork at `http://127.0.0.1:4142`, protocol 14, asset version `2a7f893fcdde59cfa285`. The default room still has two agents; the picker count reflects that roster. Isolated browser tests verify nine agents and role search, narrow layouts, mode switching, single final handoff, and inspectable review records. Convergence hides automatic-turn controls; Parallel hides review rounds. Dark-mode inputs match the rest of the interface.
+
+![Actual fork on port 4142 with the compact selector and convergence controls](convergence-live-4142.png)

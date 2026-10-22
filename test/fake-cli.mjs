@@ -242,7 +242,25 @@ if (process.env.FAKE_TRACE_PROMPTS === "1") {
 }
 
 let reply, wroteFile = null;
-if (after("HOPRESULT:")) {
+// Convergence contract probe used by isolated backend tests. It intentionally
+// emits the same strict envelope the production providers are instructed to
+// return, without affecting the ordinary fake-provider directives.
+if (process.env.FAKE_CONVERGENCE) {
+  const convergenceStage = /CONVERGENCE REVIEW/.test(current) ? "review" : /convergence drafter/i.test(current) ? "draft" : "position";
+  if (process.env.FAKE_CONVERGENCE_TRACE) fs.appendFileSync(process.env.FAKE_CONVERGENCE_TRACE, JSON.stringify({ stage: convergenceStage, seat: codexMode ? "codex" : "claude", at: Date.now() }) + "\n");
+  if (convergenceStage === "review" && Number(process.env.FAKE_CONVERGENCE_REVIEW_DELAY || 0) > 0) await new Promise((resolve) => setTimeout(resolve, Number(process.env.FAKE_CONVERGENCE_REVIEW_DELAY)));
+  const runId = /runId must be ([^;\.\s]+)/.exec(current)?.[1] || "unknown";
+  const version = /version must be (\d+)/.exec(current)?.[1] || "1";
+  const hash = /draftHash must be ([a-f0-9]+)/.exec(current)?.[1] || "unknown";
+  if (/CONVERGENCE REVIEW/.test(current)) {
+    const mode = process.env.FAKE_CONVERGENCE;
+    reply = mode === "malformed" ? "not-json" : mode === "pass" ? "[pass]" : JSON.stringify({ runId, version: Number(version), draftHash: hash, decision: mode === "block" ? "object" : mode === "reservation" ? "approve_with_reservation" : "approve", rationale: mode === "block" ? "conflict" : "all good", reservation: mode === "reservation" ? "document the remaining uncertainty" : undefined, objection: mode === "block" ? "conflict" : undefined });
+  } else if (/convergence drafter/i.test(current)) reply = `Synthesis from ${codexMode ? "codex" : "claude"}`;
+  else reply = `Independent position from ${codexMode ? "codex" : "claude"}`;
+}
+if (process.env.FAKE_CONVERGENCE) {
+  // reply was prepared above
+} else if (after("HOPRESULT:")) {
   const mode = after("HOPRESULT:");
   if (isPeerRequest && ["fail", "rate"].includes(mode)) {
     process.stderr.write(mode === "rate" ? JSON.stringify({ type: "rate_limit_event", rate_limit_info: {

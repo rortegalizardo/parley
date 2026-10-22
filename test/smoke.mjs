@@ -34,9 +34,10 @@ function ok(name, cond, detail) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let TOKEN = ""; // read out of the served page, exactly as the browser does
-const RUNTIME_PROTOCOL = "13";
+const RUNTIME_PROTOCOL = "14";
 
 async function api(method, route, body) {
+  if (route === "/api/message" && body && body.discussionMode === undefined) body = { ...body, discussionMode: "parallel" };
   const res = await fetch(base + route, method === "GET"
     ? { headers: { "X-Parley-Token": TOKEN, "X-Parley-Runtime-Protocol": RUNTIME_PROTOCOL } }
     : {
@@ -1483,7 +1484,7 @@ async function checkSoloPairControlUi() {
     resyncVersion: 0, chipRevision: 0, sendVersion: 0,
   });
   const sendScope = {
-    state, input, pairControlOnly, soloTargetProblem,
+    state, input, pairControlOnly, soloTargetProblem, guessTextTarget,
     $: () => ({ disabled: false }),
     autosize: () => {}, hideMention: () => {}, toast: () => {},
     handleSlash: async () => false,

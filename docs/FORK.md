@@ -15,7 +15,7 @@ parley-mine
 
 The original `~/.parley` library and its server on port 4141 remain separate. Existing upstream rooms retain their names, agent identities, transcripts, and sessions. `npx parley-room@1.2.1` still launches the original upstream version. Explicit `--root` and `--port` overrides are supported; do not point two running servers at the same room library.
 
-## Build your four-agent table
+## Build your table
 
 Choose **New room** in the header or **Build your room** on the first screen. **Use the four-agent setup** opens an optional template with Fable, Astra, an adversary, and a privacy reviewer, including suggested standing instructions. A room needs at least one agent and has **no fixed roster limit**, with any mixture of the installed providers. Each agent needs a unique name; that name becomes its `@mention`.
 
@@ -28,7 +28,7 @@ Choose **New room** in the header or **Build your room** on the first screen. **
 
 Models and effort values are passed to the selected CLI. Use values available in your account; free text also accepts newer model names. Gemini's CLI has no effort field, so that control is omitted. Provider permissions still apply independently of the model or instructions.
 
-Use `@fable` or `@privacy` to address one agent. Use `@all` to ask every agent; `@both` remains an alias for compatibility. Multiple specific mentions select the leading mentioned agent, so use separate messages when asking a subset. Agents can request a follow-up from one named peer per reply. Automatic turns share the existing per-message allowance across the room.
+Use the searchable **Agents (N)** selector or `@fable` / `@privacy` to address one agent. `@all` defaults to convergence: every participant reviews the same draft before one agreed handoff appears. Choose **Parallel replies** in the selector for independent answers. See [convergence and recovery](CONVERGENCE.md). `@both` remains an alias for compatibility. Multiple specific mentions select the leading mentioned agent, so use separate messages when asking a subset. Agents can request a follow-up from one named peer per reply. Automatic turns share the existing per-message allowance across the room.
 
 For two drivers and two observers, turn on the ear icon for `critic` and `privacy`. Their standing instructions guide both ordinary replies and listening turns. Adjust Lurk style to control when they speak. A larger roster can consume more provider calls; the existing automatic-turn limit still governs follow-ups.
 
@@ -42,7 +42,7 @@ The instructions describe a role, not an access boundary. Everyone participates 
 
 Open **Settings → Agents in this room**. Choose **Add agent**, then set its name, provider, model, supported effort and instructions. Use **Remove** on a card to remove it. Changes are staged until **Save**; **Cancel** leaves the room unchanged. Keep at least one agent.
 
-Saving preserves the conversation and the native sessions of retained agents. Removed agents' past messages remain in the transcript, and their names stay reserved to protect that history. New agents start fresh and receive room history when addressed. The composer updates its individual agent buttons and always offers **@all** for the current roster. Names and providers of existing agents stay fixed so historical messages remain attributable.
+Saving preserves the conversation and the native sessions of retained agents. Removed agents' past messages remain in the transcript, and their names stay reserved to protect that history. New agents start fresh and receive room history when addressed. The composer updates its searchable agent list and always offers **@all** for the current roster. Names and providers of existing agents stay fixed so historical messages remain attributable.
 
 Removal waits until active exchanges and the affected agent's queued work or Pair role have finished. A roster changed in another tab is rejected with a request to reopen Settings, rather than silently overwriting it.
 

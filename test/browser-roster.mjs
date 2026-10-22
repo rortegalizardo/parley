@@ -95,7 +95,9 @@ test("creates four individually configured agents and keeps the roster readable"
   expect(snapshot.room.seats).toEqual(names);
   expect(snapshot.room.cfg.agents.adversary.instructions).toMatch(/failure modes/);
   expect(snapshot.room.cfg.agents.privacy.instructions).toMatch(/privacy risks/);
-  await expect(app.locator("#seatChips")).toContainText("@privacy");
+  await app.locator("#agentsBtn").click();
+  await expect(app.locator("#agentsOptions")).toContainText("@privacy");
+  await app.keyboard.press("Escape");
   await expect(app.locator('.chip[data-t="both"]')).toHaveText("@all");
   await server.configure("panel");
   await send(app, "@privacy SAY:Reviewed");
@@ -105,7 +107,8 @@ test("creates four individually configured agents and keeps the roster readable"
   await idle(server, "panel");
   await expect(app.locator(".msg.agent.builder .bubble")).toContainText("Prepared the release checklist");
   await expect(app.locator(".msg.agent.builder .avatar")).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  const selectedChip = app.locator('.chip.active[data-t="builder"]');
+  const selectedChip = app.locator("#agentsBtn");
+  await expect(app.locator("#agentsBtnLabel")).toHaveText("@builder");
   await expect(selectedChip).toBeVisible();
   const chipColors = await selectedChip.evaluate((el) => ({ foreground: getComputedStyle(el).color, background: getComputedStyle(el).backgroundColor }));
   expect(chipColors.foreground).not.toBe(chipColors.background);
@@ -241,11 +244,14 @@ test("switching rooms refreshes agents after an unchanged first pair", async ({ 
   await app.locator('.room-item .ropen').filter({ hasText: "expanded" }).click();
   await expect(app.locator("#roomTitle")).toHaveText("expanded");
   await expect(app.locator("#pills .pill")).toHaveCount(3);
-  await expect(app.locator('#seatChips [data-t="privacy"]')).toBeVisible();
+  await app.locator("#agentsBtn").click();
+  await expect(app.locator('[data-agent-target="privacy"]')).toBeVisible();
+  await app.keyboard.press("Escape");
   await app.locator('.room-item .ropen').filter({ hasText: "default" }).click();
   await expect(app.locator("#roomTitle")).toHaveText("default");
   await expect(app.locator("#pills .pill")).toHaveCount(2);
-  await expect(app.locator('#seatChips [data-t="privacy"]')).toHaveCount(0);
+  await app.locator("#agentsBtn").click();
+  await expect(app.locator('[data-agent-target="privacy"]')).toHaveCount(0);
 });
 
 test("an expanded roster stays valid after removing and replacing a seat", async ({ app, server }) => {
