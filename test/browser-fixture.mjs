@@ -2,8 +2,10 @@ import { test as base, expect } from "@playwright/test";
 import { isolatedServer } from "./server-fixture.mjs";
 
 export const test = base.extend({
-  server: async ({}, use, testInfo) => {
-    const server = await isolatedServer();
+  discussionMode: ["parallel", { option: true }],
+  serverEnv: [{}, { option: true }],
+  server: async ({ discussionMode, serverEnv }, use, testInfo) => {
+    const server = await isolatedServer({ discussionMode, env: serverEnv });
     try { await use(server); }
     finally {
       if (testInfo.status !== testInfo.expectedStatus) {
@@ -17,7 +19,7 @@ export const test = base.extend({
       await server.close();
     }
   },
-  app: async ({ page, server }, use) => {
+  app: async ({ page, server, discussionMode }, use) => {
     const errors = [];
     const rejectedResponses = new Set();
     page.on("pageerror", (error) => errors.push(error.message));
@@ -42,6 +44,14 @@ export const test = base.extend({
       if (request.pathname === "/favicon.ico") return route.fulfill({ status: 204 });
       return route.continue();
     });
+    if (discussionMode) await page.addInitScript((mode) => {
+      // Explicit compatibility-mode preference for every room used by old suites.
+      const get = Storage.prototype.getItem;
+      Storage.prototype.getItem = function(key) {
+        if (this === sessionStorage && key.startsWith("parley.discussionMode:")) return get.call(this, key) || mode;
+        return get.call(this, key);
+      };
+    }, discussionMode);
     await page.goto(server.url);
     await expect(page.locator("#connDot")).toHaveClass(/on/);
     await expect(page.locator("#runtimeBanner")).toBeHidden();

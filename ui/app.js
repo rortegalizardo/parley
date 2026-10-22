@@ -24,6 +24,8 @@ const state = {
   chipRevision: 0,   // manual changes fence off older in-flight send responses
   sendVersion: 0,    // only the newest send may synchronize the selected chip
   hopChoice: storedHopChoice(INITIAL_ROOM), // per-room browser-session shortcut: default | solo | -1..8
+  discussionMode: "converge", // @all default: converge | parallel
+  convergenceRounds: 2,
   draftImages: [],   // native image attachments waiting for the next successful send
   draftFiles: [],    // other files waiting for the next successful send
   sending: false,
@@ -45,6 +47,24 @@ const state = {
   resyncVersion: 0,
 };
 
+const discussionModeKey = (room) => `parley.discussionMode:${room}`;
+const convergenceRoundsKey = (room) => `parley.convergenceRounds:${room}`;
+function loadDiscussionPrefs(room) {
+  try {
+    const mode = sessionStorage.getItem(discussionModeKey(room));
+    if (mode === "parallel" || mode === "converge") state.discussionMode = mode;
+    const rounds = Number(sessionStorage.getItem(convergenceRoundsKey(room)));
+    if (Number.isFinite(rounds) && rounds >= 1 && rounds <= 99) state.convergenceRounds = Math.round(rounds);
+  } catch { /* session storage is optional */ }
+}
+function saveDiscussionPrefs() {
+  try {
+    sessionStorage.setItem(discussionModeKey(state.room), state.discussionMode);
+    sessionStorage.setItem(convergenceRoundsKey(state.room), String(state.convergenceRounds));
+  } catch { /* keep the current page state */ }
+}
+loadDiscussionPrefs(INITIAL_ROOM);
+
 // ------------------------------------------------------------ helpers
 function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -60,7 +80,7 @@ function toast(msg, isErr) {
 // This blocks blind/cross-origin requests; it is not a secret from local
 // processes, which can fetch the public page and read the embedded token.
 const TOKEN = (document.querySelector('meta[name="parley-token"]') || {}).content || "";
-const REQUIRED_RUNTIME_PROTOCOL = "13";
+const REQUIRED_RUNTIME_PROTOCOL = "14";
 const PAGE_RUNTIME_PROTOCOL = (document.querySelector('meta[name="parley-runtime-protocol"]') || {}).content || "";
 const withToken = (url) => url + (url.includes("?") ? "&" : "?") +
   "token=" + encodeURIComponent(TOKEN) + "&protocol=" + encodeURIComponent(REQUIRED_RUNTIME_PROTOCOL);
@@ -943,7 +963,10 @@ function entryEl(e) {
   }
   if (e.kind === "system") {
     div.className = "sysmsg" + (e.meta && e.meta.error ? " err" : "");
-    div.innerHTML = esc(e.text);
+    const convergence = e.meta && e.meta.convergence;
+    div.innerHTML = convergence && convergence.status === "agreed"
+      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Agreed handoff</div><div class="agreed-handoff-body">${esc(e.text)}</div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
+      : esc(e.text);
     const recovery = e.meta && e.meta.error && recoveryForEntry(e);
     if (recovery) {
       const b = document.createElement("button");
@@ -1938,7 +1961,18 @@ function renderSeatsUI(s) {
     `<b>${esc(seatLabel(a))}</b><span class="pinfo"></span>` +
     `<button class="ear" data-seat="${esc(a)}">👂</button>` +
     `<button class="moon" data-seat="${esc(a)}">😴</button></div>`).join("");
-  $("seatChips").innerHTML = seats.map((a) => `<button class="chip" data-t="${esc(a)}">@${esc(a)}</button>`).join("");
+  // Keep the composer compact for large rooms. Individual targets live in the
+  // searchable picker, while the selected target remains visible as a single
+  // chip (and @ autocomplete still offers every seat).
+  $("seatChips").innerHTML = "";
+  const picker = $("agentsBtn");
+  if (picker) {
+    $("agentsBtnCount").textContent = String(seats.length);
+    picker.title = `Choose one of ${seats.length} agents`;
+    $("agentsMenuHint").textContent = `${seats.length} in this room`;
+    renderAgentOptions(s);
+    renderDiscussionMode();
+  }
   const allChip = document.querySelector('.chip[data-t="both"]');
   if (allChip) {
     allChip.textContent = "@all";
@@ -1952,6 +1986,41 @@ function renderSeatsUI(s) {
     `<button class="starter" data-fill="@${seats.length > 1 ? "all" : esc(seats[0])} Introduce yourselves in one sentence each."><b class="c3">@${seats.length > 1 ? "all" : seats[0]}</b> ${seats.length > 1 ? "Introduce yourselves in one sentence each." : "Start with a focused question."}</button>` +
     seats.map((a, i) => `<button class="starter" data-fill="@${esc(a)} "><b class="${i ? "c2" : "c1"}">@${esc(a)}</b> ask ${esc(seatLabel(a))} something…</button>`).join("") +
     (seats.length > 1 ? `<button class="starter" data-fill="/pair start @${esc(seats[0])} "><b class="c1">/pair start</b> one builds, the other reviews…</button>` : "");
+}
+function renderAgentOptions(s) {
+  const box = $("agentsOptions");
+  if (!box) return;
+  const q = String($("agentsSearch")?.value || "").trim().toLowerCase();
+  const rows = (s.seats || []).map((a) => {
+    const runtime = (s.agents && s.agents[a]) || {};
+    const cfg = (s.cfg && s.cfg.agents && s.cfg.agents[a]) || {};
+    const info = (s.seatInfo && s.seatInfo[a]) || {};
+    const role = cfg.instructions || info.role || info.description || "";
+    const provider = info.provider || cfg.provider || "";
+    const status = runtime.asleep ? "sleeping" : (s.busy || []).includes(a) ? "working" : "ready";
+    return { a, label: seatLabel(a), provider, role, status };
+  }).filter((x) => !q || [x.a, x.label, x.provider, x.role, x.status].join(" ").toLowerCase().includes(q));
+  box.innerHTML = rows.length ? rows.map((x) => `<button type="button" role="option" class="agent-option${state.chip === x.a ? " selected" : ""}" aria-selected="${state.chip === x.a}" data-agent-target="${esc(x.a)}"><span class="agent-dot" style="--seat-accent:${seatColor(x.a)}"></span><span class="agent-option-copy"><b>@${esc(x.a)}</b><small>${esc([x.label, x.provider, x.role].filter(Boolean).join(" · "))}</small></span><span class="agent-status">${esc(x.status)}</span></button>`).join("") : `<div class="agent-empty">No agents match “${esc(q)}”.</div>`;
+}
+function renderDiscussionMode() {
+  document.querySelectorAll("[data-discussion-mode]").forEach((el) => {
+    const active = el.dataset.discussionMode === state.discussionMode;
+    el.classList.toggle("active", active);
+    el.setAttribute("aria-checked", String(active));
+  });
+  const rounds = $("convergenceRounds");
+  if (rounds) rounds.value = String(state.convergenceRounds);
+  $("convergenceRoundsWrap").hidden = state.discussionMode !== "converge" || (state.summary?.seats?.length || 0) < 2;
+  const btn = $("agentsBtn");
+  if (btn) {
+    btn.classList.toggle("converging", state.discussionMode === "converge" && state.chip === "both");
+    const label = $("agentsBtnLabel");
+    if (label) label.textContent = state.chip !== "auto" && state.chip !== "both" ? `@${state.chip}` : "Agents";
+    if ($("agentPickerWrap").classList.contains("open")) {
+      const menu = $("agentsMenu");
+      menu.style.top = `${Math.max(8, btn.getBoundingClientRect().top - menu.offsetHeight - 8)}px`;
+    }
+  }
 }
 function syncChipUI() {
   document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.t === state.chip));
@@ -2038,6 +2107,53 @@ async function refreshGitId() {
   } catch { /* keep the last line rather than blanking on a transport hiccup */ }
 }
 
+function convergenceSnapshot(s) {
+  return s && (s.convergence || s.convergenceRun || s.deliberation || null);
+}
+function renderConvergencePanel(s) {
+  const panel = $("convergencePanel");
+  if (!panel) return;
+  const c = convergenceSnapshot(s);
+  if (!c) { panel.hidden = true; panel.innerHTML = ""; return; }
+  const phase = String(c.phase || c.status || "").toLowerCase();
+  const labels = { gathering: "Gathering", drafting: "Drafting", reviewing: "Reviewing", agreed: "Agreement", complete: "Agreement", unresolved: "Unresolved", incomplete: "Incomplete", stopped: "Stopped" };
+  const phaseLabel = labels[phase] || (c.phase || c.status || "Convergence");
+  const seats = s.seats || [];
+  const count = (v) => Array.isArray(v) ? v.length : Number(v || 0);
+  const received = c.received ?? c.responses ?? c.receipts ?? count(c.contributions);
+  const approvals = c.approvals || c.approvedBy || [];
+  const approvedCount = Array.isArray(approvals) ? approvals.length : count(approvals);
+  const total = c.total || c.participantCount || seats.length;
+  const round = c.round || c.reviewRound || 0;
+  const maxRounds = c.maxRounds || c.convergenceRounds || state.convergenceRounds;
+  // One position per participant, then each review round invokes every
+  // participant plus one synthesis pass: N + R * (N + 1).
+  const plannedCalls = c.plannedCalls || (c.calls && c.calls.planned) || (total + Number(maxRounds) * (total + 1));
+  const usedCalls = c.calls?.used ?? c.usedCalls ?? 0;
+  const detailsOpen = panel.querySelector(".convergence-contributions")?.open || false;
+  const roundReviews = (c.rounds || []).flatMap((round) => Object.entries(round.reviews || {}).map(([agent, x]) => ({ agent, text: x.reason || x.rationale || x.text, stage: `review round ${round.version || "?"}`, decision: x.decision || x.status, version: x.version || round.version, hash: x.draftHash || x.hash || round.hash, reservation: x.reservation })));
+  const contributions = Array.isArray(c.contributions) ? c.contributions : [
+    ...Object.entries(c.positions || {}).map(([agent, x]) => ({ agent, text: x.text || x.content || x.summary, stage: "position" })),
+    ...(roundReviews.length ? roundReviews : Object.entries(c.reviews || {}).map(([agent, x]) => ({ agent, text: x.reason || x.rationale || x.text, stage: "review", decision: x.decision || x.status, version: x.version, hash: x.draftHash || x.hash, reservation: x.reservation })))
+  ].filter((x) => x.text);
+  const finalValue = c.final || c.handoff || c.agreement || c.artifact || "";
+  const finalText = typeof finalValue === "string" ? finalValue : finalValue.text || finalValue.content || finalValue.reason || "";
+  const outcome = c.outcome || c.result || (finalValue.status === "agreed" ? "Agreed" : finalValue.status) || (phaseLabel === "Agreement" ? "Agreed" : "");
+  panel.hidden = false;
+  panel.classList.toggle("is-final", ["agreed", "complete", "unresolved", "incomplete", "stopped"].includes(phase));
+  const finalMarkup = finalText && !["agreed", "complete"].includes(phase)
+    ? `<div class="convergence-final"><div class="final-label">${esc(outcome || "Draft")}</div><p>${esc(finalText)}</p>${finalValue.reason ? `<p class="convergence-reason"><b>Why:</b> ${esc(finalValue.reason)}</p>` : ""}</div>`
+    : ["agreed", "complete"].includes(phase) ? `<div class="convergence-final"><div class="final-label">Agreed handoff</div><p>Final handoff posted in the transcript above.</p></div>` : "";
+  const terminal = ["agreed", "complete"].includes(phase);
+  const canResume = c.actions?.resume !== false;
+  const canExtend = c.actions?.extend !== false;
+  const extendCalls = total + 1;
+  const actionReason = c.actions?.reason ? `<p class="convergence-reason">${esc(c.actions.reason)}</p>` : "";
+  const actions = terminal ? actionReason : `<div class="convergence-actions">${actionReason}${["incomplete", "unresolved", "stopped"].includes(phase) && canResume ? `<button type="button" data-convergence-action="resume">Resume</button>` : ""}${["incomplete", "unresolved", "stopped"].includes(phase) && canExtend ? `<button type="button" data-convergence-action="extend">Extend review <small>(+1 round · +${extendCalls} calls)</small></button>` : ""}${!["incomplete", "unresolved", "stopped"].includes(phase) ? `<button type="button" data-convergence-action="stop">Stop</button>` : ""}</div>`;
+  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(usedCalls)}/${esc(plannedCalls)} agent calls</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div><div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(total)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${actions}`;
+  const details = panel.querySelector(".convergence-contributions");
+  if (details && detailsOpen) details.open = true;
+}
 function applySummary(s) {
   s.busy = s.busy || [];
   s.busyInfo = s.busyInfo || [];
@@ -2052,6 +2168,9 @@ function applySummary(s) {
     renderSeatsUI(s);
     state.renderedRosterKey = rosterKey;
   }
+  renderAgentOptions(s);
+  renderDiscussionMode();
+  renderConvergencePanel(s);
   syncChipUI();
   $("roomTitle").textContent = s.name;
   for (const a of s.seats) {
@@ -2847,6 +2966,13 @@ function openHopMenu() {
   menu.style.top = `${Math.max(8, r.top - h - 7)}px`;
 }
 function renderHopControl() {
+  const explicitTarget = guessTextTarget(input.value);
+  const convergenceComposer = (explicitTarget === "both" || (!explicitTarget && !state.summary?.pair && state.chip === "both")) && (state.summary?.seats?.length || 0) > 1 && state.discussionMode === "converge";
+  $("hopWrap").hidden = convergenceComposer;
+  if (convergenceComposer) {
+    $("hopProgress").hidden = true;
+    return;
+  }
   $("hopAccountingNote").textContent = "Remembered for this room and browser session. " +
     (automaticAccounting() ? "Every automatic start counts; initial requested responses do not. No answer return is free. "
       : "This room retains its previous accounting: a counted request can include a free answer return. Switch to Automatic turns in Settings for one unit per automatic start. ") +
@@ -2938,6 +3064,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeHopMe
 function updateRouteHint() {
   if (!state.summary) return;
   renderHopProjections();
+  renderHopControl();
   const raw = $("input").value;
   const explicit = guessTextTarget(raw);
   const pair = state.summary.pair;
@@ -2945,6 +3072,13 @@ function updateRouteHint() {
   const soloPairCommand = !!soloProblem && /^\/pair\b/i.test(raw.trim()) &&
     !/^\/pair\s+(?:end|stop|off)\b/i.test(raw.trim());
   $("routeHint").classList.toggle("warn", !!soloProblem);
+  if (explicit === "both" || (!pair && !explicit && state.chip === "both")) {
+    const n = state.summary.seats.length;
+    if (n === 1) { $("routeHint").textContent = `→ ${seatLabel(state.summary.seats[0])} · single-agent response`; return; }
+    const mode = state.discussionMode === "parallel" ? "parallel replies" : `one agreed handoff · ${state.convergenceRounds} review round${state.convergenceRounds === 1 ? "" : "s"}`;
+    $("routeHint").textContent = `→ all ${n} agents · ${mode}`;
+    return;
+  }
   if (pair && !explicit && !raw.trim().startsWith("/")) {
     const dozing = [pair.worker, pair.reviewer].filter(seatAsleep);
     $("routeHint").textContent = `→ ${seatLabel(pair.worker)} · 🔁 ${seatLabel(pair.reviewer)} reviews · ${pairRoundsLabel(pair.rounds)}` +
@@ -2974,9 +3108,15 @@ function selectChip(target) {
   if (state.hopChoice === "solo" && String(target) === "both") return false;
   const chips = [...document.querySelectorAll(".chip")];
   const chip = chips.find((candidate) => candidate.dataset.t === String(target));
-  if (!chip) return false;
+  // Large rosters keep individual targets in the picker instead of rendering
+  // a chip for every seat. Selection still updates routing and the visible
+  // picker label when the target has no standalone chip.
+  if (!chip && !((state.summary?.seats || []).includes(String(target)))) return false;
   state.chip = String(target);
   chips.forEach((x) => x.classList.toggle("active", x === chip));
+  renderAgentOptions(state.summary || { seats: [] });
+  renderDiscussionMode();
+  renderHopControl();
   updateRouteHint();
   return true;
 }
@@ -3157,6 +3297,9 @@ async function loadRoom(name) {
   if (roomName !== state.room) {
     closeHopMenu();
     state.hopChoice = storedHopChoice(roomName);
+    state.discussionMode = "converge";
+    state.convergenceRounds = 2;
+    loadDiscussionPrefs(roomName);
   }
   state.room = roomName;
   refreshDoctor(roomName);
@@ -3619,6 +3762,11 @@ async function send() {
       data: await fileBase64(draft.file),
     })));
     const body = { room: sentRoom, text, target: sentTarget, images, files };
+    const messageTarget = guessTextTarget(text) || sentTarget;
+    if (!relayControlOnly && messageTarget === "both") {
+      body.discussionMode = state.discussionMode;
+      if (state.discussionMode === "converge") body.convergenceRounds = state.convergenceRounds;
+    }
     // Pair controls append no user turn, so they do not transmit the sticky
     // relay shortcut. Every accepted user message snapshots the current choice.
     if (!relayControlOnly && sentHopChoice === "solo") body.solo = true;
@@ -3628,9 +3776,13 @@ async function send() {
     const r = await api("/api/message", body);
     clearDraftImages(imageDrafts.map((draft) => draft.id));
     clearDraftFiles(fileDrafts.map((draft) => draft.id));
-    if (r.explicit && r.target && state.room === sentRoom && state.resyncVersion === sentResync &&
+    if (state.room === sentRoom && state.resyncVersion === sentResync &&
         state.chipRevision === chipRevision && state.sendVersion === sendVersion) {
-      selectChip(r.target);
+      // The server reports explicit routing on newer contracts. Older fake
+      // providers omit it, so preserve the same visible selection from the
+      // message's @mention as a compatibility fallback.
+      const routed = r.explicit && r.target ? r.target : guessTextTarget(text);
+      if (routed) selectChip(routed);
     }
     if (r.queued) toast(`⏳ Queued (#${r.position}) — sends when the target lane is free.`);
     // Partly delivered: the free seat is already answering, the busy one is next.
@@ -3761,11 +3913,72 @@ input.addEventListener("paste", (e) => {
 });
 
 $("chipsRow").addEventListener("click", (e) => {
+  const agent = e.target.closest("[data-agent-target]");
+  if (agent) {
+    state.chipRevision++;
+    selectChip(agent.dataset.agentTarget);
+    closeAgentsMenu();
+    input.focus();
+    return;
+  }
+  const mode = e.target.closest("[data-discussion-mode]");
+  if (mode) {
+    state.discussionMode = mode.dataset.discussionMode === "parallel" ? "parallel" : "converge";
+    saveDiscussionPrefs(); renderDiscussionMode(); renderHopControl(); updateRouteHint();
+    return;
+  }
+  const action = e.target.closest("[data-convergence-action]");
+  if (action) {
+    convergenceAction(action.dataset.convergenceAction);
+    return;
+  }
   const c = e.target.closest(".chip");
   if (!c) return;
   state.chipRevision++;
   selectChip(c.dataset.t);
   input.focus();
+});
+function closeAgentsMenu() {
+  const wrap = $("agentPickerWrap");
+  if (!wrap) return;
+  wrap.classList.remove("open");
+  $("agentsBtn").setAttribute("aria-expanded", "false");
+}
+function openAgentsMenu() {
+  const wrap = $("agentPickerWrap");
+  if (!wrap) return;
+  wrap.classList.add("open");
+  $("agentsBtn").setAttribute("aria-expanded", "true");
+  const r = $("agentsBtn").getBoundingClientRect();
+  const menu = $("agentsMenu");
+  const w = menu.offsetWidth || 340;
+  menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
+  menu.style.top = `${Math.max(8, r.top - (menu.offsetHeight || 360) - 8)}px`;
+  setTimeout(() => $("agentsSearch")?.focus(), 0);
+}
+$("agentsBtn")?.addEventListener("click", () => {
+  if ($("agentPickerWrap").classList.contains("open")) closeAgentsMenu(); else openAgentsMenu();
+});
+$("agentsSearch")?.addEventListener("input", () => renderAgentOptions(state.summary || { seats: [] }));
+$("convergenceRounds")?.addEventListener("change", (e) => {
+  state.convergenceRounds = Math.max(1, Math.min(99, Math.round(Number(e.target.value) || 2)));
+  saveDiscussionPrefs();
+  renderDiscussionMode();
+  updateRouteHint();
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#agentPickerWrap")) closeAgentsMenu();
+});
+window.addEventListener("resize", closeAgentsMenu);
+async function convergenceAction(action) {
+  try {
+    const runId = convergenceSnapshot(state.summary)?.runId;
+    await api("/api/convergence", { room: state.room, action, runId, rounds: action === "extend" ? 1 : state.convergenceRounds });
+  } catch (e) { toast(e.message, true); }
+}
+$("convergencePanel")?.addEventListener("click", (e) => {
+  const action = e.target.closest("[data-convergence-action]");
+  if (action) convergenceAction(action.dataset.convergenceAction);
 });
 $("starters").addEventListener("click", (e) => {
   const s = e.target.closest(".starter");

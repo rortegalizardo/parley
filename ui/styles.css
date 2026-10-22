@@ -477,6 +477,7 @@
   /* Per-message exchange policy. The menu is fixed and positioned from the
      trigger, like the wake menu, so a wrapped composer row cannot clip it. */
   #hopWrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
+  #hopWrap[hidden] { display: none !important; }
   #hopBtn {
     display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px;
     border-radius: 999px; border: 1px solid var(--border2); background: var(--panel);
@@ -514,6 +515,63 @@
   }
   #hopProgress.capped { color: #e8b45c; border-color: rgba(232,180,92,.35); }
   #hopProgress[hidden] { display: none; }
+  .agent-picker-wrap { position: relative; display: inline-flex; }
+  #agentsBtn { gap: 4px; }
+  #agentsBtn b { color: var(--text); font-weight: 700; }
+  #agentsBtn.converging { border-color: color-mix(in srgb, var(--user) 60%, var(--border)); }
+  .picker-caret { font-size: 9px; opacity: .65; margin-left: 2px; }
+  #agentsMenu { position: fixed; display: none; width: min(340px, calc(100vw - 20px)); padding: 10px; background: var(--panel2); border: 1px solid var(--border2); border-radius: 14px; box-shadow: 0 14px 38px rgba(0,0,0,.5); z-index: 45; }
+  #agentPickerWrap.open #agentsMenu { display: block; }
+  .agents-menu-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 3px 8px; color: var(--text); font-size: 12px; }
+  .agents-menu-title span { color: var(--text-faint); font-size: 10px; }
+  #agentsSearch { width: 100%; box-sizing: border-box; padding: 8px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font: inherit; font-size: 12px; outline: none; }
+  #agentsSearch:focus { border-color: var(--user); }
+  #agentsOptions { max-height: min(260px, 42vh); overflow: auto; margin: 7px 0; }
+  .agent-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 7px; border-radius: 8px; color: var(--text-dim); text-align: left; }
+  .agent-option:hover, .agent-option.selected { background: var(--panel); color: var(--text); }
+  .agent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--seat-accent, var(--user)); flex-shrink: 0; }
+  .agent-option-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .agent-option-copy b { font-size: 12px; }
+  .agent-option-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font-size: 10px; }
+  .agent-status { color: var(--text-faint); font-size: 10px; }
+  .agent-empty { padding: 12px 7px; color: var(--text-faint); font-size: 11px; }
+  .agents-mode-label { border-top: 1px solid var(--border); padding: 8px 3px 5px; color: var(--text-faint); font-size: 10px; }
+  .agents-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .agents-modes button { padding: 7px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); text-align: left; }
+  .agents-modes button:hover, .agents-modes button.active { border-color: var(--user); background: color-mix(in srgb, var(--user) 10%, transparent); color: var(--text); }
+  .agents-modes b, .agents-modes span { display: block; }
+  .agents-modes b { font-size: 11px; }
+  .agents-modes span { margin-top: 2px; color: var(--text-faint); font-size: 10px; }
+  .convergence-rounds { display: flex; justify-content: space-between; align-items: center; margin: 8px 3px 1px; color: var(--text-faint); font-size: 10px; }
+  .convergence-rounds input, .convergence-rounds select { width: 52px; box-sizing: border-box; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); color-scheme: dark; }
+  @media (prefers-color-scheme: light) { .convergence-rounds input, .convergence-rounds select { color-scheme: light; } }
+  .convergence-panel { margin: 0 0 8px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--user) 30%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--panel) 92%, var(--user)); }
+  .convergence-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .convergence-head b, .convergence-head span { display: block; }
+  .convergence-head > div > span { margin-top: 2px; color: var(--text-faint); font-size: 10px; }
+  .convergence-status { padding: 3px 7px; border-radius: 99px; background: var(--panel2); color: var(--user); font-size: 10px; white-space: nowrap; }
+  .convergence-status.unresolved, .convergence-status.incomplete, .convergence-status.stopped { color: #e8b45c; }
+  .convergence-steps { display: flex; gap: 5px; flex-wrap: wrap; margin: 9px 0 7px; }
+  .convergence-steps span { padding: 3px 6px; border-radius: 6px; background: var(--panel2); color: var(--text-faint); font-size: 10px; }
+  .convergence-steps span.done { color: var(--text); border: 1px solid color-mix(in srgb, var(--user) 35%, var(--border)); }
+  .convergence-steps b { color: var(--user); }
+  .convergence-contributions { border-top: 1px solid var(--border); padding-top: 6px; font-size: 11px; }
+  .convergence-contributions summary { cursor: pointer; color: var(--text-dim); }
+  .convergence-contributions article { margin-top: 7px; padding: 7px; border-radius: 7px; background: var(--panel2); }
+  .convergence-contributions p, .convergence-final p { margin: 3px 0 0; color: var(--text-dim); white-space: pre-wrap; }
+  .review-meta { display: block; margin-top: 2px; color: var(--user); font-size: 10px; }
+  .review-reservation, .convergence-reason { border-left: 2px solid #e8b45c; padding-left: 7px; color: #e8b45c !important; }
+  .convergence-final { margin-top: 8px; padding: 8px; border-radius: 8px; background: var(--panel2); }
+  .final-label { color: var(--user); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .convergence-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .convergence-actions button { padding: 5px 8px; border: 1px solid var(--border); border-radius: 7px; color: var(--text-dim); font-size: 11px; }
+  .convergence-actions button:hover { border-color: var(--user); color: var(--text); }
+  .convergence-actions button small { color: var(--text-faint); font-size: 9px; }
+  .agreed-handoff-heading { margin-bottom: 6px; color: var(--user); font-weight: 700; }
+  .agreed-handoff-body { white-space: pre-wrap; }
+  .agreed-handoff-proof { margin-top: 8px; color: var(--text-faint); font-size: 10.5px; }
+  .agreed-handoff-proof summary { cursor: pointer; color: var(--user); }
+  .agreed-handoff-proof p { margin: 5px 0 0; }
   #draftImages { display: none; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; }
   #draftImages.show { display: flex; }
   .draft-image { position: relative; width: 74px; height: 62px; border: 1px solid var(--border2); border-radius: 9px; overflow: hidden; background: var(--panel); }
@@ -823,6 +881,7 @@
       overflow: hidden; text-overflow: ellipsis;
     }
     #hopMenu { width: min(286px, calc(100vw - 16px)); }
+    #queuePop { position: fixed; right: 8px; left: auto; bottom: 72px; width: min(330px, calc(100vw - 16px)); }
   }
 
   @media (max-width:600px) {
@@ -927,3 +986,5 @@
   #hopMenu > button:hover, #stopMenu button:hover, #wakeMenu button:hover, #askMenu button:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
   #mention { padding: 5px; }
   #mention button { border-radius: 7px; }
+
+#convergenceRoundsWrap[hidden] { display: none !important; }

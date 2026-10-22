@@ -68,7 +68,7 @@ test("setup and runtime warning screens fit in a compact viewport", async ({ pag
   await page.screenshot({ animations: "disabled", path: `${auditDir}/setup-warning-dark-390.png` });
   await page.route(server.url + "/", async (route) => {
     const response = await route.fetch();
-    const body = (await response.text()).replace('name="parley-runtime-protocol" content="13"', 'name="parley-runtime-protocol" content="12"');
+    const body = (await response.text()).replace('name="parley-runtime-protocol" content="14"', 'name="parley-runtime-protocol" content="13"');
     await route.fulfill({ response, body });
   });
   await page.reload();

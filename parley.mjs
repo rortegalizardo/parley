@@ -25,6 +25,7 @@ import { createCausalCoordinator as coordinateCausal } from "./lib/causal-coordi
 import { relayAllowanceNote } from "./lib/budget-prompts.mjs";
 import { snapshotClientAssets } from "./lib/client-assets.mjs";
 import { claudeLoggedIn } from "./lib/claude-auth.mjs";
+import { createConvergenceRun, draftHash, classifyReview, composeDraft, allApproved } from "./lib/convergence.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Keep the browser and backend on the same build. Previously the server read
@@ -65,7 +66,7 @@ const UI_HTML = UI_SNAPSHOT.html;
 //    lane order is not arrival order.
 // 11: recovery actions name their original root and Pair cancellation recovers
 //     a whole cycle. Old pages offer unbound/per-seat actions for those entries.
-const RUNTIME_PROTOCOL = "13";
+const RUNTIME_PROTOCOL = "14";
 const IS_WIN = process.platform === "win32";
 
 const IMAGE_TYPES = new Map([
@@ -573,6 +574,7 @@ function defaultState(agentsCfg) {
     // question and therefore the same cap instead of minting a fresh budget.
     relayUsage: {},
     pair: null,     // { worker, reviewer, rounds, roundsSource } while pair mode is on
+    convergence: null,
     codexLastWarned: false,
     // Current normalized room-note state. The revision advances on both edits
     // and clears so a linked native session can be told explicitly that an old
@@ -1702,7 +1704,7 @@ function briefedAdapter(send) {
     if (run) {
       const root = room.entries.find((e) => e.n === run.rootN && e.kind === "user");
       const policy = relayPolicyForEntry(room, root);
-      if (root && !root.meta?.pair && isAutomaticPolicy(policy)) {
+      if (root && !root.meta?.pair && !run.convergence && isAutomaticPolicy(policy)) {
         if (run.stopRequested || run.stopAt !== room.stopEpoch || (run.chain && chainHalted(room, run.chain)) || isAsleep(room, opts.seat)) {
           throw Object.assign(new Error("Automatic start cancelled before launch"), { stopped: true });
         }
@@ -1730,6 +1732,7 @@ function briefedAdapter(send) {
           startedAt: run.startedAt, runId: run.runId, ...runProvenance(room, run) });
       }
     }
+    opts.beforeAttempt?.();
     return send(room, opts);
   };
 }
@@ -1851,6 +1854,15 @@ function loadRoom(name, seatChoice, create = false) {
     .filter(([id]) => liveSeatSet.has(id)));
   for (const id of liveSeatSet) {
     if (!state.agents[id]) state.agents[id] = defaultState({ [id]: cfg.agents[id] }).agents[id];
+  }
+  // A process restart cannot safely resume provider calls in the middle of a
+  // convergence phase. Preserve completed positions/reviews and require the
+  // explicit Resume action instead of replaying calls automatically.
+  if (state.convergence && ["gathering", "drafting", "reviewing", "revising"].includes(state.convergence.phase)) {
+    state.convergence.phase = "incomplete";
+    state.convergence.final = { status: "incomplete", reason: "Process restarted during convergence; explicit resume required." };
+    state.convergence.updatedAt = Date.now();
+    writeJSON(stateFile, state);
   }
 
   // A native Claude session was created under one effective permission mode.
@@ -2581,6 +2593,7 @@ function roomSummary(room) {
         !isolatedProtectedTurn(room, a, { readOnly: true }),
     }])),
     pair: pairSnapshot(room),
+    convergence: convergenceSummary(room),
     // Settings affect the next room-sourced cycle. If a cycle is already in
     // flight, expose its immutable execution snapshot separately so clients
     // never mistake the newly configured cap for the cap currently running.
@@ -2639,11 +2652,11 @@ function roomSummary(room) {
 //     so the pre-spawn half of that is not currently reachable; the check in
 //     runCli is there to keep it unreachable if staging ever grows an await.
 function beginRun(room, agent, { phase, startedAt, rootN = null, sourceN = null, queueGroupId = null, chain = null,
-  delivery = null, catchUp = null }) {
+  delivery = null, catchUp = null, convergence = false }) {
   const run = {
     runId: `r${room.runSeq++}`,
     agent, phase, startedAt, queueGroupId, chain,
-    ...(delivery ? { delivery } : {}), ...(catchUp ? { catchUp } : {}),
+    ...(delivery ? { delivery } : {}), ...(catchUp ? { catchUp } : {}), ...(convergence ? { convergence: true } : {}),
     rootN: rootN === undefined ? null : rootN,
     sourceN: sourceN === undefined ? null : sourceN,
     // The epoch this turn was accepted under. Stop-everything moves the room
@@ -3178,10 +3191,11 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
     delivery: { kind: userTurn.meta?.pair ? "pair-work" : "root", rootN: userTurn.n,
       triggerEntryN: userTurn.n, source: userTurn.meta?.pair ? "pair" : userTurn.meta?.relay?.source || "room", counted: false },
     queueGroupId: opts.queueGroupId || null, chain: opts.chain || null,
+    convergence: !!opts.convergence,
   });
-  const onStream = (text) => { if (gen === room.generation) streamText(room, agent, text); };
+  const onStream = (text) => { if (!opts.convergenceBuffer && gen === room.generation) streamText(room, agent, text); };
   const onActivity = (label) => {
-    if (gen === room.generation) appendEntry(room, { kind: "activity", author: agent, text: label }, { md: false, state: false });
+    if (!opts.convergenceBuffer && gen === room.generation) appendEntry(room, { kind: "activity", author: agent, text: label }, { md: false, state: false });
   };
 
   let providerInputs = null;
@@ -3230,7 +3244,7 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
     const attemptPrompt = (dlv, ts) => {
       const base = buildPrompt(room, delta, userTurn, providerInputs,
         opts.heldCount || 0, askBlock, noteBlock(room, agent, dlv), opts.heldReason || "sleep");
-      const allowance = rootAllowanceNote(room, userTurn, { root: true });
+      const allowance = opts.convergence ? "" : rootAllowanceNote(room, userTurn, { root: true });
       return dlv.prefix + noted(ts.discussion
         ? `${base}\n\n${discussionBlock(room, agent, dlv)}` : base) +
         (allowance ? `\n\n(${allowance})` : "");
@@ -3250,7 +3264,7 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
       res = await adapters[providerIdOf(room, agent)](room, {
         seat: agent,
         prompt, briefing, onStream, onActivity, images, inputDir: providerInputs.dir,
-        allowEmpty: !!opts.allowEmpty, ...turnScope,
+        allowEmpty: !!opts.allowEmpty, beforeAttempt: opts.beforeAttempt, ...turnScope,
       });
     } catch (e) {
       if (e.resumeFailed && !e.stopped) {
@@ -3270,12 +3284,12 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
         res = await adapters[providerIdOf(room, agent)](room, {
         seat: agent,
           prompt, briefing: b2, onStream, onActivity, images, inputDir: providerInputs.dir,
-          allowEmpty: !!opts.allowEmpty, ...turnScope,
+          allowEmpty: !!opts.allowEmpty, beforeAttempt: opts.beforeAttempt, ...turnScope,
         });
       } else throw e;
     }
 
-    if (gen !== room.generation) return null; // room was reset while this turn ran
+    if (gen !== room.generation || (opts.valid && !opts.valid())) return null; // room was reset while this turn ran
     applyAdapterSession(room, agent, res, epoch);
     stampPromptDelivery(room, agent, res, epoch, delivery);
     // Retry may deliberately replay an older root (including under switched
@@ -3298,7 +3312,10 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
       saveState(room);
       return STEP_INCOMPLETE;
     }
-    const replyEntry = appendEntry(room, {
+    const replyEntry = opts.convergenceBuffer ? {
+      n: null, kind: "agent", author: agent, text: res.text,
+      meta: { durationMs: Date.now() - startedAt, replyTo: userTurn.n, ...(res.usage ? { tokens: res.usage } : {}) },
+    } : appendEntry(room, {
       kind: "agent", author: agent, text: res.text,
       meta: {
         durationMs: Date.now() - startedAt,
@@ -3335,7 +3352,8 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
     }
     return replyEntry;
   } catch (e) {
-    if (gen !== room.generation) return null; // room was reset; drop the stale error
+    if (gen !== room.generation || (opts.valid && !opts.valid())) return null; // room was reset; drop the stale error
+    if (opts.convergenceBuffer) return { error: e.message };
     if (e.automaticCapped) return null;
     // Amber. The seat received this message — the process ran with it in the
     // prompt — and the user cut the answer short. Recorded before the notice so
@@ -4967,7 +4985,198 @@ function launchUserDispatch(room, userTurn, {
   return { queueGroupId, deferred: [...deferred] };
 }
 
-function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRelay = {}) {
+function convergenceResumeCalls(run) {
+  const n = run.participants.length;
+  const missing = run.participants.filter((p) => run.positions[p.id]?.status !== "complete").length;
+  const round = run.rounds?.at(-1);
+  if (!round?.text) return missing + n + 1;
+  if (allApproved(round.reviews, run.participants, round.version, round.hash)) return missing;
+  if (round.complete) return missing + n + 1;
+  return missing + run.participants.filter((p) => !round.reviews[p.id] || round.reviews[p.id].status === "unresolved").length;
+}
+function convergenceSummary(room) {
+  const c = room.state.convergence;
+  if (!c) return null;
+  const terminal = ["incomplete", "unresolved", "stopped"].includes(c.phase);
+  const refusal = terminal ? convergenceCanResume(room, c) : null;
+  const remaining = c.calls.planned - c.calls.used;
+  return { ...c, status: c.final?.status || c.phase, total: c.participants.length,
+    received: Object.values(c.positions).filter((p) => p.status === "complete").length,
+    approvals: Object.values(c.reviews).filter((r) => ["approve", "approve_with_reservation"].includes(r.status) && r.version === c.draftVersion && r.draftHash === c.draftHash).length,
+    contributions: c.positions, outcome: c.final?.status || null,
+    actions: { resume: terminal && !refusal && c.phase !== "unresolved" && convergenceResumeCalls(c) <= remaining,
+      extend: terminal && !refusal && c.maxRounds < 99, stop: !terminal && c.phase !== "agreed", reason: refusal },
+  };
+}
+
+function convergenceConfigHash(room, agent) {
+  return draftHash(JSON.stringify(room.cfg.agents[agent] || {}));
+}
+function convergenceActive(room) {
+  return !!room.convergenceWorker || ["gathering", "drafting", "reviewing", "revising"].includes(room.state.convergence?.phase);
+}
+function convergencePublish(room) {
+  room.state.convergence.updatedAt = Date.now();
+  saveState(room);
+  broadcast(room, { type: "room", room: roomSummary(room) });
+}
+function convergenceStop(room) {
+  const run = room.state.convergence;
+  if (!run || !convergenceActive(room)) return;
+  run.phase = "stopped";
+  run.final = { status: "stopped", reason: "Stopped by user. Completed contributions are preserved." };
+  convergencePublish(room);
+  for (const native of room.runs.values()) if (native.convergence) stopRun(room, native);
+}
+function convergenceRoundsValue(value, fallback = 2) {
+  const rounds = value == null ? fallback : Number(value);
+  if (!Number.isSafeInteger(rounds) || rounds < 1 || rounds > 99) {
+    throw Object.assign(new Error("Review rounds must be a whole number from 1 to 99."), { status: 400 });
+  }
+  return rounds;
+}
+function convergenceCanResume(room, run) {
+  if (roomWorkInFlight(room) || room.convergenceWorker || room.queuePaused) return "Wait for room work to finish and resume its queue first.";
+  if (room.state.lastUser?.n !== run.rootN) return "A newer task superseded this run. Start a new @all discussion.";
+  if (run.configHash !== draftHash(JSON.stringify(room.cfg)) || run.participants.some((p) => !room.cfg.agents[p.id] || convergenceConfigHash(room, p.id) !== p.configHash)) return "Room settings or participants changed. Start a new @all discussion.";
+  if (run.participants.some((p) => isAsleep(room, p.id))) return "Wake every participant before resuming.";
+  return null;
+}
+
+// A durable stage machine. Provider results are saved as each call completes,
+// outside the conversation delta, so an initial barrier and restart recovery
+// do not depend on transcript ordering or the speed of a particular provider.
+async function runConvergence(room, userTurn) {
+  const run = room.state.convergence;
+  const gen = room.generation;
+  const token = {};
+  room.convergenceWorker = token;
+  room.exchanges++;
+  const participants = run.participants.map((p) => p.id);
+  const scope = makeScope(room, run.rootN, "both", run.discussion);
+  const current = () => gen === room.generation && room.state.convergence === run && room.convergenceWorker === token;
+  const live = () => current() && ["gathering", "drafting", "reviewing", "revising"].includes(run.phase);
+  const publish = () => { if (current()) convergencePublish(room); };
+  const finish = (status, reason = null) => {
+    if (!live()) return;
+    run.phase = status;
+    run.final = { status, version: run.draftVersion, hash: run.draftHash, text: run.draftText, reason,
+      reservations: Object.entries(run.reviews).filter(([, r]) => r.reservation).map(([agent, r]) => ({ agent, text: r.reservation })) };
+    publish();
+    // Only the exact approved draft is a handoff. Other outcomes retain the
+    // candidate and objections in the inspectable run; no creative final call.
+    if (status === "agreed" && !run.finalEntryN) {
+      const entry = appendEntry(room, { kind: "system", author: "system", text: run.draftText,
+        meta: { convergence: { runId: run.runId, status, version: run.draftVersion, hash: run.draftHash,
+          participants: run.participants, positions: run.positions, rounds: run.rounds, reservations: run.final.reservations } } });
+      run.finalEntryN = entry.n;
+      publish();
+    }
+  };
+  const enough = (count) => {
+    if (run.calls.used + count <= run.calls.planned) return true;
+    finish("incomplete", `This stage needs ${count} calls; ${run.calls.planned - run.calls.used} remain. Extend the review budget to continue.`);
+    return false;
+  };
+  const invoke = async (agent, stage, instruction) => {
+    if (!live()) return null;
+    const result = await runAgentTurn(room, agent, userTurn, scope, {
+      instruction: `User task: ${run.task}\n\n${instruction}`, convergence: true, convergenceBuffer: true,
+      allowEmpty: true, valid: live,
+      // This callback runs at every adapter boundary, including a native
+      // session recovery retry; it never borrows the ordinary auto-hop budget.
+      beforeAttempt() {
+        if (!live()) throw Object.assign(new Error("Convergence stopped"), { stopped: true });
+        if (run.calls.used >= run.calls.planned) throw new Error("Convergence call budget exhausted.");
+        run.calls.used++;
+        (run.calls.attempts ||= []).push({ agent, stage, version: run.draftVersion, startedAt: Date.now() });
+        publish();
+      },
+    });
+    return live() ? result : null;
+  };
+  try {
+    run.rounds ||= [];
+    run.final = null;
+    run.phase = "gathering";
+    publish();
+    const missing = participants.filter((a) => run.positions[a]?.status !== "complete");
+    if (!enough(missing.length)) return;
+    await Promise.all(missing.map(async (agent) => {
+      const result = await invoke(agent, "position", "CONVERGENCE POSITION (independent stage). Give your recommendation, reasons and concerns. Do not address other agents. Silence or [pass] cannot count as a position.");
+      if (!live()) return;
+      const validText = typeof result?.text === "string" && result.text.trim() && !LURK_PASS.test(result.text);
+      run.positions[agent] = validText ? { status: "complete", text: result.text } : { status: "missing", text: "", reason: result?.error || "No position returned." };
+      publish();
+    }));
+    if (!live()) return;
+    if (participants.some((a) => run.positions[a]?.status !== "complete")) return finish("incomplete", "Every participant must supply an independent position. Resume retries only missing contributions.");
+
+    for (;;) {
+      if (!live()) return;
+      let round = run.rounds[run.rounds.length - 1];
+      if (round?.text && allApproved(round.reviews, run.participants, round.version, round.hash)) {
+        run.round = run.draftVersion = round.version; run.draftText = round.text; run.draftHash = round.hash; run.reviews = round.reviews;
+        return finish("agreed");
+      }
+      if (!round || round.complete) {
+        if (run.rounds.length >= run.maxRounds) return finish("unresolved", "Review limit reached. Blocking objections remain; extend to request another draft and a full review.");
+        if (!enough(participants.length + 1)) return;
+        round = { version: run.rounds.length + 1, text: null, hash: null, reviews: {}, complete: false };
+        run.rounds.push(round);
+      }
+      run.round = round.version;
+      run.draftVersion = round.version;
+      run.reviews = round.reviews;
+      if (!round.text) {
+        if (!enough(participants.length + 1)) return;
+        run.phase = round.version === 1 ? "drafting" : "revising";
+        publish();
+        const previous = run.rounds[run.rounds.length - 2];
+        const revision = previous ? `\nPREVIOUS DRAFT:\n${previous.text}\nREVIEWS TO ADDRESS (each objector must later approve):\n${JSON.stringify(previous.reviews)}` : "";
+        const result = await invoke(participants[0], "draft", `You are the convergence drafter. Synthesize the independent positions into one actionable answer to the user's task. Address every blocking objection in a revised candidate. You cannot declare another agent's approval. Return only the candidate answer text.\nPOSITIONS:\n${composeDraft(run.positions)}${revision}`);
+        if (!live()) return;
+        if (!result?.text?.trim() || LURK_PASS.test(result.text)) return finish("incomplete", result?.error || "Drafter returned no candidate.");
+        round.text = result.text;
+        round.hash = draftHash(result.text);
+        publish();
+      }
+      run.draftText = round.text;
+      run.draftHash = round.hash;
+      run.phase = "reviewing";
+      // Completed reviews survive restart. A missing/invalid review alone is
+      // retried on explicit resume; changing the draft creates an empty round.
+      const pending = participants.filter((a) => !round.reviews[a] || round.reviews[a].status === "unresolved");
+      if (!enough(pending.length)) return;
+      publish();
+      await Promise.all(pending.map(async (agent) => {
+        const result = await invoke(agent, "review", `CONVERGENCE REVIEW. Review the exact candidate below against the task and your standing identity. Return ONLY valid JSON with runId, version, draftHash, decision, rationale, and an objection or reservation when applicable. runId must be ${run.runId}; version must be ${round.version}; draftHash must be ${round.hash}. decision must be exactly approve, approve_with_reservation, or object. An objection must name a disputed clause and a concrete required change. A reservation must be explicitly nonblocking. Silence is not approval.\nDRAFT:\n${round.text}`);
+        if (!live()) return;
+        const vote = classifyReview(result?.text || "", { runId: run.runId, version: round.version, draftHash: round.hash });
+        round.reviews[agent] = { ...vote, version: round.version, draftHash: round.hash, text: result?.text || "", ...(result?.error ? { error: result.error } : {}) };
+        publish();
+      }));
+      if (!live()) return;
+      run.objections = Object.entries(round.reviews).filter(([, r]) => r.status === "block").map(([agent, r]) => ({ agent, version: round.version, text: r.reason }));
+      if (participants.some((a) => !round.reviews[a] || round.reviews[a].status === "unresolved")) return finish("incomplete", "A required review failed, was empty, or did not match this draft. Resume retries only those reviews.");
+      round.complete = true;
+      if (allApproved(round.reviews, run.participants, round.version, round.hash)) return finish("agreed");
+      publish();
+    }
+  } catch (error) {
+    if (live()) finish("incomplete", error.message);
+  } finally {
+    if (current()) {
+      room.convergenceWorker = null;
+      room.exchanges = Math.max(0, room.exchanges - 1);
+      broadcast(room, { type: "room", room: roomSummary(room) });
+      drainLanes(room);
+      scheduleCatchUps(room);
+    }
+  }
+}
+
+function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRelay = {}, discussionMode = null, convergenceRounds = null) {
   const raw0 = String(rawText || "").trim();
   if (raw0.length > MAX_MESSAGE_TEXT) {
     throw Object.assign(new Error(`message text must be ${MAX_MESSAGE_TEXT.toLocaleString()} characters or shorter`), { status: 413 });
@@ -5018,6 +5227,9 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   if (startingPair && seatIds(room).length < 2) throw Object.assign(new Error("Pair mode needs at least two agents."), { status: 400 });
   if (!text && !prepared.length && !startingPair) throw Object.assign(new Error("empty message"), { status: 400 });
   if (target !== "both" && !room.cfg.agents[target]) throw Object.assign(new Error(`unknown target: ${target}`), { status: 400 });
+  if (convergenceActive(room)) {
+    throw Object.assign(new Error("A convergence run is active. Wait for it to finish or stop it before starting a new task."), { status: 409 });
+  }
 
   // Only a pair turn still refuses before an entry exists. Everything else is
   // *held*: the message lands in the thread at the moment it was sent, marked
@@ -5126,6 +5338,10 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   const listeners = asPairTurn || solo || !agents.length ? [] // the reviewer is already in the loop
     : allSeats.filter((a) => !agents.includes(a) && !sleeping.includes(a) && room.cfg.agents[a].lurk);
   const discussion = effectiveTarget === "both" && room.cfg.mode === "work";
+  const convergence = !asPairTurn && effectiveTarget === "both" && allSeats.length > 1 && discussionMode !== "parallel";
+  const reviewRounds = convergence ? convergenceRoundsValue(convergenceRounds) : null;
+  if (convergence && (roomWorkInFlight(room) || room.queuePaused)) throw Object.assign(new Error("Wait for current room work to finish and resume the queue before starting convergence."), { status: 409 });
+  if (convergence && sleeping.length) throw Object.assign(new Error("Convergence needs every addressed agent awake."), { status: 409 });
   const attachments = persistAttachments(room, prepared);
   let userTurn;
   try {
@@ -5136,6 +5352,7 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
         ...(!asPairTurn ? { relay: relayPolicy } : {}),
         ...(attachments.length ? { attachments } : {}),
         ...(discussion ? { discussion: true } : {}),
+        ...(convergence ? { convergence: true } : {}),
         ...(asPairTurn ? { pair: { rounds: pair.rounds, worker: pair.worker, reviewer: pair.reviewer } } : {}),
       },
     });
@@ -5150,6 +5367,19 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
     ...(attachments.length ? { attachments } : {}),
   };
   saveState(room);
+  if (convergence) {
+    const participants = [...agents];
+    const maxRounds = reviewRounds;
+    const runId = `cv-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
+    if (room.state.convergence) {
+      (room.state.convergenceHistory ||= []).push(room.state.convergence);
+    }
+    room.state.convergence = createConvergenceRun({ runId, rootN: userTurn.n, task: text, maxRounds, participants: participants.map((id) => ({ id, provider: providerIdOf(room, id), configHash: convergenceConfigHash(room, id), config: structuredClone(room.cfg.agents[id]) })), plannedCalls: participants.length + maxRounds * (participants.length + 1) });
+    saveState(room); broadcast(room, { type: "room", room: roomSummary(room) });
+    Object.assign(room.state.convergence, { configHash: draftHash(JSON.stringify(room.cfg)), configSnapshot: structuredClone(room.cfg), discussion });
+    runConvergence(room, userTurn);
+    return { target: effectiveTarget, explicit: plan.explicit, convergence: runId };
+  }
   // Recorded after the entry it is about, so the thread reads in the order it
   // happened: the message, then which seat is holding it until it wakes.
   for (const a of sleeping) noteSleepSkip(room, a, "turn", { sourceN: userTurn.n, held: true });
@@ -5939,6 +6169,7 @@ function runMergedDeliveries(room, seat, batch) {
 // also claims its seats, so nothing behind it in those lanes can overtake it —
 // that single rule is what keeps arrival order across both item kinds.
 function drainLanes(room) {
+  if (room.convergenceWorker) return;
   if (!room.pending.length) {
     scheduleCatchUps(room);
     return;
@@ -6348,6 +6579,7 @@ function requireRetrySeats(room, value, envelope) {
 // — and `canRetry` has to say so, or the button offers work the room would
 // refuse. handleRetry re-derives *why* nothing is eligible for its message.
 function retryTargets(room, requested = null) {
+  if (convergenceActive(room) || room.entries.some((e) => e.n === room.state.lastUser?.n && e.meta?.convergence)) return [];
   const lu = room.state.lastUser;
   if (!lu) return [];
   if (pairRetryRoot(room, lu)) {
@@ -6391,6 +6623,7 @@ function asleepRefusal(room, agents, detail) {
 // message and per seat, it survives newer traffic replacing `lastUser`, and it
 // is what prevents re-delivering to a seat that already received this.
 function handleRetryDiscarded(room, sourceN, requested = null) {
+  if (convergenceActive(room)) throw Object.assign(new Error("Finish or stop convergence before retrying queued messages."), { status: 409 });
   const n = Number(sourceN);
   if (!Number.isSafeInteger(n) || n <= 0) throw Object.assign(new Error("n must be a turn number"), { status: 400 });
   refuseOrdinaryPairRecovery(room.entries.find((e) => e.n === n && e.kind === "user"));
@@ -6420,6 +6653,7 @@ function handleRetryDiscarded(room, sourceN, requested = null) {
 }
 
 function handleRetry(room, options = {}) {
+  if (convergenceActive(room) || room.entries.some((e) => e.n === room.state.lastUser?.n && e.meta?.convergence)) throw Object.assign(new Error("Use the convergence panel to resume or extend this discussion."), { status: 409 });
   const lu = room.state.lastUser;
   if (Object.prototype.hasOwnProperty.call(options, "rootN")) {
     if (!Number.isSafeInteger(options.rootN) || options.rootN <= 0) {
@@ -6526,6 +6760,7 @@ function handleRetry(room, options = {}) {
 //   - A stale pin degrades, never escalates: handleStop returns
 //     { stale: true } having touched nothing, and the ask proceeds.
 function handleAsk(room, opts = {}) {
+  if (convergenceActive(room)) throw Object.assign(new Error("Stop the convergence discussion before starting a different task."), { status: 409 });
   // ---- 1. validate everything before mutating anything ----
   // Same discipline as wakeAndDeliver: a refusal must leave the run the user was
   // looking at provably still running.
@@ -6674,6 +6909,7 @@ function handleStop(room, opts = {}) {
   if (!STOP_SCOPES.has(scope)) {
     throw Object.assign(new Error(`unknown stop scope: ${scope}`), { status: 400 });
   }
+  const stopConvergence = () => convergenceStop(room);
   if (scope === "seat") {
     if (agent === null || !seatIds(room).includes(agent)) {
       throw Object.assign(new Error(`unknown agent: ${agent}`), { status: 400 });
@@ -6686,6 +6922,7 @@ function handleStop(room, opts = {}) {
     if (!run || (runId && run.runId !== runId)) {
       return { stopped: false, count: 0, cancelled: 0, stale: true, scope, agent, runId };
     }
+    if (run.convergence) stopConvergence();
     stopRun(room, run);
     return { stopped: true, count: 1, cancelled: 0, stale: false, scope, agent, runId: run.runId };
   }
@@ -6706,6 +6943,7 @@ function handleStop(room, opts = {}) {
     if (!targets.length) {
       return { stopped: false, count: 0, cancelled: 0, stale: !!pins, scope, agent: null };
     }
+    if (room.state.convergence && targets.some((run) => run && run.convergence)) stopConvergence();
     let count = 0;
     for (const run of targets) {
       stopRun(room, run);
@@ -6721,6 +6959,7 @@ function handleStop(room, opts = {}) {
   // rather than raising a flag, so every chain running now abandons itself and
   // no later message can undo that by clearing a shared boolean.
   room.stopEpoch++;
+  stopConvergence();
   for (const a of seatIds(room)) cancelLurkCatchUp(room, a, "cancelled");
   // Silence means the queue goes too. Held deliveries settle so the chain
   // waiting on them closes out instead of hanging on a turn that will never
@@ -6983,6 +7222,7 @@ function handleNewConversation(room) {
     }
   }
   room.generation++;
+  room.convergenceWorker = null;
   // Coordinators from the archived generation may still be unwinding. Their
   // terminal cleanup is fenced by generation; fresh work owns fresh counters.
   room.exchanges = 0;
@@ -7340,7 +7580,7 @@ const server = http.createServer(async (req, res) => {
 
     if (route === "POST /api/message") {
       const body = await readBody(req, MAX_MESSAGE_BODY_BYTES);
-      const { room: name, text, target, images, files } = body;
+      const { room: name, text, target, images, files, discussionMode, convergenceRounds } = body;
       const room = loadRoom(name || "default");
       const raw = String(text || "").trim();
       const relay = {};
@@ -7359,7 +7599,10 @@ const server = http.createServer(async (req, res) => {
       // ordinary turn, the whole cycle for a pair turn. Nothing is ever held as
       // raw text, because text appended later lands after messages the user
       // sent afterwards and takes the retry slot with it.
-      const outcome = handleUserMessage(room, raw, target, images, files, relay) || {}; // replies arrive over SSE
+      if (discussionMode !== undefined && discussionMode !== "parallel" && discussionMode !== "converge") {
+        return json(res, 400, { error: "discussionMode must be parallel or converge" });
+      }
+      const outcome = handleUserMessage(room, raw, target, images, files, relay, discussionMode, convergenceRounds) || {}; // replies arrive over SSE
       if (outcome.pairQueued) return json(res, 200, {
         queued: true, position: room.pending.length,
         target: outcome.target, explicit: !!outcome.explicit,
@@ -7414,9 +7657,39 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ...result, agent: result.agent });
     }
 
+    if (route === "POST /api/convergence") {
+      const body = await readBody(req);
+      const room = loadRoom(body.room || "default");
+      const cv = room.state.convergence;
+      if (!cv) return json(res, 404, { error: "no convergence run" });
+      if (body.runId && body.runId !== cv.runId) return json(res, 409, { error: "This convergence run has been replaced." });
+      const action = String(body.action || "").toLowerCase();
+      if (action === "stop") {
+        convergenceStop(room);
+        return json(res, 200, { ok: true, convergence: roomSummary(room).convergence });
+      }
+      if (!["resume", "extend"].includes(action)) return json(res, 400, { error: "action must be resume, extend, or stop" });
+      if (!["incomplete", "unresolved", "stopped"].includes(cv.phase)) return json(res, 409, { error: "Run is active or already agreed." });
+      const refused = convergenceCanResume(room, cv);
+      if (refused) return json(res, 409, { error: refused });
+      const userTurn = room.entries.find((e) => e.n === cv.rootN && e.kind === "user");
+      if (!userTurn) return json(res, 409, { error: "Convergence task is unavailable." });
+      if (action === "extend") {
+        const extra = convergenceRoundsValue(body.rounds ?? body.convergenceRounds, 1);
+        if (!Number.isSafeInteger(cv.maxRounds + extra) || cv.maxRounds + extra > 99) return json(res, 400, { error: "At most 99 review rounds per run; start a new task for further discussion." });
+        cv.maxRounds += extra;
+        cv.calls.planned += extra * (cv.participants.length + 1);
+      } else if (cv.phase === "unresolved" || convergenceResumeCalls(cv) > cv.calls.planned - cv.calls.used) {
+        return json(res, 409, { error: "Extend the review budget to continue this run." });
+      }
+      runConvergence(room, userTurn);
+      return json(res, 200, { ok: true, convergence: roomSummary(room).convergence });
+    }
+
     if (route === "POST /api/seat/sleep") {
       const body = await readBody(req);
       const room = loadRoom(body.room || "default");
+      if (convergenceActive(room)) return json(res, 409, { error: "Finish or stop convergence before changing participant availability." });
       const agent = String(body.agent || "").toLowerCase();
       if (!seatIds(room).includes(agent)) return json(res, 400, { error: `unknown agent: ${body.agent}` });
       // Idempotent on purpose: a second click, or a second tab, reports the
@@ -7697,6 +7970,12 @@ const server = http.createServer(async (req, res) => {
         return json(res, 409, {
           error: "The pair cycle is still working. Wait for it to finish or stop it before changing settings that restart an agent session.",
         });
+      }
+      if (convergenceActive(room)) {
+        const activeIds = room.state.convergence.participants.map((p) => p.id);
+        const rosterChanged = rosterSpecs && (activeIds.length !== rosterSpecs.length || activeIds.some((id) => !rosterSpecs.some((s) => s.id === id)));
+        const configChanged = activeIds.some((id) => next.agents[id] && convergenceConfigHash({ cfg: next }, id) !== room.state.convergence.participants.find((p) => p.id === id)?.configHash);
+        if (rosterChanged || configChanged || JSON.stringify(next) !== JSON.stringify(room.cfg)) return json(res, 409, { error: "Convergence is active. Stop or finish it before changing its agents or instructions." });
       }
 
       const hadSession = Object.fromEntries(seatIds(room).map((id) =>

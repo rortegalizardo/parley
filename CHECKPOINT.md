@@ -1,5 +1,20 @@
 # Parley fork checkpoint — 2026-10-22
 
+## Current checkpoint — convergence and compact recipients
+
+This section supersedes the historical checkpoints below. Branch: `feat/convergence-handoff`. User approved `@all` convergence by default and explicitly authorized implementation, delegation, and live fork verification.
+
+- Compact **Auto · Agents (N) · @all** composer replaces per-agent chips. Search includes name, provider, and standing role. The room has no fixed roster cap; browser coverage includes nine agents. Selected individuals remain visible, typed mentions route consistently, and single-agent rooms show a normal response.
+- `@all` gathers independent positions behind a barrier, asks an existing participant to draft, and requires every participant to explicitly approve the same full SHA-256/version. Draft revisions invalidate all votes. Nonblocking reservations stay visible. Only the exact agreed text is posted as a handoff, with its approval record. Parallel replies is explicit and retains ordinary automatic-turn controls; convergence shows review rounds and actual/planned calls instead.
+- Durable stage results survive Stop/restart. Resume skips completed positions/drafts/reviews; Extend adds one round and N+1 calls and actually continues. Malformed/silent/failed reviews are incomplete, objections at the limit unresolved. Native-session retries count against N+R*(N+1); no speculative agreement. New tasks, availability changes, ordinary recovery routes, and config changes cannot race an active run. Work retains the existing discussion boundary.
+- Verified: 839 smoke checks, 16 unit checks, all integration suites, 7 consensus-integrity tests, lifecycle cases for N1/N2/N4/N8/N9, stop/resume/extend and an in-flight restart without completed-call replay. Full browser suite: 42 passed; final convergence and policy controls reran (8 passed), then final picker positioning (5 passed). Package startup passed. Provider execution used isolated fake providers, not paid model calls.
+- **Actual fork on 4142** refreshed only after exact process/launcher ownership and empty-idle checks. Observed PID **72134**, protocol **14**, UI version **2a7f893fcdde59cfa285**. Served script/style bytes exactly match the checkout. CUA verified the actual picker, Converge/Parallel behavior, dark rounds input, and correct automatic-turn visibility. Evidence: `docs/convergence-live-4142.png`.
+- **4141 remains untouched**, original PID **29360**. No HTTP requests, signals, config edits, or library writes were made against it. Fork library remains `~/.parley-fork`; original library remains separate. Process IDs are observations, never instructions to signal without freshly checking ownership/activity.
+
+User guide: [docs/CONVERGENCE.md](docs/CONVERGENCE.md). Design contract: [docs/CONVERGENCE-PROPOSAL.md](docs/CONVERGENCE-PROPOSAL.md). Next action: use the refreshed fork on 4142, or launch `parley-mine`; reload older tabs for protocol 14. Review PR: https://github.com/rortegalizardo/parley/pull/5 (open; implementation is already running locally on 4142).
+
+---
+
 ## Current checkpoint — editable rosters and @all
 
 This section supersedes the historical checkpoints below. Active branch: `feat/editable-room-rosters`.

@@ -7,14 +7,16 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fake = path.join(here, "fake-cli.mjs");
+const ownedFixtureRoots = new Set();
 
 // Every test owns a server, home and room tree. Provider commands are configured
 // before sending, and the server cannot inherit a real provider token or PATH.
-export async function isolatedServer({ env: overrides = {} } = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "parley-browser-"));
+export async function isolatedServer({ env: overrides = {}, discussionMode = "parallel", root: suppliedRoot = null, keepRoot = false } = {}) {
+  const root = suppliedRoot || fs.mkdtempSync(path.join(os.tmpdir(), "parley-browser-"));
+  if (!suppliedRoot) ownedFixtureRoots.add(root);
   const home = path.join(root, "home");
   const rooms = path.join(root, "rooms");
-  fs.mkdirSync(home);
+  fs.mkdirSync(home, { recursive: true });
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
     /^(SystemRoot|WINDIR|COMSPEC|PATHEXT|TEMP|TMP|LANG|LC_ALL)$/i.test(key)));
   Object.assign(env, {
@@ -46,7 +48,7 @@ export async function isolatedServer({ env: overrides = {} } = {}) {
       await Promise.race([new Promise((resolve) => proc.once("close", resolve)), new Promise((resolve) => setTimeout(resolve, 2000))]);
     }
     // This exact path was created above; never delete an externally supplied root.
-    try { fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
+    if (!keepRoot && ownedFixtureRoots.has(root)) try { fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); ownedFixtureRoots.delete(root); }
     catch (error) { console.warn(`Test fixture cleanup left ${root}: ${error.code}`); }
   };
   try {
@@ -66,6 +68,9 @@ export async function isolatedServer({ env: overrides = {} } = {}) {
     const protocol = /name="parley-runtime-protocol" content="([^"]+)"/.exec(html)?.[1];
     if (!token || !protocol) throw new Error("Served page omitted runtime handshake metadata");
     api = async (method, route, body) => {
+      // Legacy suites deliberately exercise independent replies. Convergence
+      // suites pass null to verify the production default without an override.
+      if (route === "/api/message" && body && discussionMode && body.discussionMode === undefined) body = { ...body, discussionMode };
       const res = await fetch(url + route, {
         method, signal: AbortSignal.timeout(8000),
         headers: { "Content-Type": "application/json", "X-Parley-Token": token, "X-Parley-Runtime-Protocol": protocol },

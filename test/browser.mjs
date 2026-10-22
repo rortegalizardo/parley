@@ -12,13 +12,15 @@ test("creates a room by clicking its actual submit button", async ({ app, server
 test("creates a room by implicit Enter with multiple visible text fields", async ({ app, server }) => {
   await createRoom(app, server, "keyboard", { enter: true, sameProvider: true });
   expect((await server.room("keyboard")).room.seats).toEqual(["builder", "reviewer"]);
-  await expect(app.locator("#seatChips")).toContainText("@builder");
-  await expect(app.locator("#seatChips")).toContainText("@reviewer");
+  await app.locator("#agentsBtn").click();
+  await expect(app.locator("#agentsOptions")).toContainText("@builder");
+  await expect(app.locator("#agentsOptions")).toContainText("@reviewer");
 });
 
 test("selected recipient gets progressive stream and one final bubble", async ({ app, server }) => {
   await createRoom(app, server, "stream");
-  await app.locator('.chip[data-t="codex"]').click();
+  await app.locator("#agentsBtn").click();
+  await app.locator('[data-agent-target="codex"]').click();
   const text = "STREAM SAY:BROWSER_PROGRESSIVE_RESPONSE";
   await app.locator("#input").fill(text);
   await expect(app.locator("#routeHint")).toContainText(/codex/i);
