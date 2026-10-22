@@ -1,5 +1,19 @@
 # Parley fork checkpoint — 2026-10-22
 
+## Current checkpoint — full interface audit
+
+This section supersedes the checkpoints below. User clarified that polishing only the landing screen is insufficient and explicitly requested a delegated review of every screen.
+
+- Branch: `fix/full-interface-polish`. The audit and evidence are in `docs/UI-REVIEW.md` and `docs/ui-review/` (15 surface groups). CSS changes cover Settings, room forms, the conversation, menus, header/sidebar, composer and theme-aware status banners. Settings closes mobile navigation before opening; option values and provider behavior are unchanged.
+- Verification: all **36 browser tests** and packed runtime startup passed. Final conversation/banner checks reran successfully after the last contrast correction. Screenshots cover desktop/mobile and light/dark; tests use temporary libraries and fake providers. Native OS picker and notification prompts were not invoked.
+- The actual fork at **http://127.0.0.1:4142** was idle with an empty default room and was refreshed to serve the corrected UI. Current observed PID **79098**. Served UI version **c26c0efb58c00b61f693** matches the checked-out assets exactly. Actual Settings was visually verified in a new in-app browser tab. Older tabs need a reload.
+- **Port 4141 was never signaled, restarted, or reconfigured.** Original PID **29360** remained listening. Do not touch its room library or running agents.
+- Launcher remains `parley-mine`; fork data remains `~/.parley-fork`; original data stays separate. Never use process IDs here without freshly verifying ownership and activity.
+
+Next action: finish shipping the full-interface correction, then use the refreshed fork on 4142. No user-model calls were made.
+
+---
+
 ## Current checkpoint — visible setup and short launcher
 
 This section supersedes the historical checkpoint below.

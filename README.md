@@ -4,6 +4,8 @@
 
 This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley), based on `parley-room@1.2.1`. It adds **1–8 agents per room**, individual model/effort/instructions, and a refreshed interface. See the [fork guide](docs/FORK.md) for the four-agent setup and [current-feature guide](docs/CURRENT-FEATURES.md) for what upstream 1.2.1 already offered.
 
+See the [full interface review](docs/UI-REVIEW.md) for the conversation, Settings, menus, and mobile layouts—not just the welcome screen.
+
 ![Parley Mine with a visible four-agent room setup](docs/fork-home.png)
 
 ![Create a room with four individually named and configured agents](docs/fork-room-setup.png)
