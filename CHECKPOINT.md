@@ -2,7 +2,7 @@
 
 ## Current checkpoint — convergence and compact recipients
 
-This section supersedes the historical checkpoints below. Branch: `feat/convergence-handoff`. User approved `@all` convergence by default and explicitly authorized implementation, delegation, and live fork verification.
+This section supersedes the historical checkpoints below. Branch: `main`. User approved `@all` convergence by default and explicitly authorized implementation, delegation, and live fork verification. PR #5 merged on 2026-10-22 as `40ca75d2ca1c34afa44309c48c43e35306269e65`.
 
 - Compact **Auto · Agents (N) · @all** composer replaces per-agent chips. Search includes name, provider, and standing role. The room has no fixed roster cap; browser coverage includes nine agents. Selected individuals remain visible, typed mentions route consistently, and single-agent rooms show a normal response.
 - `@all` gathers independent positions behind a barrier, asks an existing participant to draft, and requires every participant to explicitly approve the same full SHA-256/version. Draft revisions invalidate all votes. Nonblocking reservations stay visible. Only the exact agreed text is posted as a handoff, with its approval record. Parallel replies is explicit and retains ordinary automatic-turn controls; convergence shows review rounds and actual/planned calls instead.
@@ -11,7 +11,11 @@ This section supersedes the historical checkpoints below. Branch: `feat/converge
 - **Actual fork on 4142** refreshed only after exact process/launcher ownership and empty-idle checks. Observed PID **72134**, protocol **14**, UI version **2a7f893fcdde59cfa285**. Served script/style bytes exactly match the checkout. CUA verified the actual picker, Converge/Parallel behavior, dark rounds input, and correct automatic-turn visibility. Evidence: `docs/convergence-live-4142.png`.
 - **4141 remains untouched**, original PID **29360**. No HTTP requests, signals, config edits, or library writes were made against it. Fork library remains `~/.parley-fork`; original library remains separate. Process IDs are observations, never instructions to signal without freshly checking ownership/activity.
 
-User guide: [docs/CONVERGENCE.md](docs/CONVERGENCE.md). Design contract: [docs/CONVERGENCE-PROPOSAL.md](docs/CONVERGENCE-PROPOSAL.md). Next action: use the refreshed fork on 4142, or launch `parley-mine`; reload older tabs for protocol 14. Review PR: https://github.com/rortegalizardo/parley/pull/5 (open; implementation is already running locally on 4142).
+User guide: [docs/CONVERGENCE.md](docs/CONVERGENCE.md). Design contract: [docs/CONVERGENCE-PROPOSAL.md](docs/CONVERGENCE-PROPOSAL.md). Delivery: https://github.com/rortegalizardo/parley/pull/5 (merged; implementation is already running locally on 4142). The merge and subsequent proposal documentation required no server actions on either port.
+
+Latest user direction: delegate future coding to **gpt-6.1-sol** and have the primary agent validate. Merge completed authorized changes into the fork; do not leave new PRs for the user to merge. Never touch the active session on 4141.
+
+New requirement explored: let an existing Codex or Claude harness message a Parley conversation directly. [docs/HARNESS-BRIDGE-PROPOSAL.md](docs/HARNESS-BRIDGE-PROPOSAL.md) recommends a shared local MCP bridge with named targeting, correlated replies and `@all` convergence. Status: design only; no bridge/client configuration installed. Next action: implement the bridge when the user requests implementation.
 
 ---
 
