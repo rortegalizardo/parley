@@ -13,7 +13,9 @@ This section supersedes the historical checkpoint below.
 - Screenshots: `docs/fork-home.png`, `docs/fork-room-setup.png`. Feature guide: `docs/CURRENT-FEATURES.md`. Setup guide: `docs/FORK.md`.
 - No npm publication or real model invocation was performed. The user's original session needs no migration or restart.
 
-Next action: finish committing and shipping this follow-up to the user's fork, preserving the independent running servers.
+Follow-up delivery: https://github.com/rortegalizardo/parley/pull/2. The implementation is committed and pushed; this PR records the correction to the initial delivery.
+
+Next action: use the running fork at 4142, or run `parley-mine` to reopen it. Keep the original server on 4141 untouched.
 
 ---
 
