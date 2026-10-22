@@ -11,7 +11,7 @@ This section supersedes the historical checkpoints below. Branch: `feat/converge
 - **Actual fork on 4142** refreshed only after exact process/launcher ownership and empty-idle checks. Observed PID **72134**, protocol **14**, UI version **2a7f893fcdde59cfa285**. Served script/style bytes exactly match the checkout. CUA verified the actual picker, Converge/Parallel behavior, dark rounds input, and correct automatic-turn visibility. Evidence: `docs/convergence-live-4142.png`.
 - **4141 remains untouched**, original PID **29360**. No HTTP requests, signals, config edits, or library writes were made against it. Fork library remains `~/.parley-fork`; original library remains separate. Process IDs are observations, never instructions to signal without freshly checking ownership/activity.
 
-User guide: [docs/CONVERGENCE.md](docs/CONVERGENCE.md). Design contract: [docs/CONVERGENCE-PROPOSAL.md](docs/CONVERGENCE-PROPOSAL.md). Next action: use the refreshed fork on 4142, or launch `parley-mine`; reload older tabs for protocol 14. PR delivery is recorded below after creation.
+User guide: [docs/CONVERGENCE.md](docs/CONVERGENCE.md). Design contract: [docs/CONVERGENCE-PROPOSAL.md](docs/CONVERGENCE-PROPOSAL.md). Next action: use the refreshed fork on 4142, or launch `parley-mine`; reload older tabs for protocol 14. Review PR: https://github.com/rortegalizardo/parley/pull/5 (open; implementation is already running locally on 4142).
 
 ---
 
