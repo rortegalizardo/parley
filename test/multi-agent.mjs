@@ -114,7 +114,14 @@ try {
     ["reserved", [{ id: "all", provider: "claude" }, "codex"]],
     ["bad-provider", [{ id: "x", provider: "unavailable-provider" }]],
   ]) {
-    await post("/api/rooms", { name: `multi-${name}`, seats: invalidSeats }, 400);
+    const expected = name === "nine" ? 200 : 400;
+    const created = await post("/api/rooms", { name: `multi-${name}`, seats: invalidSeats }, expected);
+    if (name === "nine") {
+      const nine = await room("multi-nine");
+      assert.equal(nine.room.seats.length, 9, "rooms support more than eight seats");
+      assert.deepEqual(nine.room.seats, invalidSeats.map(({ id }) => id), "all nine seats are persisted");
+      assert.equal(created.rooms.find((entry) => entry.name === "multi-nine")?.name, "multi-nine");
+    }
   }
   await post("/api/rooms", { name: "single", seats: [{ id: "solo", provider: "claude" }] });
   await server.configure("single");

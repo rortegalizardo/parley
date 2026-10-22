@@ -17,7 +17,7 @@ The original `~/.parley` library and its server on port 4141 remain separate. Ex
 
 ## Build your four-agent table
 
-Choose **New room** in the header or **Build your room** on the first screen. **Use the four-agent setup** opens an editable roster with Fable, Astra, an adversary, and a privacy reviewer, including suggested standing instructions. A room accepts **1–8 agents**, with any mixture of the installed providers. Each agent needs a unique name; that name becomes its `@mention` and stays fixed for the room's life.
+Choose **New room** in the header or **Build your room** on the first screen. **Use the four-agent setup** opens an optional template with Fable, Astra, an adversary, and a privacy reviewer, including suggested standing instructions. A room needs at least one agent and has **no fixed roster limit**, with any mixture of the installed providers. Each agent needs a unique name; that name becomes its `@mention`.
 
 | Name | Provider | Model | Suggested standing instructions |
 | --- | --- | --- | --- |
@@ -38,7 +38,13 @@ Room Settings has a separate card for every agent, including model, effort where
 
 The instructions describe a role, not an access boundary. Everyone participates in a shared transcript and workspace; a privacy-focused agent does not receive a private channel or stronger sandbox automatically.
 
-Agent names, providers, and roster membership are fixed after creation. Create another room for a different roster. Model, effort, and instructions remain editable.
+## Add or remove agents in an existing room
+
+Open **Settings → Agents in this room**. Choose **Add agent**, then set its name, provider, model, supported effort and instructions. Use **Remove** on a card to remove it. Changes are staged until **Save**; **Cancel** leaves the room unchanged. Keep at least one agent.
+
+Saving preserves the conversation and the native sessions of retained agents. Removed agents' past messages remain in the transcript, and their names stay reserved to protect that history. New agents start fresh and receive room history when addressed. The composer updates its individual agent buttons and always offers **@all** for the current roster. Names and providers of existing agents stay fixed so historical messages remain attributable.
+
+Removal waits until active exchanges and the affected agent's queued work or Pair role have finished. A roster changed in another tab is rejected with a request to reopen Settings, rather than silently overwriting it.
 
 ## Pair mode
 
@@ -46,6 +52,6 @@ Pair mode still has two roles: one worker and one reviewer. `/pair start @astra 
 
 ## Verification
 
-`npm ci` installs development-only test tools. `npm run test:all` runs unit, integration, fake-provider, browser, and package checks. The new roster coverage is also available as `npm run test:multi-agent`; browser cases live in `test/browser-roster.mjs`. Tests use isolated room libraries and fake provider CLIs.
+`npm ci` installs development-only test tools. `npm run test:all` runs unit, integration, fake-provider, browser, and package checks. Focused roster checks are available as `npm run test:multi-agent` and `npm run test:roster-edit`; browser cases live in `test/browser-roster.mjs`. Tests use isolated room libraries and fake provider CLIs.
 
 For the original release's capabilities, read [What Parley could do in 1.2.1](CURRENT-FEATURES.md).

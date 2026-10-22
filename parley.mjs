@@ -338,7 +338,6 @@ const PROVIDERS = {
   },
 };
 const DEFAULT_SEATS = ["claude", "codex"];
-const MAX_SEATS = 8;
 const MAX_AGENT_INSTRUCTIONS = 8000;
 const CLAUDE_PERMISSION_MODES = new Set(["auto", "plan", "acceptEdits", "bypassPermissions"]);
 // Gemini's own vocabulary, minus the interactive-only cases. "auto" is Parley's
@@ -470,7 +469,7 @@ function pruneSeats(cfg) {
   // Resolvability, not "the key happens to be a provider name": a seat is real
   // if its config names a provider, or if its own id is one — which is what
   // every room written before the two were separate looks like.
-  const keys = Object.keys(cfg.agents || {}).filter((k) => validSeatId(k) && providerIdFor(cfg.agents[k], k)).slice(0, MAX_SEATS);
+  const keys = Object.keys(cfg.agents || {}).filter((k) => validSeatId(k) && providerIdFor(cfg.agents[k], k));
   cfg.agents = keys.length > 0
     ? Object.fromEntries(keys.map((k) => [k, cfg.agents[k]]))
     : defaultConfig().agents;
@@ -488,6 +487,14 @@ function seatSpecs(seats) {
   return (seats || DEFAULT_SEATS).map((s) => typeof s === "string"
     ? { id: s, provider: s }
     : { ...s, id: String(s.id), provider: String(s.provider || s.id) });
+}
+
+// Stable optimistic-concurrency token for roster edits.  It intentionally
+// covers membership and provider identity only: changing model/effort or
+// standing instructions is an ordinary settings edit and must not make a
+// roster form stale.
+function rosterVersion(room) {
+  return seatIds(room).map((id) => `${id}:${providerIdOf(room, id)}`).join("|");
 }
 
 // Model and effort are intentionally open text: CLIs can add values without a
@@ -537,6 +544,10 @@ function defaultConfig(seats = DEFAULT_SEATS) {
 function defaultState(agentsCfg) {
   const seats = Object.keys(agentsCfg || {});
   return {
+    // Seat ids are transcript authors. Retiring an id prevents a later seat
+    // from inheriting its receipt high-water mark and accidentally skipping
+    // history or accepting stale scheduled work under the same identity.
+    retiredAgents: {},
     lastAddressed: null,
     nextTurn: 1,
     lastUser: null, // { n, text, target, done: {agent:true}, pair:boolean }
@@ -775,7 +786,7 @@ function stampPromptDelivery(room, agent, res, epoch, delivery) {
 // Claude bypass arguments are rejected here as well as in the config endpoint
 // because room.json is intentionally hand-editable. Provider/user settings and
 // custom command wrappers remain part of the trusted local CLI boundary.
-function extraArgsViolation(room, agent, value) {
+function extraArgsViolation(room, agent, value, providerOverride = null) {
   if (!Array.isArray(value)) return "Extra CLI args must be a list";
   const args = value.map((v) => String(v));
   for (const raw of args) {
@@ -786,7 +797,8 @@ function extraArgsViolation(room, agent, value) {
     }
   }
   // Anything else is the provider's own vocabulary, so the provider owns it.
-  const issue = (room ? capsOf(room, agent) : (PROVIDERS[agent] || {}).capabilities || {}).extraArgsIssue;
+  const issue = (providerOverride ? (PROVIDERS[providerOverride] || {}).capabilities || {}
+    : (room ? capsOf(room, agent) : (PROVIDERS[agent] || {}).capabilities || {})).extraArgsIssue;
   return typeof issue === "function" ? (issue(args) || null) : null;
 }
 
@@ -1786,7 +1798,6 @@ function loadRoom(name, seatChoice, create = false) {
     // is why this migration adds one field and renames nothing.
     const seats = Object.entries(raw.agents || {})
       .filter(([k, v]) => validSeatId(k) && providerIdFor(v, k))
-      .slice(0, MAX_SEATS)
       .map(([k, v]) => ({ id: k, provider: providerIdFor(v, k) }));
     if (seats.some(({ id, provider }) => (raw.agents[id] || {}).provider !== provider)) cfgMigrated = true;
     cfg = pruneSeats(deepMerge(defaultConfig(seats.length ? seats : DEFAULT_SEATS), raw));
@@ -1832,11 +1843,22 @@ function loadRoom(name, seatChoice, create = false) {
   }
   else { state = defaultState(cfg.agents); writeJSON(stateFile, state); }
 
+  // A prior roster may have left agent runtime records in state.json.  Keep
+  // transcript/events as the historical source of truth, but never let a
+  // removed seat reappear as routable runtime state after restart.
+  const liveSeatSet = new Set(Object.keys(cfg.agents));
+  state.agents = Object.fromEntries(Object.entries(state.agents || {})
+    .filter(([id]) => liveSeatSet.has(id)));
+  for (const id of liveSeatSet) {
+    if (!state.agents[id]) state.agents[id] = defaultState({ [id]: cfg.agents[id] }).agents[id];
+  }
+
   // A native Claude session was created under one effective permission mode.
   // Persist that provenance so an offline room.json edit (or an upgrade from a
   // state file that predates this field) cannot resume a more privileged
   // session under a newly conservative configuration.
-  let stateMigrated = false;
+  let stateMigrated = !!rawState &&
+    JSON.stringify(Object.keys(rawState.agents || {}).sort()) !== JSON.stringify([...liveSeatSet].sort());
   const configuredRoomNote = normalizeRoomNote(cfg.roomNote);
   const trackedRoomNote = !!rawState && Object.prototype.hasOwnProperty.call(rawState, "roomNoteValue");
   if (!trackedRoomNote) {
@@ -2533,6 +2555,7 @@ function roomSummary(room) {
     git: gitIdentity(workDir(room)),
     lastAddressed: room.state.lastAddressed,
     seats,
+    rosterVersion: rosterVersion(room),
     providers: providerCatalog(),
     // Per seat, because a seat's id no longer has to be its provider's. Purely
     // additive: an older page still keys off `providers` and, for a room whose
@@ -7148,7 +7171,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 403, { error: "forbidden — the Parley API needs the session token from its own page" });
     }
 
-    if (route === "GET /api/rooms") return json(res, 200, { rooms: roomsWithModes(), providers: providerCatalog(), maxSeats: MAX_SEATS });
+    if (route === "GET /api/rooms") return json(res, 200, { rooms: roomsWithModes(), providers: providerCatalog(), maxSeats: null });
 
     if (route === "POST /api/rooms") {
       const { name, seats, projectDir } = await readBody(req);
@@ -7180,17 +7203,17 @@ const server = http.createServer(async (req, res) => {
             return json(res, 400, { error: `Seat names: lowercase letters, numbers, dashes (max 20), and not ${[...RESERVED_SEAT_IDS].join(", ")}.` });
           }
           if (typeof raw === "object" && raw) {
-            spec.model = agentText(raw.model, "Model", 200);
-            spec.effort = agentText(raw.effort, "Effort", 40);
-            spec.instructions = agentText(raw.instructions, "Agent instructions", MAX_AGENT_INSTRUCTIONS);
+            if (Object.hasOwn(raw, "model")) spec.model = agentText(raw.model, "Model", 200);
+            if (Object.hasOwn(raw, "effort")) spec.effort = agentText(raw.effort, "Effort", 40);
+            if (Object.hasOwn(raw, "instructions")) spec.instructions = agentText(raw.instructions, "Agent instructions", MAX_AGENT_INSTRUCTIONS);
             if (spec.effort && !PROVIDERS[spec.provider].fields.includes("effort")) {
               return json(res, 400, { error: `${PROVIDERS[spec.provider].label} does not expose an effort setting.` });
             }
           }
           picked.push(spec);
         }
-        if (!picked.length || picked.length > MAX_SEATS || new Set(picked.map((s) => s.id)).size !== picked.length) {
-          return json(res, 400, { error: `Pick 1–${MAX_SEATS} agents with unique names.` });
+        if (!picked.length || new Set(picked.map((s) => s.id)).size !== picked.length) {
+          return json(res, 400, { error: "Pick at least one agent with unique names." });
         }
       }
       const created = loadRoom(roomName, picked, true);
@@ -7460,8 +7483,61 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (route === "POST /api/config") {
-      const { room: name, config } = await readBody(req);
+      const body = await readBody(req);
+      const { room: name, config, seats: requestedSeats, expectedRosterVersion } = body;
       const room = loadRoom(name || "default");
+      const rosterInput = requestedSeats !== undefined
+        ? requestedSeats
+        : (config && Object.hasOwn(config, "seats") ? config.seats : undefined);
+      const rosterEdit = rosterInput !== undefined;
+      let rosterSpecs = null;
+      if (rosterEdit) {
+        if (expectedRosterVersion !== undefined && String(expectedRosterVersion) !== rosterVersion(room)) {
+          return json(res, 409, { error: "The room roster changed. Reload Settings and try again.", rosterVersion: rosterVersion(room) });
+        }
+        if (!Array.isArray(rosterInput) || !rosterInput.length) {
+          return json(res, 400, { error: "The room must keep at least one agent." });
+        }
+        rosterSpecs = [];
+        const seen = new Set();
+        for (const raw of rosterInput) {
+          const spec = typeof raw === "string"
+            ? { id: String(raw).trim().toLowerCase(), provider: String(raw).trim().toLowerCase() }
+            : { id: String((raw && raw.id) || "").trim().toLowerCase(), provider: String((raw && raw.provider) || (raw && raw.id) || "").trim().toLowerCase() };
+          if (!validSeatId(spec.id)) return json(res, 400, { error: `Invalid agent name: ${spec.id || "(none)"}.` });
+          if (seen.has(spec.id)) return json(res, 400, { error: `Agent names must be unique: ${spec.id}.` });
+          seen.add(spec.id);
+          if (!Object.hasOwn(room.cfg.agents, spec.id) && room.state.retiredAgents?.[spec.id]) {
+            return json(res, 409, { error: `@${spec.id} was removed from this room and cannot be reused. Choose a new agent name.` });
+          }
+          if (!Object.hasOwn(PROVIDERS, spec.provider)) return json(res, 400, { error: `Unknown provider: ${spec.provider || "(none)"}` });
+          if (Object.hasOwn(room.cfg.agents, spec.id) && providerIdOf(room, spec.id) !== spec.provider) {
+            return json(res, 409, { error: `The provider for @${spec.id} is fixed once the agent exists.` });
+          }
+          if (typeof raw === "object" && raw) {
+            if (Object.hasOwn(raw, "model")) spec.model = agentText(raw.model, "Model", 200);
+            if (Object.hasOwn(raw, "effort")) spec.effort = agentText(raw.effort, "Effort", 40);
+            if (Object.hasOwn(raw, "instructions")) spec.instructions = agentText(raw.instructions, "Agent instructions", MAX_AGENT_INSTRUCTIONS);
+            if (spec.effort && !PROVIDERS[spec.provider].fields.includes("effort")) {
+              return json(res, 400, { error: `${PROVIDERS[spec.provider].label} does not expose an effort setting.` });
+            }
+          }
+          rosterSpecs.push(spec);
+        }
+        const desired = new Set(rosterSpecs.map((s) => s.id));
+        const removed = seatIds(room).filter((id) => !desired.has(id));
+        if (removed.length && room.exchanges > 0) {
+          return json(res, 409, { error: "An agent cannot be removed while an exchange is still in flight. Wait for it to finish or stop it, then try again." });
+        }
+        const blocked = removed.filter((id) =>
+          seatOccupied(room, id) || room.runs.has(id) ||
+          (room.pairActive && [room.pairActive.worker, room.pairActive.reviewer].includes(id)));
+        if (blocked.length) {
+          return json(res, 409, { error: `${blocked.join(" and ")} ${blocked.length === 1 ? "is" : "are"} still working. Wait for the work to finish before removing ${blocked.length === 1 ? "that agent" : "those agents"}.` });
+        }
+        // `seats` is transport metadata, never a persisted room setting.
+        if (config && Object.hasOwn(config, "seats")) delete config.seats;
+      }
       const prevMode = room.cfg.mode || "talk";
       const prevProjectDir = room.cfg.projectDir || null;
       const prevRoomNote = normalizeRoomNote(room.cfg.roomNote);
@@ -7482,22 +7558,27 @@ const server = http.createServer(async (req, res) => {
       // Validate into a candidate first — a rejected patch must leave the
       // live room untouched.
       const configPatch = { ...(config || {}) };
+      delete configPatch.seats;
+      delete configPatch.rosterVersion;
+      delete configPatch.retiredSeats;
       if (Object.hasOwn(configPatch, "agents")) {
         if (!configPatch.agents || typeof configPatch.agents !== "object" || Array.isArray(configPatch.agents)) {
           return json(res, 400, { error: "agents must be an object of existing agent settings." });
         }
         for (const [id, patch] of Object.entries(configPatch.agents)) {
-          if (!Object.hasOwn(room.cfg.agents, id) || !patch || typeof patch !== "object" || Array.isArray(patch)) {
+          const prospective = rosterSpecs && rosterSpecs.find((spec) => spec.id === id);
+          if ((!Object.hasOwn(room.cfg.agents, id) && !prospective) || !patch || typeof patch !== "object" || Array.isArray(patch)) {
             return json(res, 400, { error: "Agent names and room membership are fixed. Create a new room to change the roster." });
           }
-          if (Object.hasOwn(patch, "provider") && patch.provider !== providerIdOf(room, id)) {
-            return json(res, 400, { error: `The provider for @${id} is fixed. Create a new room to change it.` });
+          const expectedProvider = prospective?.provider || providerIdOf(room, id);
+          if (Object.hasOwn(patch, "provider") && patch.provider !== expectedProvider) {
+            return json(res, 400, { error: `The provider for @${id} is fixed once the agent exists.` });
           }
           for (const [field, max] of [["model", 200], ["effort", 40], ["instructions", MAX_AGENT_INSTRUCTIONS]]) {
             if (Object.hasOwn(patch, field)) patch[field] = agentText(patch[field], field, max);
           }
-          if (patch.effort && !providerOf(room, id).fields.includes("effort")) {
-            return json(res, 400, { error: `${providerOf(room, id).label} does not expose an effort setting.` });
+          if (patch.effort && !PROVIDERS[expectedProvider].fields.includes("effort")) {
+            return json(res, 400, { error: `${PROVIDERS[expectedProvider].label} does not expose an effort setting.` });
           }
         }
       }
@@ -7515,8 +7596,21 @@ const server = http.createServer(async (req, res) => {
       if (Object.prototype.hasOwnProperty.call(configPatch, "hopBudget")) {
         configPatch.hopBudget = requireRoomHopBudget(configPatch.hopBudget);
       }
-      const next = pruneSeats(deepMerge(defaultConfig(seatIds(room).map((id) => ({ id, provider: providerIdOf(room, id) }))), deepMerge(room.cfg, configPatch)));
-      if (next.defaultAgent !== "both" && !Object.hasOwn(next.agents, next.defaultAgent)) next.defaultAgent = seatIds(room)[0];
+      let next = pruneSeats(deepMerge(defaultConfig((rosterSpecs || seatIds(room).map((id) => ({ id, provider: providerIdOf(room, id) })))), deepMerge(room.cfg, configPatch)));
+      if (rosterSpecs) {
+        // Deep merge preserves old nested agent keys by design. Replace that
+        // map only after all validation, retaining existing settings for seats
+        // that stayed and creating fresh defaults for new seats.
+        next.agents = Object.fromEntries(rosterSpecs.map((spec) => {
+          const prior = next.agents[spec.id] || defaultConfig([spec]).agents[spec.id];
+          const agent = { ...prior, provider: spec.provider };
+          if (Object.hasOwn(spec, "model")) agent.model = spec.model;
+          if (Object.hasOwn(spec, "effort") && PROVIDERS[spec.provider].fields.includes("effort")) agent.effort = spec.effort;
+          if (Object.hasOwn(spec, "instructions")) agent.instructions = spec.instructions;
+          return [spec.id, agent];
+        }));
+      }
+      if (next.defaultAgent !== "both" && !Object.hasOwn(next.agents, next.defaultAgent)) next.defaultAgent = Object.keys(next.agents)[0];
       next.timeoutMs = Math.max(10000, Number(next.timeoutMs) || 300000);
       next.mode = next.mode === "work" ? "work" : "talk";
       next.hopBudget = normalizeHopBudget(next.hopBudget, -1);
@@ -7525,7 +7619,7 @@ const server = http.createServer(async (req, res) => {
       for (const [id, agentCfg] of Object.entries(next.agents)) {
         const pid = providerIdFor(agentCfg, id);
         const caps = pid ? (PROVIDERS[pid].capabilities || {}) : {};
-        const issue = extraArgsViolation(room, id, agentCfg.extraArgs || []);
+        const issue = extraArgsViolation(room, id, agentCfg.extraArgs || [], pid);
         if (issue) return json(res, 400, { error: `Unsafe Extra CLI args for ${id}: ${issue}` });
         // Which fields are enumerated, and what a bad value says, belongs to
         // the provider — the API refuses it outright, while a hand-edited
@@ -7539,7 +7633,7 @@ const server = http.createServer(async (req, res) => {
       const nextScopes = Object.fromEntries(scopeSeats
         .filter((id) => next.agents[id])
         .map((id) => [id, capsOf(room, id).sessionScope.of(next.agents[id], next.mode)]));
-      const scopeChangedSeats = scopeSeats.filter((id) => prevScopes[id] !== nextScopes[id]);
+      const scopeChangedSeats = scopeSeats.filter((id) => next.agents[id] && prevScopes[id] !== nextScopes[id]);
       const claudePermissionChanged = scopeChangedSeats.length > 0;
       if (next.projectDir) {
         const pd = path.resolve(String(next.projectDir).trim());
@@ -7556,13 +7650,13 @@ const server = http.createServer(async (req, res) => {
       // session. The same rule covers gaps inside an active pair cycle.
       const modeResetSeats = new Set();
       if (prevMode !== next.mode) {
-        for (const id of modeSensitiveSeats) modeResetSeats.add(id);
-        for (const id of scopeChangedSeats) modeResetSeats.add(id);
+        for (const id of modeSensitiveSeats) if (next.agents[id]) modeResetSeats.add(id);
+        for (const id of scopeChangedSeats) if (next.agents[id]) modeResetSeats.add(id);
       }
-      const sandboxChangedSeats = new Set(sandboxSeats.filter((id) =>
+      const sandboxChangedSeats = new Set(sandboxSeats.filter((id) => next.agents[id] &&
         prevSandboxes[id] !== (next.agents[id].sandbox || "read-only")));
       const resetRequiredSeats = new Set();
-      const identityChangedSeats = seatIds(room).filter((id) =>
+      const identityChangedSeats = seatIds(room).filter((id) => next.agents[id] &&
         (room.cfg.agents[id].instructions || null) !== (next.agents[id].instructions || null));
       for (const id of identityChangedSeats) resetRequiredSeats.add(id);
       if (prevProjectDir !== next.projectDir) {
@@ -7607,7 +7701,49 @@ const server = http.createServer(async (req, res) => {
 
       const hadSession = Object.fromEntries(seatIds(room).map((id) =>
         [id, !!room.state.agents[id].sessionRef]));
+      const priorSeatIds = seatIds(room);
+      const priorProviders = Object.fromEntries(priorSeatIds.map((id) => [id, providerIdOf(room, id)]));
+      if (rosterSpecs) {
+        const live = new Set(rosterSpecs.map((s) => s.id));
+        // Cancel while the old cfg/state pair is still internally consistent:
+        // cancelLurkCatchUp broadcasts a room summary, which must not observe
+        // the new roster before its new runtime records have been initialized.
+        for (const id of priorSeatIds) {
+          if (!live.has(id)) {
+            cancelLurkCatchUp(room, id, "removed");
+            room.state.retiredAgents ||= {};
+            room.state.retiredAgents[id] = { provider: priorProviders[id], removedAt: new Date().toISOString() };
+          }
+        }
+      }
       room.cfg = next;
+      if (rosterSpecs) {
+        const live = new Set(rosterSpecs.map((s) => s.id));
+        // Retained seats keep their native session, cursor, and all durable
+        // delivery facts. New seats begin at cursor zero and can catch up from
+        // the existing transcript when first addressed.
+        room.state.agents = Object.fromEntries(Object.entries(room.state.agents || {})
+          .filter(([id]) => live.has(id)));
+        for (const spec of rosterSpecs) {
+          if (!room.state.agents[spec.id]) {
+            room.state.agents[spec.id] = defaultState({ [spec.id]: room.cfg.agents[spec.id] }).agents[spec.id];
+          }
+        }
+        if (room.state.lastAddressed && room.state.lastAddressed !== "both" && !live.has(room.state.lastAddressed)) {
+          room.state.lastAddressed = [...live][0] || null;
+        }
+        if (room.cfg.defaultAgent !== "both" && !live.has(room.cfg.defaultAgent)) {
+          room.cfg.defaultAgent = [...live][0] || null;
+        }
+        if (room.state.pair &&
+            (!live.has(room.state.pair.worker) || !live.has(room.state.pair.reviewer))) {
+          // A dormant pair snapshot can survive a restart even though its
+          // in-memory pairActive cycle is gone. Do not let a later dispatch
+          // resurrect roles that were removed from the roster.
+          room.state.pair = null;
+        }
+        saveState(room);
+      }
       for (const id of seatIds(room)) {
         const runningCatchUp = room.runs.get(id) && room.runs.get(id).phase === "catching-up";
         if (prevLurk[id] && !room.cfg.agents[id].lurk && !runningCatchUp) {

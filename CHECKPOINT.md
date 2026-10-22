@@ -1,6 +1,20 @@
 # Parley fork checkpoint — 2026-10-22
 
-## Current checkpoint — full interface audit
+## Current checkpoint — editable rosters and @all
+
+This section supersedes the historical checkpoints below. Active branch: `feat/editable-room-rosters`.
+
+- Settings now stages additions and removals until Save; Cancel discards the draft. Each new agent has its own name, provider, model, supported effort and standing instructions. Typed fields survive adding/removing other cards.
+- Rooms have no fixed roster-size cap. Four agents is only an optional template. The composer always displays `@all`, one button per current agent, and roster-aware hints and mention choices. `@both` stays a compatibility alias.
+- Retained agents keep their sessions/cursors and all messages remain in the transcript. New agents start fresh. Removed names stay reserved in `state.retiredAgents` so historical receipts cannot attach to a different agent. Removal waits for active exchanges, queued deliveries and active Pair roles; pending catch-up is cancelled with durable provenance. Stale roster drafts return 409.
+- Focused backend coverage includes real fake-provider conversation state, fresh-process reload, retained model/effort/instructions, rejected-edit atomicity, busy/queued removal and pending-catch-up cancellation. Full browser suite passed 37 checks; the strengthened Settings case reran after the final default-field correction. Smoke: 839 passed, unit: 16 passed, and package startup passed. All integration suites passed: retry, provenance, scheduler sequences, automatic turns, Claude sessions, multi-agent, roster edits and launcher isolation. The legacy nine-seat rejection assertion was replaced with successful creation and persistence coverage.
+- **Port 4141 remains protected and untouched**, original PID 29360. The empty, idle fork was refreshed on port 4142 only: current PID 72262, UI version `0420c2ef13ee5bd074c9`, data `~/.parley-fork`, launcher `parley-mine`. Served script/style bytes match the checkout exactly. The actual browser tab now visibly shows `@all` and Settings Add/Remove controls. No room configuration or messages were changed. Process IDs are observations, never instructions to signal a PID without freshly verifying ownership and activity.
+
+Next action: use the updated fork on 4142; reload any older tab to receive its new assets. Settings → Agents in this room manages membership. Port 4141 requires no action. Delivery is recorded in the pull request for `feat/editable-room-rosters`.
+
+---
+
+## Historical checkpoint — full interface audit
 
 This section supersedes the checkpoints below. User clarified that polishing only the landing screen is insufficient and explicitly requested a delegated review of every screen.
 
@@ -14,7 +28,7 @@ Delivery record: https://github.com/rortegalizardo/parley/pull/3. Next action: u
 
 ---
 
-## Current checkpoint — visible setup and short launcher
+## Historical checkpoint — visible setup and short launcher
 
 This section supersedes the historical checkpoint below.
 

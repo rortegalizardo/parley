@@ -2,9 +2,11 @@
 import path from "node:path";
 import os from "node:os";
 const captureRoot = os.tmpdir();
+const fakeCli = path.join(process.cwd(), "test", "fake-cli.mjs");
 import { test, expect, send, idle } from "./browser-fixture.mjs";
 
 test("settings fields and composer fit without horizontal scrolling in dark mode", async ({ app }) => {
+  await expect(app.locator('.chip[data-t="both"]')).toHaveText("@all");
   await app.emulateMedia({ colorScheme: "dark" });
   for (const width of [640, 390]) {
     await app.setViewportSize({ width, height: 900 });
@@ -98,7 +100,7 @@ test("creates four individually configured agents and keeps the roster readable"
   await server.configure("panel");
   await send(app, "@privacy SAY:Reviewed");
   await idle(server, "panel");
-  await expect(app.locator(".msg.agent.privacy .bubble")).toContainText("Reviewed");
+  await expect(app.locator(".msg.agent.privacy .bubble").filter({ hasText: "Reviewed" })).toHaveCount(1);
   await send(app, "@builder Prepare a release checklist. SHOWCASE");
   await idle(server, "panel");
   await expect(app.locator(".msg.agent.builder .bubble")).toContainText("Prepared the release checklist");
@@ -140,6 +142,59 @@ test("persists per-agent instructions in settings and wraps menus on a narrow vi
   await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-roster-narrow.png" });
 });
 
+test("settings edits the live roster without clearing history and cancel discards the draft", async ({ app, server }) => {
+  await server.configure("default");
+  await send(app, "Seed the transcript. SHOWCASE");
+  await idle(server, "default");
+  const beforeMessages = await app.locator("#chat .msg").count();
+  await app.locator("#settingsBtn").click();
+  await app.locator("#settingsAddSeat").click();
+  await expect(app.locator("#seatCards .mgroup")).toHaveCount(3);
+  await app.locator(".settings-agent-provider").last().selectOption("claude");
+  await expect(app.locator('#seatCards .mgroup').last().locator('select[data-f="permissionMode"]')).toHaveValue("auto");
+  await app.emulateMedia({ colorScheme: "dark" });
+  await app.screenshot({ path: path.join(captureRoot, "parley-settings-new-agent-dark.png"), fullPage: true });
+  await app.emulateMedia({ colorScheme: "light" });
+  await app.screenshot({ path: path.join(captureRoot, "parley-settings-new-agent-light.png"), fullPage: true });
+  const added = app.locator(".settings-agent-name");
+  await added.fill("privacy");
+  await app.locator('#seatCards textarea[data-f="instructions"]').last().fill("Keep secrets private.");
+  await app.locator("#settingsAddSeat").click();
+  await expect(app.locator('#seatCards textarea[data-f="instructions"]').nth(2)).toHaveValue("Keep secrets private.");
+  await app.locator("#seatCards .settings-remove-agent").first().click();
+  await expect(app.locator("#seatCards .mgroup")).toHaveCount(3);
+  await app.locator("#mCancel").click();
+  await app.locator("#settingsBtn").click();
+  await expect(app.locator("#seatCards .mgroup")).toHaveCount(2);
+  await app.locator("#settingsAddSeat").click();
+  await app.locator(".settings-agent-provider").last().selectOption("claude");
+  await app.locator(".settings-agent-name").fill("privacy");
+  await app.locator('#seatCards input[data-f="command"]').last().fill(fakeCli);
+  await app.locator('#seatCards textarea[data-f="instructions"]').last().fill("Protect personal data and secrets.");
+  await app.locator("#seatCards .settings-remove-agent").first().click();
+  await expect(app.locator("#seatCards .mgroup")).toHaveCount(2);
+  const saved = app.waitForResponse((res) => new URL(res.url()).pathname === "/api/config" && res.request().method() === "POST");
+  await app.locator("#mSave").click();
+  expect((await saved).status()).toBe(200);
+  const after = await server.room("default");
+  expect(await app.locator("#chat .msg").count()).toBe(beforeMessages);
+  expect(after.room.seats).toEqual(["codex", "privacy"]);
+  expect(after.room.cfg.agents.privacy.instructions).toMatch(/personal data/);
+  await expect(app.locator("#pills .pill")).toHaveCount(after.room.seats.length);
+  await expect(app.locator('.chip[data-t="both"]')).toHaveText("@all");
+  const privateReply = await send(app, "@privacy SAY:Reviewed");
+  await idle(server, "default");
+  expect(privateReply.target).toBe("privacy");
+  const allReply = await send(app, "@all SAY:Reviewed");
+  await idle(server, "default");
+  expect(allReply.target).toBe("both");
+  await expect(app.locator(".msg.agent.privacy .bubble").filter({ hasText: "Reviewed" })).toHaveCount(1);
+  await app.setViewportSize({ width: 390, height: 844 });
+  await expect(app.locator("#toast")).not.toHaveClass(/show/);
+  if (await app.locator("#navToggle").getAttribute("aria-expanded") === "true") await app.locator("#navToggle").click();
+  await app.screenshot({ path: path.join(captureRoot, "parley-composer-all-mobile.png"), fullPage: true });
+});
+
 test("mobile room dialog supports one agent, keyboard dismissal and reopening", async ({ app, server }) => {
   await app.setViewportSize({ width: 390, height: 844 });
   await app.locator("#navToggle").click();
@@ -158,6 +213,7 @@ test("mobile room dialog supports one agent, keyboard dismissal and reopening", 
   await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-dialog-mobile.png" });
   await app.locator("#newRoomCreate").click();
   await expect(app.locator("#roomTitle")).toHaveText("solo-room");
+  await expect(app.locator('.chip[data-t="both"]')).toHaveText("@all");
   expect((await server.room("solo-room")).room.seats).toEqual(["privacy"]);
   await app.locator("#navToggle").click();
   await app.locator("#addRoomBtn").click();
@@ -192,18 +248,20 @@ test("switching rooms refreshes agents after an unchanged first pair", async ({ 
   await expect(app.locator('#seatChips [data-t="privacy"]')).toHaveCount(0);
 });
 
-test("an eight-agent roster stays valid after removing and replacing a seat", async ({ app, server }) => {
+test("an expanded roster stays valid after removing and replacing a seat", async ({ app, server }) => {
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("full-table");
   for (let i = 0; i < 6; i++) await app.locator("#addSeatBtn").click();
   await expect(app.locator(".roster-row")).toHaveCount(8);
-  await expect(app.locator("#addSeatBtn")).toBeDisabled();
+  await app.locator("#addSeatBtn").click();
+  await app.locator("#addSeatBtn").click();
+  await expect(app.locator(".roster-row")).toHaveCount(10);
   await app.locator(".roster-remove").nth(2).click();
   await app.locator("#addSeatBtn").click();
   const names = await app.locator(".roster-name").evaluateAll((inputs) => inputs.map((input) => input.value));
-  expect(new Set(names).size).toBe(8);
+  expect(new Set(names).size).toBe(10);
   await app.locator("#newRoomCreate").click();
   await expect(app.locator("#roomTitle")).toHaveText("full-table");
   expect((await server.room("full-table")).room.seats).toEqual(names);
-  await expect(app.locator("#pills .pill")).toHaveCount(8);
+  await expect(app.locator("#pills .pill")).toHaveCount(10);
 });

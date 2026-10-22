@@ -1940,12 +1940,16 @@ function renderSeatsUI(s) {
     `<button class="moon" data-seat="${esc(a)}">😴</button></div>`).join("");
   $("seatChips").innerHTML = seats.map((a) => `<button class="chip" data-t="${esc(a)}">@${esc(a)}</button>`).join("");
   const allChip = document.querySelector('.chip[data-t="both"]');
-  if (allChip) allChip.textContent = seats.length > 2 ? "@all" : "@both";
+  if (allChip) {
+    allChip.textContent = "@all";
+    allChip.title = `Send to all ${seats.length} agent${seats.length === 1 ? "" : "s"}`;
+    allChip.setAttribute("aria-label", `Send to all ${seats.length} agent${seats.length === 1 ? "" : "s"}`);
+  }
   document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.t === state.chip));
   $("tagline").textContent = `Your shared workspace · ${seats.length} agent${seats.length === 1 ? "" : "s"}`;
   input.placeholder = `Message the table…  type @ to choose an agent`;
   $("starters").innerHTML =
-    `<button class="starter" data-fill="@${seats.length > 1 ? (seats.length > 2 ? "all" : "both") : esc(seats[0])} Introduce yourselves in one sentence each."><b class="c3">@${seats.length > 1 ? (seats.length > 2 ? "all" : "both") : seats[0]}</b> ${seats.length > 1 ? "Introduce yourselves in one sentence each." : "Start with a focused question."}</button>` +
+    `<button class="starter" data-fill="@${seats.length > 1 ? "all" : esc(seats[0])} Introduce yourselves in one sentence each."><b class="c3">@${seats.length > 1 ? "all" : seats[0]}</b> ${seats.length > 1 ? "Introduce yourselves in one sentence each." : "Start with a focused question."}</button>` +
     seats.map((a, i) => `<button class="starter" data-fill="@${esc(a)} "><b class="${i ? "c2" : "c1"}">@${esc(a)}</b> ask ${esc(seatLabel(a))} something…</button>`).join("") +
     (seats.length > 1 ? `<button class="starter" data-fill="/pair start @${esc(seats[0])} "><b class="c1">/pair start</b> one builds, the other reviews…</button>` : "");
 }
@@ -2252,9 +2256,9 @@ function renderAskMenu(btn) {
   const busy = state.summary.busy || [];
   const aimed = askSeatsFor(askDraft.target);
   const contested = state.summary.workingPair || aimed.some((a) => busy.includes(a));
-  const chips = [...seats, ...(seats.length > 1 ? ["both"] : [])].map((t) =>
+  const chips = [...seats, ...(seats.length ? ["both"] : [])].map((t) =>
     `<button data-ask-seat="${esc(t)}" class="${t === askDraft.target ? "active" : ""}">` +
-    `${esc(t === "both" ? (seats.length > 2 ? "All" : "Both") : seatLabel(t))}</button>`).join("");
+    `${esc(t === "both" ? "All agents" : seatLabel(t))}</button>`).join("");
   const draft = ($("askText") || {}).value || "";
   const actions = !contested
     ? `<button role="menuitem" data-ask-mode="now">↪ Ask now<span class="sm-sub">the seat is free</span></button>`
@@ -2819,7 +2823,7 @@ function soloTargetProblem(raw, hasAttachments = false) {
     return "Solo cannot start or run a pair cycle — choose Room or a continuation budget.";
   }
   const explicit = guessTextTarget(text);
-  if (explicit === "both") return "Solo needs one target — tag only one seat, not @both or both names.";
+  if (explicit === "both") return "Solo needs one target — tag only one seat, not @all or multiple agents.";
   if (state.summary.pair && !explicit && !text.startsWith("/")) {
     return "Solo needs one explicit @seat while pair mode is on.";
   }
@@ -2871,8 +2875,8 @@ function renderHopControl() {
   if (both) {
     both.disabled = choice === "solo";
     both.title = choice === "solo"
-      ? "Solo requires one seat. The other seat will not react, but can read the message in the transcript later."
-      : "Send to both seats";
+      ? "Solo requires one selected agent. Other agents will not react, but can read the message in the transcript later."
+      : `Send to all ${state.summary && state.summary.seats ? state.summary.seats.length : 2} agents`;
   }
 
   // Solo cannot inherit @both. Fall back to Auto—not a particular seat—so
@@ -2952,10 +2956,13 @@ function updateRouteHint() {
     || (state.chip !== "auto" ? state.chip : (state.summary.lastAddressed || state.summary.cfg.defaultAgent));
   const selectedBudget = state.hopChoice === "default" ? roomHopBudget() : normalizedHopBudget(state.hopChoice);
   const liveListeners = state.summary.seats.filter((a) => a !== t && t !== "both" && !seatAsleep(a) && state.summary.cfg.agents[a].lurk);
+  const otherCount = t === "both" ? 0 : state.summary.seats.filter((a) => a !== t).length;
   const behavior = state.hopChoice === "solo" ? "Solo"
     : t === "both" ? ((state.summary.cfg.mode || "talk") === "work" ? "discussion (no edits)" : "discussion")
       : liveListeners.length ? `${liveListeners.map(seatLabel).join(" + ")} may listen and respond`
-        : effectiveHopLimit(selectedBudget) === 0 ? "no extra peer response" : "peer responds if called";
+        : otherCount === 0 ? "no other agents"
+          : effectiveHopLimit(selectedBudget) === 0 ? "no extra peer response"
+            : `${otherCount} other agent${otherCount === 1 ? "" : "s"} may respond if called`;
   const disc = ` · ${behavior}` + (state.hopChoice === "solo" ? "" : ` · ${selectedBudget === -1 ? hopBudgetDetail(selectedBudget) : `${effectiveHopLimit(selectedBudget)} ${accountingLabel().toLowerCase()}`}`);
   const targets = t === "both" ? state.summary.seats : [t];
   $("routeHint").textContent = "→ " + (t === "both" ? state.summary.seats.map(seatLabel).join(" + ") : seatLabel(t)) +
@@ -3283,8 +3290,8 @@ let newRoster = [];
 function renderRoster() {
   const list = $("rosterList"); if (!list) return;
   const ids = Object.keys(state.providers || {});
-  $("rosterCount").textContent = `Your agents · ${newRoster.length} of 8`;
-  $("addSeatBtn").disabled = newRoster.length >= 8;
+  $("rosterCount").textContent = `Your agents · ${newRoster.length}`;
+  $("addSeatBtn").disabled = false;
   $("newRoomReview").hidden = newRoster.length < 2;
   if (newRoster.length < 2) $("newRoomReviewChk").checked = false;
   list.innerHTML = newRoster.map((agent, i) => {
@@ -3318,7 +3325,6 @@ function renderRoster() {
   });
 }
 $("addSeatBtn").onclick = () => {
-  if (newRoster.length >= 8) return toast("Rooms support up to 8 agents.", true);
   const providers = Object.keys(state.providers || {});
   let next = newRoster.length + 1;
   while (newRoster.some((agent) => agent.id === `agent${next}`)) next++;
@@ -3516,7 +3522,7 @@ async function handleSlash(text) {
   if (cmd === "/note") {
     try {
       await api("/api/config", { room: state.room, config: { roomNote: rest || null } });
-      toast(rest ? "📌 Room note set — both agents will see it on every turn." : "📌 Room note cleared.");
+      toast(rest ? `📌 Room note set — all ${state.summary?.seats?.length || 0} agents will see it on every turn.` : "📌 Room note cleared.");
     } catch (e) { toast(e.message, true); }
     return true;
   }
@@ -3557,11 +3563,11 @@ async function handleSlash(text) {
   }
   if (cmd === "/help") {
     localSystemNote(
-      "<b>Routing:</b> only @claude / @codex / @both tags route from text · tagging both names reaches both · untagged goes to whoever you last addressed<br>" +
-      "<b>Agent calls:</b> @name always hands off · a plain direct call ('Codex, …') hands off when that agent is lurking or your message addressed both<br>" +
+      "<b>Routing:</b> individual @agent tags route to one seat; @all reaches every agent · untagged goes to whoever you last addressed<br>" +
+      "<b>Agent calls:</b> @name always hands off · a plain direct call ('Agent, …') hands off when that agent is lurking or your message addressed all agents<br>" +
       "<b>/pair start @agent [task]</b> — pair mode: that agent works, the other reviews every message you send<br>" +
       "<b>/pair end</b> — leave pair mode (also the End button in the banner)<br>" +
-      "<b>/note [text]</b> — standing room note both agents see every turn (empty clears)<br>" +
+      "<b>/note [text]</b> — standing room note every agent sees every turn (empty clears)<br>" +
       "<b>/sleep @agent [reason]</b> — stop launching that seat (rate limited?); <b>/wake @agent</b> brings it back<br>" +
       "<b>/summarize [@agent]</b> — ask for a recap of the room<br>" +
       "<b>👂</b> on a pill = lurk · <b>😴</b> = sleep/wake that seat · <b>💬/🔨</b> = talk/work mode · dots under messages = who heard what");
@@ -3772,7 +3778,7 @@ function mentionOptions() {
   const seats = state.summary ? state.summary.seats : [];
   return [
     ...seats.map((a) => ({ tag: "@" + a, color: seatColor(a) })),
-    { tag: "@both", color: "var(--user)" },
+    { tag: "@all", color: "var(--user)" },
   ];
 }
 let mItems = [], mSel = 0;
@@ -3953,7 +3959,7 @@ $("openRoomDir").onclick = () => api("/api/open", { room: state.room, what: "roo
 // fields it understands, so a new provider's settings appear automatically.
 function seatFieldHTML(a, field, p) {
   const d = (n, f) => `data-seat="${esc(a)}" data-f="${f}"`;
-  if (field === "command") return `<div class="fld"><label>Command</label><input ${d(a, "command")} spellcheck="false"></div>`;
+  if (field === "command") return `<div class="fld"><label>Command</label><input ${d(a, "command")} spellcheck="false" placeholder="${esc((p.defaults && p.defaults.command) || p.command || "provider")} (default)"></div>`;
   // Model and effort are comboboxes, not fixed lists: the suggestions are a
   // convenience, but anything you type is passed straight to the CLI — so
   // models and effort levels released after this build still work.
@@ -4091,10 +4097,35 @@ document.addEventListener("click", (e) => {
     document.querySelectorAll(".freecombo.open").forEach((combo) => setFreeComboOpen(combo, false));
   }
 });
+let settingsRosterDraft = null;
+let settingsRosterVersion = null;
+function rosterDraftFromSummary(s) {
+  return s.seats.map((id) => {
+    const p = (s.seatInfo && s.seatInfo[id]) || s.providers[id] || {};
+    const cfg = (s.cfg.agents && s.cfg.agents[id]) || {};
+    return { id, provider: p.provider || id, model: cfg.model || "", effort: cfg.effort || "", instructions: cfg.instructions || "", existing: true };
+  });
+}
+function captureSettingsDraft() {
+  if (!settingsRosterDraft) return;
+  settingsRosterDraft.forEach((seat, index) => {
+    document.querySelectorAll(`#seatCards .mgroup[data-roster-index="${index}"] [data-f]`).forEach((el) => {
+      seat[el.dataset.f] = el.value;
+    });
+  });
+}
+function refreshSettingsDefaultOptions() {
+  if (!settingsRosterDraft || !$("s_default")) return;
+  const current = $("s_default").value;
+  $("s_default").innerHTML = settingsRosterDraft.map((seat) => `<option>${esc(seat.id)}</option>`).join("");
+  $("s_default").value = settingsRosterDraft.some((seat) => seat.id === current) ? current : (settingsRosterDraft[0] && settingsRosterDraft[0].id);
+}
 function renderSeatCards(s) {
-  $("seatCards").innerHTML = s.seats.map((a) => {
-    const p = (s.seatInfo && s.seatInfo[a]) || s.providers[a] || {};
-    const ag = s.agents[a];
+  const roster = settingsRosterDraft || rosterDraftFromSummary(s);
+  $("seatCards").innerHTML = roster.map((seat, index) => {
+    const a = seat.id;
+    const p = (s.seatInfo && s.seatInfo[a]) || s.providers[seat.provider] || state.providers[seat.provider] || {};
+    const ag = s.agents[a] || { linked: false };
     let f = (p.fields || []).map((field) => seatFieldHTML(a, field, p)).join("");
     f += seatInstructionsHTML(a);
     f += `<div class="fld"><label>Lurk assertiveness (when 👂 is on)</label><select data-seat="${esc(a)}" data-f="lurkStyle">` +
@@ -4107,14 +4138,39 @@ function renderSeatCards(s) {
     const sess = ag.linked
       ? `Session linked (${ag.sessionRef}…), seen through turn ${ag.cursor}.`
       : "No session yet — next message starts one.";
-    return `<div class="mgroup"><h3><span class="agc" style="color:${seatColor(a)}">${esc(seatLabel(a))}</span> · ${esc(p.sub || "")}</h3>${f}<div class="sess">${sess}</div></div>`;
+    const identity = seat.existing
+      ? `<strong class="agc" style="color:${seatColor(a)}">@${esc(a)}</strong>`
+      : `<input class="settings-agent-name" data-roster-index="${index}" value="${esc(a)}" maxlength="20" aria-label="Agent ${index + 1} name" spellcheck="false">`;
+    const provider = p.label || seat.provider || "provider";
+    const providerSelect = seat.existing ? `<small>${esc(provider)} · existing seat</small>` : `<select class="settings-agent-provider" data-roster-index="${index}" aria-label="Provider for agent ${index + 1}">${Object.entries(state.providers || {}).map(([id, meta]) => `<option value="${esc(id)}" ${id === seat.provider ? "selected" : ""}>${esc(meta.label || id)}</option>`).join("")}</select>`;
+    return `<div class="mgroup" data-roster-index="${index}"><div class="settings-agent-bar"><div class="agent-identity">${identity}${providerSelect}</div><button type="button" class="btn settings-remove-agent" data-remove-roster="${index}" aria-label="Remove agent ${index + 1}">Remove</button></div>${f}<div class="sess">${sess}</div></div>`;
   }).join("");
-  for (const a of s.seats) {
-    for (const el of document.querySelectorAll(`#seatCards [data-seat="${a}"][data-f]`)) {
-      const v = s.cfg.agents[a][el.dataset.f];
-      el.value = el.dataset.f === "extraArgs" ? (v || []).join(" ") : (v ?? "");
+  for (const [rosterIndex, seat] of roster.entries()) {
+    const a = seat.id;
+    for (const el of document.querySelectorAll(`#seatCards .mgroup[data-roster-index="${rosterIndex}"] [data-f]`)) {
+      const v = s.cfg.agents[a] && s.cfg.agents[a][el.dataset.f];
+      const draftValue = seat[el.dataset.f];
+      const hasDraft = Object.hasOwn(seat, el.dataset.f);
+      el.value = el.dataset.f === "extraArgs" ? (hasDraft ? draftValue : (v || []).join(" ")) : (hasDraft ? draftValue : (v ?? ""));
+      if (!hasDraft && !v && el.tagName === "SELECT" && el.options.length) el.value = el.options[0].value;
     }
   }
+  $("seatCards").querySelectorAll("[data-remove-roster]").forEach((button) => {
+    button.onclick = () => {
+      const i = Number(button.dataset.removeRoster);
+      if (settingsRosterDraft.length <= 1) return toast("A room needs at least one agent.", true);
+      captureSettingsDraft();
+      settingsRosterDraft.splice(i, 1);
+      refreshSettingsDefaultOptions();
+      renderSeatCards(s);
+    };
+  });
+  $("seatCards").querySelectorAll(".settings-agent-name").forEach((input) => {
+    input.oninput = () => { settingsRosterDraft[Number(input.dataset.rosterIndex)].id = input.value.toLowerCase().replace(/[^a-z0-9-]/g, ""); refreshSettingsDefaultOptions(); };
+  });
+  $("seatCards").querySelectorAll(".settings-agent-provider").forEach((select) => {
+    select.onchange = () => { captureSettingsDraft(); settingsRosterDraft[Number(select.dataset.rosterIndex)].provider = select.value; renderSeatCards(s); };
+  });
 }
 // The folder dialog is not modal to this page, so Settings can be closed,
 // saved, or pointed at a different room while it is still open. Every one of
@@ -4125,6 +4181,8 @@ function retireSettingsPick() { settingsPick++; }
 function closeSettings() {
   retireSettingsPick();
   $("overlay").classList.remove("open");
+  settingsRosterDraft = null;
+  settingsRosterVersion = null;
   // Closing a dialog used to leave focus on nothing at all.
   if (settingsOpener && document.contains(settingsOpener)) settingsOpener.focus();
   settingsOpener = null;
@@ -4137,14 +4195,16 @@ function openSettings() {
   setNavOpen(false);
   settingsOpener = document.activeElement;
   retireSettingsPick();
+  settingsRosterDraft = rosterDraftFromSummary(s);
+  settingsRosterVersion = s.rosterVersion;
   $("roomPath").textContent = s.dir;
   $("mDelete").hidden = s.name === "default"; // the fallback room can't be removed
   renderSeatCards(s);
   $("s_notify").checked = notifyEnabled();
   $("s_projdir").value = s.cfg.projectDir || "";
   $("s_roomnote").value = s.cfg.roomNote || "";
-  $("s_default").innerHTML = s.seats.map((x) => `<option>${esc(x)}</option>`).join("");
-  $("s_default").value = s.cfg.defaultAgent || s.seats[0];
+  $("s_default").innerHTML = settingsRosterDraft.map((x) => `<option>${esc(x.id)}</option>`).join("");
+  $("s_default").value = s.cfg.defaultAgent || settingsRosterDraft[0].id;
   $("s_timeout").value = Math.round((s.cfg.timeoutMs || 300000) / 1000);
   $("s_hopbudget").value = String(normalizedHopBudget(s.cfg.hopBudget, -1));
   const previousAccounting = s.cfg.accounting !== "automatic";
@@ -4158,6 +4218,17 @@ function openSettings() {
   $("s_pairrounds").value = s.cfg.pairRounds || 0;
   $("overlay").classList.add("open");
 }
+$("settingsAddSeat").onclick = () => {
+  if (!settingsRosterDraft) return;
+  captureSettingsDraft();
+  const providers = Object.keys(state.providers || {});
+  let n = settingsRosterDraft.length + 1;
+  let id = `agent${n}`;
+  while (settingsRosterDraft.some((seat) => seat.id === id)) id = `agent${++n}`;
+  settingsRosterDraft.push({ id, provider: providers[settingsRosterDraft.length % Math.max(1, providers.length)] || "claude", model: "", effort: "", instructions: "", existing: false });
+  renderSeatCards(state.summary);
+  refreshSettingsDefaultOptions();
+};
 $("settingsBtn").onclick = openSettings;
 $("settingsBtn2").onclick = openSettings;
 $("mCancel").onclick = () => closeSettings();
@@ -4165,15 +4236,24 @@ $("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) c
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
 $("mSave").onclick = async () => {
   const s = state.summary; if (!s) return;
+  const roster = settingsRosterDraft || rosterDraftFromSummary(s);
+  const rosterNames = roster.map((seat) => seat.id.trim().toLowerCase());
+  if (roster.some((seat) => seat.id !== seat.id.trim().toLowerCase() || seatNameIssue(seat.id))) {
+    const bad = roster.find((seat) => seat.id !== seat.id.trim().toLowerCase() || seatNameIssue(seat.id));
+    toast(seatNameIssue(bad.id) || `"${bad.id}" is not a valid agent name.`, true);
+    return;
+  }
+  if (new Set(rosterNames).size !== rosterNames.length) { toast("Each agent needs a unique @mention.", true); return; }
   const roomHopBudget = Number($("s_hopbudget").value);
   if (!Number.isSafeInteger(roomHopBudget) || roomHopBudget < -1) {
     toast("Hop budget must be -1 (until settled) or a non-negative whole number.", true);
     return;
   }
   const agents = {};
-  for (const a of s.seats) {
+  for (const [rosterIndex, seat] of roster.entries()) {
+    const a = seat.id;
     agents[a] = {};
-    for (const el of document.querySelectorAll(`#seatCards [data-seat="${a}"][data-f]`)) {
+    for (const el of document.querySelectorAll(`#seatCards .mgroup[data-roster-index="${rosterIndex}"] [data-f]`)) {
       const f = el.dataset.f;
       let v = el.value;
       if (f === "extraArgs") v = v.trim() ? v.trim().split(/\s+/) : [];
@@ -4197,7 +4277,7 @@ $("mSave").onclick = async () => {
       `⚠ Give ${who} Full access in this room?\n\n` +
       `${who} will bypass its ordinary permission prompts and checks. It can modify protected paths such as .git; it can also run commands, use inherited credentials and network access, and change files outside:\n${scope}\n\n` +
       `Explicit ask/deny rules, managed policy, OS permissions, and the CLI's own hard safety limits may still restrict actions.\n\n` +
-      `Parley requests separate read-only invocations for protected @both discussions, pair reviews, and lurk turns. They discard the seat's ordinary native session; the next ordinary turn is re-briefed from room history. Ordinary handoffs and pair-worker turns still receive Full access. Trusted external CLI settings or wrappers remain outside this boundary.\n\n` +
+      `Parley requests separate read-only invocations for protected @all discussions, pair reviews, and lurk turns. They discard the seat's ordinary native session; the next ordinary turn is re-briefed from room history. Ordinary handoffs and pair-worker turns still receive Full access. Trusted external CLI settings or wrappers remain outside this boundary.\n\n` +
       `${who} will start a fresh session. Running an agent with full access directly on a trusted host grants host-level access; an isolated container or VM is the recommended place for it.`
     );
     if (!accepted) return;
@@ -4206,7 +4286,7 @@ $("mSave").onclick = async () => {
   // dialog that resolves while the save is in flight would otherwise fill the
   // field with a folder this request did not carry.
   const config = {
-    defaultAgent: $("s_default").value,
+    defaultAgent: roster.some((seat) => seat.id === $("s_default").value) ? $("s_default").value : roster[0].id,
     timeoutMs: Math.max(10, Number($("s_timeout").value) || 300) * 1000,
     hopBudget: roomHopBudget,
     accounting: $("s_accounting").value,
@@ -4227,7 +4307,11 @@ $("mSave").onclick = async () => {
   }
   retireSettingsPick();
   try {
-    const saved = await api("/api/config", { room: state.room, config });
+    const seats = roster.map((seat) => {
+      const values = agents[seat.id] || {};
+      return { id: seat.id, provider: seat.provider, model: values.model || null, effort: values.effort || null, instructions: values.instructions || null };
+    });
+    const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config });
     closeSettings();
     // The panel above already shows the new permission, but a CLI process that
     // has launched cannot be changed. Say what the user is actually watching —
@@ -4240,7 +4324,7 @@ $("mSave").onclick = async () => {
   } catch (e) { toast(e.message, true); }
 };
 async function newConversation() {
-  if (!confirm("Archive this conversation and reset both agents' sessions?")) return;
+  if (!confirm(`Archive this conversation and reset ${state.summary?.seats?.length || 0} agent sessions?`)) return;
   try { await api("/api/new", { room: state.room }); closeSettings(); }
   catch (e) { toast(e.message, true); }
 }
