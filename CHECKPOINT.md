@@ -14,7 +14,7 @@ The original server was not modified or stopped during this work. All test serve
 - Baseline: upstream `v1.2.1`, commit `c4cd237b7fe58c7df1f2692b6a62971be29e904b`
 - Branch: `feat/agent-roster-and-ui`
 - Implementation commit: `0240cfaa17f1aaddd61cd73ad9a096def75eebb2` (pushed)
-- Draft PR in the user's fork: https://github.com/rortegalizardo/parley/pull/1
+- PR in the user's fork: https://github.com/rortegalizardo/parley/pull/1
 - Nothing was merged or published to npm. Package version is `1.3.0-personal.0`, with `private: true` and upstream MIT attribution retained.
 
 ## Implemented
@@ -43,15 +43,14 @@ Passed on macOS / Node v26.11.1, using fake provider CLIs and isolated libraries
 - Package startup/runtime verification. Log: `/private/tmp/parley-package-final.log`.
 - Syntax and `git diff --check`.
 
-The previous full smoke run completed **838 passed, 1 failed**. The sole failure was an old test expecting standing prompt version 4; the application correctly uses version 5. That assertion was corrected and committed. A final full smoke rerun is still running at checkpoint:
+The final full smoke rerun completed **839 passed, 0 failed**. It confirms the corrected version-5 expectation as well as all existing workflow regressions.
 
-- Shell session: `29541` (started by the `roster_tests` agent).
 - Full output: `/private/tmp/parley-smoke-verified.log`.
-- Latest inspected output passed causal/retry checks; no final result yet.
-- The agent was instructed to stop monitoring and leave this isolated test process to finish. Do not start another full run just to recover its result; read the log first.
+- Completed shell session: `29541` (started by the `roster_tests` agent).
+- GitHub reported no CI check runs for this fork's PR when inspected; validation above was run locally.
 
-## Next action after resuming
+## Completion and next action
 
-Read the final smoke log and confirm the exit result. If all 839 checks pass, update the draft PR's validation paragraph (currently says final smoke rerun is pending), inspect available CI status, and mark the PR ready if appropriate. If a real failure remains, repair it within the current scope and rerun only justified checks. The implementation is already committed and pushed; this checkpoint is a separate documentation commit.
+Implementation and local validation are complete. The PR's validation paragraph is being updated with the final passing totals and the PR marked ready for review. Next action: review the PR in the user's fork. No implementation work or local test failures remain.
 
 Do not merge or publish merely to complete the checkpoint. Keep the active user session on port 4141 untouched throughout.
