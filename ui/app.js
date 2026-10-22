@@ -507,6 +507,9 @@ window.addEventListener("focus", () => { document.title = "Parley"; refreshGitId
 const chatWrap = $("chatWrap"), chat = $("chat");
 function nearBottom() { return chatWrap.scrollHeight - chatWrap.scrollTop - chatWrap.clientHeight < 120; }
 function scrollBottom(force) {
+  // An empty room is an onboarding screen, not a transcript. Scrolling it to
+  // the bottom hides the room builder on short windows.
+  if (!state.entries.length) { chatWrap.scrollTop = 0; $("jump").style.display = "none"; return; }
   if (force || nearBottom()) { chatWrap.scrollTop = chatWrap.scrollHeight; $("jump").style.display = "none"; }
   else $("jump").style.display = "block";
 }
@@ -1372,7 +1375,7 @@ function jumpToEntry(n) {
   void el.offsetWidth; // restart the highlight when the same entry is re-targeted
   el.classList.add("jump-flash");
   setTimeout(() => el.classList.remove("jump-flash"), 1800);
-  setTimeout(() => { $("jump").style.display = nearBottom() ? "none" : "block"; }, 400);
+  setTimeout(() => { $("jump").style.display = !state.entries.length || nearBottom() ? "none" : "block"; }, 400);
 }
 document.addEventListener("click", (e) => {
   const target = e.target.closest("[data-jump-n]");
@@ -1466,7 +1469,7 @@ function renderAll({ stickToBottom = true, preserveTransient = true, anchor = fa
   for (const el of frag.children) el.classList.add("norise");
   chat.appendChild(frag);
   $("empty").style.display = state.entries.length ? "none" : "";
-  if (stickToBottom) scrollBottom(true);
+  if (!state.entries.length || stickToBottom) scrollBottom(true);
   else {
     if (!applyAnchor(keep)) chatWrap.scrollTop = oldTop;
     $("jump").style.display = nearBottom() ? "none" : "block";
@@ -3809,15 +3812,35 @@ function mentionKeydown(e) {
 }
 
 // ------------------------------------------------------------ rooms sidebar
-$("addRoomBtn").onclick = () => {
-  clearNewRoomProject(); // a fresh form never inherits the last one's folder
+function applyRoomTemplate(kind) {
   const providers = Object.keys(state.providers || {});
-  newRoster = [{ id: "claude", provider: providers.includes("claude") ? "claude" : providers[0] || "claude" }, { id: "codex", provider: providers.includes("codex") ? "codex" : providers[1] || providers[0] || "codex" }];
+  const claude = providers.includes("claude") ? "claude" : providers[0] || "claude";
+  const codex = providers.includes("codex") ? "codex" : providers[1] || providers[0] || "codex";
+  newRoster = kind === "team" ? [
+    { id: "fable", provider: claude, model: "fable", instructions: "Drive the discussion with Astra. Build on useful ideas, state assumptions, and check conclusions against evidence." },
+    { id: "astra", provider: codex, model: "gpt-6-astra", effort: "high", instructions: "Drive the work with Fable. Check feasibility, propose concrete implementation steps, and verify conclusions." },
+    { id: "adversary", provider: claude, instructions: "Take the perspective of a skeptical customer. Challenge assumptions, find counterexamples and failure modes, and accept conclusions when evidence resolves your objections." },
+    { id: "privacy", provider: codex, instructions: "Review data collection, retention, access, and disclosure. Flag exposure of secrets or personal data and propose ways to achieve the goal with less sensitive information." },
+  ] : [{ id: "claude", provider: claude }, { id: "codex", provider: codex }];
+  $("twoAgentTemplate").setAttribute("aria-pressed", String(kind !== "team"));
+  $("fourAgentTemplate").setAttribute("aria-pressed", String(kind === "team"));
   renderRoster();
+}
+function openNewRoom(kind = "pair") {
+  clearNewRoomProject(); // a fresh form never inherits the last one's folder
+  $("newRoomInput").value = "";
+  $("newRoomReviewChk").checked = false;
+  applyRoomTemplate(kind);
   setNavOpen(false);
   $("newRoomDialog").showModal();
   $("newRoomInput").focus();
-};
+}
+$("addRoomBtn").onclick = () => openNewRoom();
+$("newRoomHeaderBtn").onclick = () => openNewRoom();
+$("buildRoomBtn").onclick = () => openNewRoom();
+$("fourAgentBtn").onclick = () => openNewRoom("team");
+$("twoAgentTemplate").onclick = () => applyRoomTemplate("pair");
+$("fourAgentTemplate").onclick = () => applyRoomTemplate("team");
 function closeNewRoom() {
   newRoomPick++;
   $("newRoomDialog").close();

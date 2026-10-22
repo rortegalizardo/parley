@@ -15,9 +15,10 @@
   <aside id="sidebar">
     <div class="logo">
       <svg width="30" height="30" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#555c6b" stroke-width="2"/><circle cx="16" cy="7" r="4" fill="#7aa2f7"/><circle cx="8" cy="22" r="4" fill="#e8845c"/><circle cx="24" cy="22" r="4" fill="#2fd6a8"/></svg>
-      <div><b>Parley</b><span id="tagline">you · claude · codex</span></div>
+      <div><b>Parley <small class="fork-badge">YOURS</small></b><span id="tagline">Your agent workspace</span></div>
     </div>
-    <div class="side-label">Rooms <button id="addRoomBtn" title="New room">+</button></div>
+    <button id="addRoomBtn" class="new-room-action" title="New room"><span aria-hidden="true">＋</span> New room</button>
+    <div class="side-label">Your rooms</div>
 
     <nav id="roomList"></nav>
     <div class="side-foot">
@@ -36,10 +37,11 @@
       <div id="connDot" title="connection"></div>
       <div id="roomTitle">default</div>
       <div id="modeToggle" title="Talk: conversational, conservative defaults; explicit seat permission overrides remain active. Work: agents can write files in the workspace and run commands.">
-        <button class="mbtn active" data-m="talk">💬 Talk</button>
-        <button class="mbtn" data-m="work">🔨 Work</button>
+        <button class="mbtn active" data-m="talk"><span class="mode-icon" aria-hidden="true">💬 </span>Talk</button>
+        <button class="mbtn" data-m="work"><span class="mode-icon" aria-hidden="true">🔨 </span>Work</button>
       </div>
       <div class="pills" id="pills"></div>
+      <button class="hbtn new-room-header" id="newRoomHeaderBtn" type="button">＋ New room</button>
       <button class="hbtn" id="newConvBtn" title="Archive this conversation and start fresh">✨ New conversation</button>
       <button class="hbtn" id="settingsBtn" title="Settings">⚙️</button>
     </header>
@@ -54,10 +56,21 @@
     <div id="chatWrap">
       <div id="chat" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation"></div>
       <div id="empty" style="display:none">
-        <div class="big">🃏</div>
-        <h2>The table is set</h2>
-        <p>One conversation, many seats. Tag an agent, or just type — Parley remembers who you were talking to.</p>
-        <div class="starters" id="starters"></div>
+        <div class="welcome-eyebrow"><span class="welcome-mark" aria-hidden="true">◈</span> YOUR AGENT WORKSPACE</div>
+        <h2>Different perspectives.<br>One conversation.</h2>
+        <p class="welcome-copy">Build a room with the agents you want. Choose each one's provider, model, effort, and point of view.</p>
+        <div class="welcome-actions">
+          <button type="button" id="buildRoomBtn" class="btn primary">Build your room <span aria-hidden="true">↗</span></button>
+          <button type="button" id="fourAgentBtn" class="btn">Use the four-agent setup</button>
+        </div>
+        <div class="team-preview" aria-label="Four-agent setup preview">
+          <div class="team-role role-lead"><span class="role-symbol" aria-hidden="true">F</span><div><b>Fable</b><span>Drive the discussion</span></div><small>CLAUDE</small></div>
+          <div class="team-role role-builder"><span class="role-symbol" aria-hidden="true">A</span><div><b>Astra</b><span>Build and verify</span></div><small>CODEX</small></div>
+          <div class="team-role role-critic"><span class="role-symbol" aria-hidden="true">↗</span><div><b>Adversary</b><span>Challenge assumptions</span></div><small>YOUR CHOICE</small></div>
+          <div class="team-role role-privacy"><span class="role-symbol" aria-hidden="true">◇</span><div><b>Privacy</b><span>Protect sensitive data</span></div><small>YOUR CHOICE</small></div>
+        </div>
+        <div class="welcome-detail"><span>1–8 agents</span><span>Individual @mentions</span><span>Persistent role instructions</span></div>
+        <div class="current-room-start"><div class="starter-label">Or start with this room's agents</div><div class="starters" id="starters"></div></div>
       </div>
     </div>
     <button id="jump">↓ New messages</button>
@@ -127,7 +140,8 @@
 
 <dialog id="newRoomDialog" aria-labelledby="newRoomTitle">
     <form id="newRoomForm">
-      <div class="form-title"><div><strong id="newRoomTitle">Create a room</strong><span>Choose the agents that should share this conversation.</span></div><button type="button" id="newRoomCancel" class="modal-close" aria-label="Close create room">×</button></div>
+      <div class="form-title"><div><strong id="newRoomTitle">Create a room</strong><span>Your agents, your models, your perspectives.</span></div><button type="button" id="newRoomCancel" class="modal-close" aria-label="Close create room">×</button></div>
+      <div class="room-template"><span>Start with</span><button type="button" id="twoAgentTemplate" aria-pressed="true">Two agents</button><button type="button" id="fourAgentTemplate" aria-pressed="false">Drivers + adversary + privacy</button></div>
       <label class="form-label" for="newRoomInput">Room name</label>
       <input id="newRoomInput" placeholder="room name…" maxlength="40" spellcheck="false">
       <div class="roster-heading"><span id="rosterCount">Your agents</span><button type="button" id="addSeatBtn" class="ract" title="Add an agent">＋ Add agent</button></div>

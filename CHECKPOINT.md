@@ -1,5 +1,26 @@
 # Parley fork checkpoint — 2026-10-22
 
+## Current checkpoint — visible setup and short launcher
+
+This section supersedes the historical checkpoint below.
+
+- PR #1 was merged into the user's fork (`5389f97a9b9e00b77ace54dc61f60beb12da05b5`). The first pass did not make the new features visible enough; this follow-up fixes discovery and launch friction.
+- Current branch: `fix/room-discovery-and-launch`. The corrected UI is running separately at **http://127.0.0.1:4142**, PID **11446**, with data at `/Users/ortega/.parley-fork`. Log: `/private/tmp/parley-mine.log`. Process identifiers are observations, not instructions to signal processes.
+- **The original session on port 4141 remains untouched**, PID 29360 when last checked. Never restart it or modify its room library. The old preview on 56882 is no longer running.
+- The installed command is **`parley-mine`**, symlinked from `/Users/ortega/.local/bin/parley-mine` to this checkout's `bin/parley-mine.mjs`. `npm start` now uses this same launcher. Defaults are port 4142 and `~/.parley-fork`; repeated launch reopens the existing fork. An unrelated occupied port is an error; exact-port mode prevents silent fallback races.
+- The opening screen and header now expose room creation. The four-agent template sets up Fable, Astra, adversary and privacy with editable provider, model, effort and persistent instructions. Empty rooms stay at the top so these controls remain visible in small windows.
+- Verified the actual 4142 page in the in-app browser. Browser regression suite: 21 passed; focused first-screen and four-agent checks reran successfully after screenshot updates. Launcher isolation/duplicate/occupied-port/equal-flags tests and packed launcher startup passed. All automated tests use temporary libraries and ephemeral ports, with fake providers.
+- Screenshots: `docs/fork-home.png`, `docs/fork-room-setup.png`. Feature guide: `docs/CURRENT-FEATURES.md`. Setup guide: `docs/FORK.md`.
+- No npm publication or real model invocation was performed. The user's original session needs no migration or restart.
+
+Follow-up delivery: https://github.com/rortegalizardo/parley/pull/2. The implementation is committed and pushed; this PR records the correction to the initial delivery.
+
+Next action: use the running fork at 4142, or run `parley-mine` to reopen it. Keep the original server on 4141 untouched.
+
+---
+
+## Historical checkpoint — first implementation
+
 ## Protect the user's active session
 
 **The user has important ongoing work at http://127.0.0.1:4141. Do not stop, restart, replace, reconfigure, or otherwise disturb that server, its agents, or its room library.** Do not use broad process-kill commands. The user emphasized this requirement immediately before requesting this checkpoint because usage was at 3%.

@@ -13,7 +13,7 @@ try {
   assert.equal(packed.status, 0, packed.stderr);
   const manifest = JSON.parse(packed.stdout)[0];
   const paths = new Set(manifest.files.map((file) => file.path));
-  for (const file of ["parley.mjs", "lib/budget-policy.mjs", "lib/budget-prompts.mjs", "lib/causal-coordinator.mjs", "lib/client-assets.mjs", "ui/index.html", "ui/styles.css", "ui/app.js"]) {
+  for (const file of ["parley.mjs", "bin/parley-mine.mjs", "lib/budget-policy.mjs", "lib/budget-prompts.mjs", "lib/causal-coordinator.mjs", "lib/client-assets.mjs", "ui/index.html", "ui/styles.css", "ui/app.js"]) {
     assert.ok(paths.has(file), `packed package contains ${file}`);
   }
   assert.ok(![...paths].some((file) => /^(?:test|node_modules)\//.test(file)));
@@ -22,7 +22,8 @@ try {
   assert.equal(unpacked.status, 0, unpacked.stderr);
   const cfg = JSON.parse(fs.readFileSync(path.join(temporary, "package", "package.json"), "utf8"));
   assert.deepEqual(cfg.dependencies || {}, {}, "zero runtime dependencies");
-  server = spawn(process.execPath, [path.join(temporary, "package", "parley.mjs"), "--port", "0", "--no-open", "--root", path.join(temporary, "rooms")], {
+  assert.equal(cfg.bin["parley-mine"], "bin/parley-mine.mjs");
+  server = spawn(process.execPath, [path.join(temporary, "package", "bin/parley-mine.mjs"), "--port", "0", "--no-open", "--root", path.join(temporary, "rooms")], {
     cwd: temporary, stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
   });
   let output = "";

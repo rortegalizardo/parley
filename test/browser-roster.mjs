@@ -2,7 +2,48 @@
 import path from "node:path";
 import { test, expect, send, idle } from "./browser-fixture.mjs";
 
+for (const viewport of [{ width: 640, height: 576 }, { width: 390, height: 844 }]) {
+  test(`room builder is visible on the first screen at ${viewport.width}×${viewport.height}`, async ({ app, server }) => {
+    await app.setViewportSize(viewport);
+    await app.reload();
+    await expect(app.locator("#newRoomHeaderBtn")).toBeVisible();
+    await expect(app.locator("#fourAgentBtn")).toBeVisible();
+    const bounds = await app.locator("#chatWrap").boundingBox();
+    const action = await app.locator("#fourAgentBtn").boundingBox();
+    expect(action.y).toBeGreaterThanOrEqual(bounds.y);
+    expect(action.y + action.height).toBeLessThanOrEqual(bounds.y + bounds.height);
+    await expect(app.locator("#chatWrap")).toHaveJSProperty("scrollTop", 0);
+    await expect(app.locator("#jump")).toBeHidden();
+    const title = await app.locator("#roomTitle").boundingBox();
+    const settings = await app.locator("#settingsBtn").boundingBox();
+    expect(Math.abs(settings.y - title.y)).toBeLessThan(15);
+    await app.screenshot({ path: `/private/tmp/parley-home-${viewport.width}.png` });
+    await app.emulateMedia({ colorScheme: "dark" });
+    await app.screenshot({ path: `/private/tmp/parley-home-dark-${viewport.width}.png` });
+    await app.locator("#fourAgentBtn").click();
+    await expect(app.locator("#newRoomDialog")).toBeVisible();
+    await expect(app.locator(".roster-row")).toHaveCount(4);
+    await expect(app.locator("#seat1Name")).toHaveValue("fable");
+    await expect(app.locator("#seat2Name")).toHaveValue("astra");
+    await expect(app.locator(".roster-instructions").nth(2)).toHaveValue(/skeptical customer/);
+    await expect(app.locator(".roster-instructions").nth(3)).toHaveValue(/personal data/);
+    await app.locator("#newRoomInput").fill(`team-${viewport.width}`);
+    await app.locator("#newRoomCreate").click();
+    await expect(app.locator("#roomTitle")).toHaveText(`team-${viewport.width}`);
+    const saved = (await server.room(`team-${viewport.width}`)).room;
+    expect(saved.seats).toEqual(["fable", "astra", "adversary", "privacy"]);
+    expect(saved.cfg.agents.astra.model).toBe("gpt-6-astra");
+    expect(saved.cfg.agents.privacy.instructions).toMatch(/personal data/);
+    await app.locator("#newRoomHeaderBtn").click();
+    await expect(app.locator(".roster-row")).toHaveCount(2);
+    await app.keyboard.press("Escape");
+    await expect(app.locator("#newRoomDialog")).toBeHidden();
+  });
+}
+
 test("creates four individually configured agents and keeps the roster readable", async ({ app, server }, testInfo) => {
+  await app.emulateMedia({ colorScheme: "dark" });
+  await app.screenshot({ path: "/private/tmp/parley-home-desktop.png" });
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("panel");
   await app.locator("#addSeatBtn").click();

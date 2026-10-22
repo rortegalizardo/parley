@@ -4,6 +4,8 @@
 
 This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley), based on `parley-room@1.2.1`. It adds **1–8 agents per room**, individual model/effort/instructions, and a refreshed interface. See the [fork guide](docs/FORK.md) for the four-agent setup and [current-feature guide](docs/CURRENT-FEATURES.md) for what upstream 1.2.1 already offered.
 
+![Parley Mine with a visible four-agent room setup](docs/fork-home.png)
+
 ![Create a room with four individually named and configured agents](docs/fork-room-setup.png)
 
 [![CI](https://github.com/rortegalizardo/parley/actions/workflows/ci.yml/badge.svg)](https://github.com/rortegalizardo/parley/actions/workflows/ci.yml)
@@ -39,23 +41,22 @@ Whether it speaks is the model's own judgment — there is no keyword trigger. A
 
 ## Get started
 
-You need **Node.js ≥ 20** and the CLI for each provider you choose, installed and authenticated (`claude`, `codex`, or `gemini`). Run this fork from source:
+You need **Node.js ≥ 20** and the CLI for each provider you choose, installed and authenticated (`claude`, `codex`, or `gemini`). From this checkout, install the fork's command once, then launch it:
 
 ```bash
-git clone https://github.com/rortegalizardo/parley.git
-cd parley
-npm start
+npm link
+parley-mine
 ```
 
-There are no runtime dependencies or build step. `npx parley-room@1.2.1` runs the original upstream release; it does not run this fork. The fork is private to npm publishing to avoid accidentally replacing the upstream package.
+`parley-mine` serves this personal fork at `http://127.0.0.1:4142` and keeps its rooms, transcripts and settings in `~/.parley-fork`, separate from the usual Parley library at `~/.parley`. It accepts `--port N`, `--root DIR`, `--no-open`, `--version` and `--help`. `npm start` uses the same safe launcher. There are no runtime dependencies or build step. `npx parley-room@1.2.1` runs the original upstream release; it does not run this fork.
 
-The UI opens automatically at a loopback URL, normally `http://127.0.0.1:4141`. Flags: `--port N` (`--port 0` picks any free port), `--root DIR`, `--no-open`, `--version`, `--help`.
+The UI opens automatically at the configured loopback URL. `--port 0` asks the OS for any free port.
 
-Optional checks and a global command:
+Optional checks:
 
 ```bash
-npm test     # optional: real server, fake agents — no login, no tokens spent
-npm link     # optional: gives you the global `parley` command for this fork
+npm run test:launcher  # safe defaults and repeated launch
+npm run test:browser   # isolated browser checks, after npm ci
 ```
 
 Two notes at the door:
@@ -69,11 +70,11 @@ Two notes at the door:
 |---|---|
 | A seat shows **not found** | `claude` or `codex` isn't on Parley's `PATH`. Hover the pill for the exact resolver error. Install the CLI, then restart Parley — `PATH` is read at launch. |
 | A seat replies with a login or auth error | The CLI itself isn't signed in. Run `claude` or `codex` once in a terminal, complete the login, then come back. Parley never handles credentials. |
-| `Failed to start: EADDRINUSE` | Something else holds port 4141 and the next 20 ports. Use `--port 0` for any free port. |
+| `port 4142 is occupied by another service` | The fork leaves that service alone. Choose another port with `parley-mine --port 0`. An already-running copy of the fork is reopened automatically. |
 | The page says the runtime protocol doesn't match | Parley was updated under a page that's still open. Reload the tab. |
 | Windows: the folder picker seems to do nothing | It can open behind the browser. Look for **Parley — Choose a project folder** in the taskbar. |
 
-Your rooms, transcripts and settings live in `~/.parley` (override with `--root`). To remove Parley entirely: `npm uninstall -g parley-room`, then delete that folder — it also holds `~/.parley/.trash`, where deleted rooms go.
+The fork's rooms, transcripts and settings live in `~/.parley-fork` (override with `--root`); deleted rooms go into its `.trash` directory. The original `parley` command continues to default to `~/.parley`.
 
 ## How you talk to it
 
