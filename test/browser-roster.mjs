@@ -1,6 +1,31 @@
 /** Chromium regressions for the multi-agent roster and refreshed shell. */
 import path from "node:path";
+import os from "node:os";
+const captureRoot = os.tmpdir();
 import { test, expect, send, idle } from "./browser-fixture.mjs";
+
+test("settings fields and composer fit without horizontal scrolling in dark mode", async ({ app }) => {
+  await app.emulateMedia({ colorScheme: "dark" });
+  for (const width of [640, 390]) {
+    await app.setViewportSize({ width, height: 900 });
+    await app.locator("#input").fill("A long unbroken reference: " + "abcdef0123456789".repeat(40));
+    const composer = app.locator("#input");
+    expect(await composer.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await app.locator("#settingsBtn").click();
+    const modal = app.locator("#overlay .modal");
+    await expect(modal).toBeVisible();
+    expect(await modal.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const instructions = app.locator('#seatCards textarea[data-f="instructions"]').first();
+    const inputBackground = await app.locator("#seatCards .fld input").first().evaluate((el) => getComputedStyle(el).backgroundColor);
+    await expect(instructions).toHaveCSS("background-color", inputBackground);
+    await instructions.fill("Privacy reviewer: " + "sensitive-reference-".repeat(25));
+    expect(await instructions.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await app.screenshot({ animations: "disabled", path: `${captureRoot}/parley-settings-fixed-${width}.png` });
+    await app.locator("#mCancel").click();
+    await app.locator("#input").fill("");
+    await app.screenshot({ animations: "disabled", path: `${captureRoot}/parley-composer-fixed-${width}.png` });
+  }
+});
 
 for (const viewport of [{ width: 640, height: 576 }, { width: 390, height: 844 }]) {
   test(`room builder is visible on the first screen at ${viewport.width}×${viewport.height}`, async ({ app, server }) => {
@@ -17,9 +42,9 @@ for (const viewport of [{ width: 640, height: 576 }, { width: 390, height: 844 }
     const title = await app.locator("#roomTitle").boundingBox();
     const settings = await app.locator("#settingsBtn").boundingBox();
     expect(Math.abs(settings.y - title.y)).toBeLessThan(15);
-    await app.screenshot({ path: `/private/tmp/parley-home-${viewport.width}.png` });
+    await app.screenshot({ animations: "disabled", path: `${captureRoot}/parley-home-${viewport.width}.png` });
     await app.emulateMedia({ colorScheme: "dark" });
-    await app.screenshot({ path: `/private/tmp/parley-home-dark-${viewport.width}.png` });
+    await app.screenshot({ animations: "disabled", path: `${captureRoot}/parley-home-dark-${viewport.width}.png` });
     await app.locator("#fourAgentBtn").click();
     await expect(app.locator("#newRoomDialog")).toBeVisible();
     await expect(app.locator(".roster-row")).toHaveCount(4);
@@ -43,7 +68,7 @@ for (const viewport of [{ width: 640, height: 576 }, { width: 390, height: 844 }
 
 test("creates four individually configured agents and keeps the roster readable", async ({ app, server }, testInfo) => {
   await app.emulateMedia({ colorScheme: "dark" });
-  await app.screenshot({ path: "/private/tmp/parley-home-desktop.png" });
+  await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-home-desktop.png" });
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("panel");
   await app.locator("#addSeatBtn").click();
@@ -59,7 +84,7 @@ test("creates four individually configured agents and keeps the roster readable"
     await rows.nth(i).locator(".roster-instructions").fill(i === 2 ? "Challenge assumptions and look for failure modes." : i === 3 ? "Protect secrets and flag privacy risks." : `Role instructions for ${names[i]}.`);
   }
   await app.locator("#rosterList").evaluate((el) => { el.scrollTop = 0; });
-  await app.screenshot({ path: "/private/tmp/parley-roster-desktop.png", fullPage: true });
+  await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-roster-desktop.png", fullPage: true });
   const accepted = app.waitForResponse((res) => new URL(res.url()).pathname === "/api/rooms" && res.request().method() === "POST");
   await app.locator("#newRoomCreate").click();
   expect((await accepted).status()).toBe(200);
@@ -84,11 +109,11 @@ test("creates four individually configured agents and keeps the roster readable"
   expect(chipColors.foreground).not.toBe(chipColors.background);
 
   const out = path.join(testInfo.outputDir, "roster-desktop.png");
-  await app.screenshot({ path: out, fullPage: true });
+  await app.screenshot({ animations: "disabled", path: out, fullPage: true });
   await testInfo.attach("roster-desktop.png", { path: out, contentType: "image/png" });
-  await app.screenshot({ path: "/private/tmp/parley-chat-desktop.png" });
+  await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-chat-desktop.png" });
   await app.emulateMedia({ colorScheme: "dark" });
-  await app.screenshot({ path: "/private/tmp/parley-chat-dark.png" });
+  await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-chat-dark.png" });
 });
 
 test("persists per-agent instructions in settings and wraps menus on a narrow viewport", async ({ app, server }, testInfo) => {
@@ -110,9 +135,9 @@ test("persists per-agent instructions in settings and wraps menus on a narrow vi
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
   const out = path.join(testInfo.outputDir, "roster-narrow.png");
-  await app.screenshot({ path: out, fullPage: true });
+  await app.screenshot({ animations: "disabled", path: out, fullPage: true });
   await testInfo.attach("roster-narrow.png", { path: out, contentType: "image/png" });
-  await app.screenshot({ path: "/private/tmp/parley-roster-narrow.png" });
+  await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-roster-narrow.png" });
 });
 
 test("mobile room dialog supports one agent, keyboard dismissal and reopening", async ({ app, server }) => {
@@ -130,7 +155,7 @@ test("mobile room dialog supports one agent, keyboard dismissal and reopening", 
   expect(bounds.x).toBeGreaterThanOrEqual(0);
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
   expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
-  await app.screenshot({ path: "/private/tmp/parley-dialog-mobile.png" });
+  await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-dialog-mobile.png" });
   await app.locator("#newRoomCreate").click();
   await expect(app.locator("#roomTitle")).toHaveText("solo-room");
   expect((await server.room("solo-room")).room.seats).toEqual(["privacy"]);

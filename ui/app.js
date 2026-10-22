@@ -3983,22 +3983,22 @@ function seatFieldHTML(a, field, p) {
   if (field === "effort") return `<div class="fld"><label>Reasoning effort</label>` +
     combo("effort", p.efforts, "blank = default") + `</div>`;
   if (field === "permissionMode") return `<div class="fld"><label>Permission mode</label><select ${d(a, "permissionMode")}>` +
-    `<option value="auto">room default — Claude's default in Talk, accept edits in Work</option>` +
-    `<option value="plan">plan — read &amp; propose only, even in work rooms</option>` +
-    `<option value="acceptEdits">accept edits — ordinary project edits allowed; protected paths and commands may still prompt</option>` +
-    `<option value="bypassPermissions">full access — bypass ordinary Claude permission checks</option></select>` +
-    `<div class="note">An effective mode change starts a fresh Claude session; the transcript keeps the room history.</div>` +
+    `<option value="auto">Room default</option>` +
+    `<option value="plan">Plan — read only</option>` +
+    `<option value="acceptEdits">Accept edits</option>` +
+    `<option value="bypassPermissions">full access</option></select>` +
+    `<div class="note">Room default uses Claude's default in Talk and accepts edits in Work. Plan reads and proposes only. Accept edits allows ordinary project edits; protected paths and commands may still prompt. Full access bypasses ordinary Claude checks. An effective mode change starts a fresh session; the transcript keeps the room history.</div>` +
     `<div class="note danger">With Claude Code 2.1.126+, Full access includes protected paths such as .git and can reach outside this project. Explicit policy and OS limits may still apply. Claude recommends an isolated container or VM; using it directly on a trusted host grants host-level access.</div></div>`;
   if (field === "approvalMode") return `<div class="fld"><label>Approval mode</label><select ${d(a, "approvalMode")}>` +
-    `<option value="auto">room default — Gemini's default in Talk, auto-approve edits in Work</option>` +
-    `<option value="plan">plan — read &amp; propose only, even in work rooms</option>` +
-    `<option value="auto_edit">auto edit — edits auto-approved; other tools still prompt</option>` +
-    `<option value="yolo">full access — auto-approve every tool</option></select>` +
-    `<div class="note">An effective mode change starts a fresh Gemini session; the transcript keeps the room history.</div>` +
+    `<option value="auto">Room default</option>` +
+    `<option value="plan">Plan — read only</option>` +
+    `<option value="auto_edit">Auto edit</option>` +
+    `<option value="yolo">full access</option></select>` +
+    `<div class="note">Room default uses Gemini's default in Talk and auto-approves edits in Work. Plan reads and proposes only. Auto edit approves edits while other tools prompt. Full access auto-approves every tool. An effective mode change starts a fresh session; the transcript keeps the room history.</div>` +
     `<div class="note danger">Full access auto-approves every tool call, including commands and writes outside this project. An isolated container or VM is the recommended place for it.</div></div>`;
   if (field === "sandbox") return `<div class="fld"><label>Sandbox</label><select ${d(a, "sandbox")}>` +
-    `<option value="read-only">read-only (default)</option><option value="workspace-write">workspace-write</option>` +
-    `<option value="danger-full-access">danger-full-access</option></select>` +
+    `<option value="read-only">Read only (default)</option><option value="workspace-write">Workspace write</option>` +
+    `<option value="danger-full-access">Full access</option></select>` +
     `<div class="note">Changing this restarts the seat's session.</div></div>`;
   if (field === "extraArgs") return `<div class="fld"><label>Extra CLI args</label><input ${d(a, "extraArgs")} spellcheck="false"></div>`;
   return "";
@@ -4098,9 +4098,10 @@ function renderSeatCards(s) {
     let f = (p.fields || []).map((field) => seatFieldHTML(a, field, p)).join("");
     f += seatInstructionsHTML(a);
     f += `<div class="fld"><label>Lurk assertiveness (when 👂 is on)</label><select data-seat="${esc(a)}" data-f="lurkStyle">` +
-      `<option value="quiet">quiet — only uncorrected errors</option>` +
-      `<option value="balanced">balanced — errors, real disagreements, critical caveats</option>` +
-      `<option value="vocal">vocal — anything with real signal</option></select></div>`;
+      `<option value="quiet">Quiet</option>` +
+      `<option value="balanced">Balanced</option>` +
+      `<option value="vocal">Vocal</option></select>` +
+      `<div class="note">Quiet: only uncorrected errors. Balanced: errors, disagreements, and critical caveats. Vocal: anything with real signal.</div></div>`;
     f += `<div class="fld"><label>Custom lurk criteria (optional, overrides preset; [pass] protocol stays active)</label>` +
       `<input data-seat="${esc(a)}" data-f="lurkPrompt" placeholder="e.g. Interject whenever you disagree." spellcheck="false"></div>`;
     const sess = ag.linked
@@ -4130,6 +4131,10 @@ function closeSettings() {
 }
 function openSettings() {
   const s = state.summary; if (!s) return;
+  // On narrow screens Settings can be opened from the slide-over sidebar.
+  // Close that navigation layer before showing the settings overlay so the
+  // sidebar cannot remain above the modal or intercept its controls.
+  setNavOpen(false);
   settingsOpener = document.activeElement;
   retireSettingsPick();
   $("roomPath").textContent = s.dir;
