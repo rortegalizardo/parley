@@ -10,7 +10,7 @@ This section supersedes the checkpoints below. User clarified that polishing onl
 - **Port 4141 was never signaled, restarted, or reconfigured.** Original PID **29360** remained listening. Do not touch its room library or running agents.
 - Launcher remains `parley-mine`; fork data remains `~/.parley-fork`; original data stays separate. Never use process IDs here without freshly verifying ownership and activity.
 
-Next action: finish shipping the full-interface correction, then use the refreshed fork on 4142. No user-model calls were made.
+Delivery record: https://github.com/rortegalizardo/parley/pull/3. Next action: use the refreshed fork on 4142; reload older tabs to receive its new asset version. No user-model calls were made.
 
 ---
 
