@@ -4,10 +4,10 @@ import { newCapEdges, publicRelayRun, normalizeHopBudget, requireMessageHopBudge
 import { relayAllowanceNote } from "../lib/budget-prompts.mjs";
 import { createCausalCoordinator } from "../lib/causal-coordinator.mjs";
 
-function fixture({ budget = 0, overrides = {} } = {}) {
-  const room = { generation: 1, entries: [], state: { agents: { a: { cursor: 0 }, b: { cursor: 0 } } } };
+function fixture({ budget = 0, seats = ["a", "b"], userTarget = "a", overrides = {} } = {}) {
+  const room = { generation: 1, entries: [], state: { agents: Object.fromEntries(seats.map((id) => [id, { cursor: 0 }])) } };
   const chain = { stopped: false };
-  const outcomes = [], launches = [];
+  const outcomes = [], launches = [], deliveries = [];
   let used = 0;
   const deps = {
     HOP_SAFETY_HOPS: 4, relayUsed: () => used,
@@ -18,6 +18,7 @@ function fixture({ budget = 0, overrides = {} } = {}) {
     isAsleep: () => false, noteSleepSkip: () => {}, seatOccupied: () => false,
     waitForHopSeat: async () => true, broadcast: () => {}, roomSummary: () => ({}),
     runHopTurn: async (_room, target, trigger, rootN, scope, opts) => {
+      deliveries.push({ target, triggerAuthor: trigger.author, triggerN: trigger.n, kind: opts.deliveryKind, instructionKey: opts.instructionKey });
       launches.push(opts.onLaunch?.());
       room.state.agents[target].cursor = trigger.n;
       return null;
@@ -31,11 +32,11 @@ function fixture({ budget = 0, overrides = {} } = {}) {
     ...overrides,
   };
   const make = () => createCausalCoordinator(deps, room, {
-    userTurn: { n: 1, target: "a" }, chain, gen: 1,
+    userTurn: { n: 1, target: userTarget }, chain, gen: 1,
     relayPolicy: { hopBudget: budget, source: "message" },
     hopRun: { used },
   });
-  return { room, chain, outcomes, launches, deps, make };
+  return { room, chain, outcomes, launches, deliveries, deps, make };
 }
 const request = (n = 2) => ({ n, kind: "agent", author: "a", target: "b" });
 
@@ -91,6 +92,68 @@ test("successful final pass charges exactly once and produces no cap", async () 
   c.enqueueInitial([request()]); await c.settle(); c.finalize();
   assert.deepEqual(f.launches, [{ rootN: 1, triggerEntryN: 2, index: 1, budget: 1, limit: 1, source: "message" }]);
   assert.deepEqual(f.room.entries, []); assert.deepEqual(f.outcomes, []);
+});
+
+test("a four-seat @all exchange sends each initial result to every other eligible peer", async () => {
+  const f = fixture({ seats: ["a", "b", "c", "d"], userTarget: "both" });
+  const c = f.make();
+  const authors = ["a", "b", "c", "d"];
+  c.enqueueInitial(authors.map((author, index) => ({
+    n: index + 8, kind: "agent", author, text: `${author.toUpperCase()}_RESULT`,
+  })), new Set(authors));
+  await c.settle(); c.finalize();
+  const expected = [];
+  authors.forEach((author, index) => {
+    for (const target of authors.filter((id) => id !== author)) {
+      expected.push({ target, triggerAuthor: author, triggerN: index + 8, kind: "sibling", instructionKey: "sibling" });
+    }
+  });
+  assert.deepEqual(f.deliveries, expected);
+  assert.deepEqual(Object.values(f.room.state.agents).map(({ cursor }) => cursor), [11, 11, 11, 10]);
+});
+
+test("same-source cap edges retain each recipient independently", async () => {
+  const f = fixture({ seats: ["a", "b", "c", "d"], budget: 0 });
+  const c = f.make();
+  c.enqueueInitial([
+    { n: 8, kind: "agent", author: "a", target: "b" },
+    { n: 8, kind: "agent", author: "a", target: "c" },
+    { n: 8, kind: "agent", author: "a", target: "d" },
+  ]);
+  await c.settle(); c.finalize();
+  assert.deepEqual(f.room.entries[0].meta.relayCap.dropped, [
+    { n: 8, target: "b" }, { n: 8, target: "c" }, { n: 8, target: "d" },
+  ]);
+});
+
+test("Stop and an unexpected request failure preserve pending recipients per edge", async () => {
+  const stopped = fixture({ seats: ["a", "b", "c", "d"] });
+  const stopCoordinator = stopped.make();
+  stopCoordinator.enqueueInitial([
+    { n: 8, kind: "agent", author: "a", target: "b" },
+    { n: 8, kind: "agent", author: "a", target: "c" },
+    { n: 8, kind: "agent", author: "a", target: "d" },
+  ]);
+  stopped.chain.stopped = true;
+  await stopCoordinator.settle(); stopCoordinator.finalize();
+  assert.deepEqual(stopped.outcomes.map(({ target, triggerN, reason }) => [target, triggerN, reason]), [
+    ["b", 8, "request-stopped"], ["c", 8, "request-stopped"], ["d", 8, "request-stopped"],
+  ]);
+
+  const failed = fixture({ seats: ["a", "b", "c", "d"], budget: 4, overrides: {
+    runHopTurn: async () => { throw Error("first peer failed to launch"); },
+  } });
+  const failCoordinator = failed.make();
+  failCoordinator.enqueueInitial([
+    { n: 8, kind: "agent", author: "a", target: "b" },
+    { n: 8, kind: "agent", author: "a", target: "c" },
+    { n: 8, kind: "agent", author: "a", target: "d" },
+  ]);
+  await assert.rejects(failCoordinator.settle(), /first peer failed/);
+  failCoordinator.finalize();
+  assert.deepEqual(failed.outcomes.map(({ target, triggerN, reason }) => [target, triggerN, reason]), [
+    ["b", 8, "request-failed"], ["c", 8, "request-failed"], ["d", 8, "request-failed"],
+  ]);
 });
 
 test("recovered coordinators durably deduplicate old cap edges, allow new ones, and honor later cursors", async () => {

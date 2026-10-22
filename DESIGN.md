@@ -4,7 +4,7 @@ Why this shape, in brief.
 
 ## From terminal concept to local web app
 
-Parley began as a terminal REPL concept. The local web app keeps the useful core — the delta/cursor context protocol, native session resume per agent, room folders and conservative talk-room defaults — while making parallel replies, streaming, routing indicators and Markdown legible in a shared three-party conversation.
+Parley began as a terminal REPL concept. The local web app keeps the useful core — the delta/cursor context protocol, native session resume per agent, room folders and conservative talk-room defaults — while making parallel replies, streaming, routing indicators and Markdown legible in one shared conversation with up to eight agent seats.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ ui/styles.css         styles
 ui/app.js             browser behavior; versioned with the HTML and styles
 ```
 
-A **seat** is the @mention name, the key in `room.json` and `state.json`, and the author on every transcript line and receipt — the primary key of everything durable, fixed for the room's life. Its **provider** is which CLI drives it. Keeping the two apart is what lets two seats share a provider (Claude vs Claude) and lets a third provider arrive as a table entry rather than a rewrite: every provider-specific difference — how sessions resume, which permission field is its scope, whether a protected turn is enforced by a flag or by prose, how a lost session announces itself — is declared once in that table and read everywhere else through it.
+A **seat** is the @mention name, the key in `room.json` and `state.json`, and the author on every transcript line and receipt — the primary key of everything durable, fixed for the room's life. A room's roster has one to eight seats and is fixed after creation. Its **provider** is which CLI drives it. Keeping seat and provider separate lets any number of distinct seats use the same provider; each seat still has its own settings, cursor and native CLI session. Provider-specific differences — how sessions resume, which permission field is its scope, whether a protected turn is enforced by a flag or by prose, how a lost session announces itself — are declared once in the provider table. `@all` and `@both` both route to every seat in the room.
 
 ## The context protocol (the core idea)
 
@@ -54,7 +54,7 @@ The delivered contract fingerprint, numeric version, room-note revision and conc
 
 The per-turn workflow notes that never change — the lurk criteria, the hop ground rules, the sibling-attention and answer-return instructions, the `@both` discussion note, a long room note — are session-deduplicated under the same stamp. Each is a keyed block with its own fingerprint; a session that has durably received one gets a one-line reminder that keeps the exact control tokens (`[pass]`, the addressing phrases), and the full text returns on any fresh, reset, sentinel or failed session and whenever the composed text changes. Two deliberate limits: Codex always gets the full discussion note, because for Codex that prose *is* the read-only boundary; and when a provider silently answers from an unexpected new session, only the blocks that went in full that turn are stamped for it — a reminder written for the dead session vouches for nothing.
 
-Pair mode adds two strict control tokens because each changes server state: `[approve]` ends a cycle when it is the reviewer's exact first nonblank line (later lines are non-blocking notes), while `[needs-user]` pauses a worker or reviewer on a genuine missing choice and requires an explanatory body. Ordinary prose remains fix feedback; malformed tokens degrade to that default. `[pass]` and successful empty pair steps never approve work — they produce a visible neutral pause without manufacturing Retry. Pending questions are recovered from durable entry metadata, with later pair roots or configuration changes making older pauses stale even if an old process appends its result late.
+Pair mode adds two strict control tokens because each changes server state: `[approve]` ends a cycle when it is the reviewer's exact first nonblank line (later lines are non-blocking notes), while `[needs-user]` pauses a worker or reviewer on a genuine missing choice and requires an explanatory body. The explicitly tagged seat is the worker; the first other seat in roster order is the reviewer. Other seats are not part of that Pair cycle. Ordinary prose remains fix feedback; malformed tokens degrade to that default. `[pass]` and successful empty pair steps never approve work — they produce a visible neutral pause without manufacturing Retry. Pending questions are recovered from durable entry metadata, with later pair roots or configuration changes making older pauses stale even if an old process appends its result late.
 
 Pair **Continue** actions are pinned to the specific round-cap entry that rendered them. A later pause, approval, Pair root or Pair configuration boundary invalidates the old action, and the server also checks the pinned cap number so a historical button cannot accidentally resume a newer cycle.
 

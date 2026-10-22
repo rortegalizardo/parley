@@ -1,13 +1,17 @@
 # Parley
 
-**Claude Code and Codex in one chat room — and they can overhear each other.**
+**Your own table of Claude, Codex, and Gemini agents — individually named and configured.**
 
-[![CI](https://github.com/auspex0/parley/actions/workflows/ci.yml/badge.svg)](https://github.com/auspex0/parley/actions/workflows/ci.yml)
+This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley), based on `parley-room@1.2.1`. It adds **1–8 agents per room**, individual model/effort/instructions, and a refreshed interface. See the [fork guide](docs/FORK.md) for the four-agent setup and [current-feature guide](docs/CURRENT-FEATURES.md) for what upstream 1.2.1 already offered.
+
+![Create a room with four individually named and configured agents](docs/fork-room-setup.png)
+
+[![CI](https://github.com/rortegalizardo/parley/actions/workflows/ci.yml/badge.svg)](https://github.com/rortegalizardo/parley/actions/workflows/ci.yml)
 ![deps: zero](https://img.shields.io/badge/deps-zero-brightgreen)
 ![node: ≥20](https://img.shields.io/badge/node-%E2%89%A520-blue)
 [![license: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 
-Most multi-agent tools are work queues — worktrees, kanban boards, parallel terminals. Parley is a *conversation*: one local page, one shared thread, two agents who hear each other. `@claude`, `@codex`, `@both` — or just type, and it goes to whoever you were last talking to. Ask Claude something, then ask Codex what it thinks of the answer; they agree, disagree, and build on each other in one thread.
+Most multi-agent tools are work queues — worktrees, kanban boards, parallel terminals. Parley is a *conversation*: one local page, one shared thread, up to eight agents who hear each other. `@fable`, `@astra`, `@privacy`, `@all` — or just type, and it goes to whoever you were last talking to. Ask Claude something, then ask Codex what it thinks of the answer; they agree, disagree, and build on each other in one thread.
 
 It drives the **official Claude Code and Codex CLIs through your existing CLI logins**. No API key, no proxy; Parley never reads or stores provider credentials — if a CLI isn't authenticated, you see its own error in the chat.
 
@@ -35,32 +39,23 @@ Whether it speaks is the model's own judgment — there is no keyword trigger. A
 
 ## Get started
 
-You need **Node.js ≥ 20** and the two official CLIs, each installed and authenticated: `claude` (Claude Code) and `codex` (OpenAI Codex). Parley shells out to them under your existing logins.
-
-Try it without installing anything:
+You need **Node.js ≥ 20** and the CLI for each provider you choose, installed and authenticated (`claude`, `codex`, or `gemini`). Run this fork from source:
 
 ```bash
-npx parley-room
+git clone https://github.com/rortegalizardo/parley.git
+cd parley
+npm start
 ```
 
-Or install it for good:
-
-```bash
-npm install -g parley-room
-parley
-```
-
-The npm package is `parley-room`; `parley` on npm is unrelated. The command remains `parley`.
+There are no runtime dependencies or build step. `npx parley-room@1.2.1` runs the original upstream release; it does not run this fork. The fork is private to npm publishing to avoid accidentally replacing the upstream package.
 
 The UI opens automatically at a loopback URL, normally `http://127.0.0.1:4141`. Flags: `--port N` (`--port 0` picks any free port), `--root DIR`, `--no-open`, `--version`, `--help`.
 
-Or run from source — there are no runtime dependencies:
+Optional checks and a global command:
 
 ```bash
-git clone https://github.com/auspex0/parley.git
-cd parley
 npm test     # optional: real server, fake agents — no login, no tokens spent
-npm start    # `npm link` here gives you the global `parley` command
+npm link     # optional: gives you the global `parley` command for this fork
 ```
 
 Two notes at the door:

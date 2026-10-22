@@ -60,7 +60,7 @@
   html, body { height: 100%; }
   body {
     margin: 0;
-    font: 15px/1.55 "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     color: var(--text);
     background:
       radial-gradient(1200px 700px at 85% -10%, rgba(47,214,168,.055), transparent 60%),
@@ -68,6 +68,7 @@
       var(--bg);
     overflow: hidden;
   }
+  button:focus-visible, a:focus-visible { outline:2px solid var(--user); outline-offset:3px; }
   button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
   input, textarea, select { font: inherit; color: inherit; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -78,13 +79,14 @@
 
   /* ---------- sidebar ---------- */
   #sidebar {
-    width: 250px; flex-shrink: 0; display: flex; flex-direction: column;
+    width: 264px; flex-shrink: 0; display: flex; flex-direction: column;
     background: var(--bg2); border-right: 1px solid var(--border);
   }
-  .logo { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; }
+  .logo { display: flex; align-items: center; gap: 10px; padding: 26px 22px 20px; }
   .logo svg { flex-shrink: 0; }
-  .logo b { font-size: 17px; letter-spacing: .2px; }
-  .logo span { color: var(--text-faint); font-size: 11px; display: block; margin-top: -3px; }
+  .logo b { font-size: 20px; letter-spacing: -.6px; }
+  .logo > div { min-width:0; }
+  .logo span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--text-faint); font-size: 11px; display: block; margin-top: -3px; }
   .side-label { padding: 14px 18px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); display:flex; justify-content: space-between; align-items:center;}
   .side-label button { color: var(--text-dim); font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
   .side-label button:hover { background: var(--panel2); color: var(--text); }
@@ -96,10 +98,10 @@
   /* The row is a container; this is the part that opens the room. */
   .room-item .ropen {
     display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
-    padding: 8px 4px 8px 10px; color: inherit; border-radius: 9px 0 0 9px;
+    padding: 11px 4px 11px 12px; color: inherit; border-radius: 9px 0 0 9px;
   }
   .room-item:hover { background: var(--panel); color: var(--text); }
-  .room-item.active { background: var(--panel2); color: var(--text); }
+  .room-item.active { background:var(--panel); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.04); }
   .room-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
   /* status icons and the hover actions occupy the same slot on the right, so
      a mode marker never sits next to a destructive button */
@@ -111,15 +113,46 @@
   .room-item .ract:hover { color: var(--text); background: var(--panel2); }
   .room-item .ract.del:hover { color: var(--danger); }
   .room-item.active .dot { background: var(--codex); }
-  #newRoomForm { display: none; padding: 4px 12px 8px; }
-  #newRoomForm input {
-    width: 100%; background: var(--panel); border: 1px solid var(--border2); border-radius: 8px;
-    padding: 6px 10px; color: var(--text); outline: none; font-size: 14px;
+  /* Native dialog keeps room creation above the mobile navigation and traps
+     focus without creating a second keyboard/navigation implementation. */
+  #newRoomDialog {
+    width: min(880px, calc(100vw - 32px)); max-height: calc(100dvh - 48px);
+    padding: 0; border: 1px solid var(--border2); border-radius: 20px;
+    background: var(--panel); color: var(--text); overflow: auto;
+    box-shadow: 0 32px 100px rgba(0,0,0,.32);
   }
-  #newRoomForm select {
-    background: var(--panel); border: 1px solid var(--border2); border-radius: 8px;
-    padding: 4px 6px; color: var(--text-dim); font-size: 12.5px; outline: none;
+  #newRoomDialog::backdrop { background: rgba(8,12,22,.55); backdrop-filter: blur(4px); }
+  #newRoomForm { padding: 28px; }
+  .form-title { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:24px; }
+  .form-title strong { display:block; font-size:24px; letter-spacing:-.035em; line-height:1.25; }
+  .form-title span { display:block; color:var(--text-dim); font-size:13px; margin-top:6px; }
+  .modal-close { flex-shrink:0; width:32px; height:32px; border:1px solid var(--border); border-radius:9px; color:var(--text-dim); font-size:22px; line-height:1; }
+  .modal-close:hover { color:var(--text); background:var(--panel2); }
+  .form-label, .roster-field { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--text-dim); min-width:0; }
+  .form-label { margin-bottom:7px; }
+  #newRoomForm input:not([type="checkbox"]), #newRoomForm select, #newRoomForm textarea {
+    width:100%; min-width:0; background:var(--panel); border:1px solid var(--border2);
+    border-radius:8px; padding:8px 10px; color:var(--text); font:inherit; font-size:13px; line-height:1.4; font-weight:400;
   }
+  #newRoomForm input:focus, #newRoomForm select:focus, #newRoomForm textarea:focus { outline:2px solid var(--user); outline-offset:1px; }
+  #newRoomForm input::placeholder, #newRoomForm textarea::placeholder { color:var(--text-faint); }
+  .roster-heading { display:flex; align-items:center; justify-content:space-between; margin:22px 0 12px; font-size:12px; font-weight:600; color:var(--text-dim); }
+  #addSeatBtn { border:1px solid var(--border2); border-radius:8px; padding:6px 10px; color:var(--text); font-size:12px; }
+  #addSeatBtn:hover { border-color:var(--user); background:var(--panel2); }
+  #addSeatBtn:disabled { opacity:.45; cursor:default; }
+  .roster-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .roster-row { border:1px solid var(--border2); border-radius:13px; background:var(--panel2); padding:14px; min-width:0; }
+  .roster-main { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 24px; gap:9px; align-items:end; }
+  .roster-advanced { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+  .roster-wide { grid-column:1 / -1; }
+  .roster-instructions { resize:vertical; min-height:66px; }
+  .roster-remove { align-self:end; height:36px; width:24px; padding:0; color:var(--text-faint); font-size:19px; }
+  .roster-remove:hover { color:var(--danger); }
+  .roster-remove:disabled { opacity:.25; cursor:default; }
+  #newRoomProj { margin-top:18px !important; padding:8px 0 !important; font-size:13px !important; }
+  .review-preset { display:flex; align-items:center; gap:9px; margin-top:8px; color:var(--text-dim); font-size:12px; cursor:pointer; }
+  #newRoomReviewChk { width:16px; height:16px; flex:0 0 16px; accent-color:var(--user); margin:0; }
+  .form-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:24px; padding-top:18px; border-top:1px solid var(--border); }
   .side-foot { padding: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
   .side-foot button, .side-foot a {
     display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px;
@@ -127,6 +160,9 @@
   }
   .side-foot button:hover, .side-foot a:hover { background: var(--panel); color: var(--text); }
   .side-foot .ico { width: 16px; text-align: center; opacity: .8; }
+  #sidebar, #main, .chips, .box { min-width:0; }
+  .hop-menu, #hopMenu, #stopMenu, #askMenu, #wakeMenu { max-width:min(360px, calc(100vw - 24px)); overflow-wrap:anywhere; }
+  .hm-sub, .hm-label { white-space:normal; line-height:1.4; }
   /* branch line: reads as a caption under Open workspace, never as an action */
   #gitId {
     padding: 0 10px 4px 35px; margin-top: -3px; font-size: 11.5px; color: var(--text-faint);
@@ -137,17 +173,22 @@
   #main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
 
   header {
-    display: flex; align-items: center; gap: 14px; padding: 12px 20px;
-    border-bottom: 1px solid var(--border); background: rgba(14,18,25,.7); backdrop-filter: blur(8px);
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:18px 24px 12px;
+    border-bottom:1px solid var(--border); background:var(--panel); flex-shrink:0;
   }
-  #roomTitle { font-weight: 600; font-size: 15.5px; }
-  #connDot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint); transition: background .3s; }
-  #connDot.on { background: var(--codex); box-shadow: 0 0 6px rgba(47,214,168,.7); }
-  .pills { display: flex; gap: 8px; margin-left: auto; }
+  header > * { min-width:0; }
+  #roomTitle { font-weight:650; font-size:17px; letter-spacing:-.02em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #connDot { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:var(--text-faint); transition:background .3s; }
+  #connDot.on { background:var(--codex); box-shadow:0 0 0 4px color-mix(in srgb, var(--codex) 10%, transparent); }
+  #newConvBtn { margin-left:auto; }
+  .pills { display:flex; gap:8px; order:10; width:100%; overflow-x:auto; padding:5px 0 2px; scrollbar-width:thin; }
   .pill {
-    display: flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px;
-    border: 1px solid var(--border2); font-size: 12.5px; color: var(--text-dim); background: var(--panel);
+    display:flex; align-items:center; gap:7px; flex:0 0 auto; padding:7px 10px; border-radius:9px;
+    border:1px solid var(--border); font-size:12px; color:var(--text-dim); background:var(--panel2);
   }
+  .pill b { color:var(--seat-accent, var(--text)); white-space:nowrap; font-size:12px; }
+  .pill .pinfo { max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @media (prefers-color-scheme:light) { .pill b { color:color-mix(in srgb, var(--seat-accent, var(--text)) 70%, #172030); } }
   .pill .st { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); }
   .pill.claude b { color: var(--claude); font-weight: 600; }
   .pill.codex b { color: var(--codex); font-weight: 600; }
@@ -703,7 +744,10 @@
     body.nav-open #sidebar { transform: none; }
     body.nav-open #navScrim { display: block; }
     #navToggle { display: flex; }
-    header { flex-wrap: wrap; row-gap: 6px; }
+    header { row-gap:8px; padding:12px 14px 8px; }
+    #newConvBtn { font-size:0; padding:6px; }
+    #newConvBtn::before { content:"✨"; font-size:16px; }
+    #roomTitle { max-width:130px; }
     .msg { max-width: 92%; }
     #composerWrap { padding: 8px 10px 12px; }
     .chips { gap: 5px; }
@@ -714,3 +758,17 @@
     }
     #hopMenu { width: min(286px, calc(100vw - 16px)); }
   }
+
+  @media (max-width:600px) {
+    #newRoomDialog { width:calc(100vw - 20px); max-height:calc(100dvh - 24px); border-radius:15px; }
+    #newRoomForm { padding:20px 16px; }
+    .roster-list { grid-template-columns:minmax(0,1fr); }
+    .form-title strong { font-size:21px; }
+    .form-title { margin-bottom:20px; }
+    .pill .pinfo { max-width:92px; }
+    .msg { max-width:96%; }
+    #chat { padding:20px 14px 10px; }
+    .hint { font-size:11px; }
+  }
+
+  .review-preset[hidden] { display:none; }

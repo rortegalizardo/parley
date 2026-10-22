@@ -25,7 +25,7 @@ room.json        config (see below)
 state.json       sessions, per-agent cursors, per-seat sleep and persisted lurk catch-up/outcome state
 events.jsonl     machine-readable transcript and delivery/causal-answer receipts (source of truth)
 transcript.md    human-readable transcript (what "Download transcript" serves)
-workspace/       shared folder; both agent CLIs run with this as cwd
+workspace/       shared folder; all seat CLIs run with this as cwd
 ```
 
 ## Config (`room.json`, editable in the UI)
@@ -38,8 +38,8 @@ workspace/       shared folder; both agent CLIs run with this as cwd
   "pairRounds": 0,
   "timeoutMs": 900000,
   "agents": {
-    "claude": { "provider": "claude", "command": "claude", "model": null, "permissionMode": "auto", "extraArgs": [] },
-    "codex":  { "provider": "codex",  "command": "codex",  "model": null, "sandbox": "read-only", "extraArgs": [] }
+    "claude": { "provider": "claude", "command": "claude", "model": null, "effort": null, "instructions": null, "permissionMode": "auto", "extraArgs": [] },
+    "codex":  { "provider": "codex",  "command": "codex",  "model": null, "effort": null, "instructions": null, "sandbox": "read-only", "extraArgs": [] }
   }
 }
 ```
@@ -55,13 +55,17 @@ workspace/       shared folder; both agent CLIs run with this as cwd
 
 ## Rooms and seats
 
-A room seats **exactly two agents**, chosen when you create it (the "+" form is pre-filled with Claude + Codex — change either dropdown if you want a different pair). Seats are fixed for the room's lifetime; pills, chips, @mentions, colors and settings all follow the chosen pair. Existing rooms just work — no migration. The two seats need different *names*, but they may run the same provider: see [Seats and providers](#seats-and-providers).
+A room has **one to eight agents**, chosen when you create it. The "+" form starts with Claude and Codex; add or remove rows to set the roster. For each seat, set its name, provider, optional model and effort, and standing instructions. Seats are fixed for that room's lifetime: Settings can change their configuration, but cannot add, remove, rename or reorder seats. Names must be unique. Multiple seats can use the same provider; each seat keeps its own native CLI session and settings. See [Seats and providers](#seats-and-providers).
+
+Address a seat by name (`@builder`). `@all` sends the message to every seat; `@both` remains an alias for the whole roster. Tagging every seat by name also addresses the whole roster. In rooms with more than two agents, the UI uses `@all` to make this clear.
+
+Pair mode still uses two roles: the seat tagged in `/pair start @worker ...` is the worker, and the first other seat in roster order is the reviewer. Additional seats are not part of that Pair cycle.
 
 ### Linked project folders 📁
 
-Point a room at a real project — **Browse…** in Settings ("Project folder") opens your OS's own folder picker, or link one while creating the room ("📁 Link a project folder…" in the + form). Both agents then work and read *there* instead of the room's sandbox, and automatically pick up the project's `CLAUDE.md` / `AGENTS.md`.
+Point a room at a real project — **Browse…** in Settings ("Project folder") opens your OS's own folder picker, or link one while creating the room ("📁 Link a project folder…" in the + form). All agents then work and read *there* instead of the room's sandbox, and automatically pick up the project's `CLAUDE.md` / `AGENTS.md`.
 
-The sidebar footer names the folder the room actually works in, so you can always see whether it's a real project or the room's sandbox. If that folder is inside a Git repository, a muted line beneath it reads `⑂ branch` — or `⑂ abc1234 (detached)` when HEAD is on no branch — so you can tell at a glance which branch the agents are about to write in. A *linked worktree* adds its own name (`⑂ side-branch · wt-alpha`); an ordinary checkout doesn't, since that would only repeat the folder name above. It reads `.git` directly (no `git` subprocess), refreshes when the room state changes or the window regains focus, and shows nothing at all when the folder isn't a repo or HEAD can't be read — it never guesses a branch. Linked rooms show 📁 in the sidebar; flipping one to 🔨 work mode asks for explicit confirmation, since agents can then edit the real files. Changing the link resets both agents' sessions (the transcript keeps the room history). Blank = the room's own sandbox.
+The sidebar footer names the folder the room actually works in, so you can always see whether it's a real project or the room's sandbox. If that folder is inside a Git repository, a muted line beneath it reads `⑂ branch` — or `⑂ abc1234 (detached)` when HEAD is on no branch — so you can tell at a glance which branch the agents are about to write in. A *linked worktree* adds its own name (`⑂ side-branch · wt-alpha`); an ordinary checkout doesn't, since that would only repeat the folder name above. It reads `.git` directly (no `git` subprocess), refreshes when the room state changes or the window regains focus, and shows nothing at all when the folder isn't a repo or HEAD can't be read — it never guesses a branch. Linked rooms show 📁 in the sidebar; flipping one to 🔨 work mode asks for explicit confirmation, since agents can then edit the real files. Changing the link resets each seat's session (the transcript keeps the room history). Blank = the room's own sandbox.
 
 ### Housekeeping
 
@@ -98,11 +102,11 @@ Attachment-only messages work too, Retry reuses the same stored bytes, and a fai
 | `/summarize` | Recap of decisions and open questions |
 | `/help` | List commands |
 
-**Room note** (`/note <text>`, or Settings) is a standing instruction both agents see at the top of every prompt — project context, conventions, tone. It survives session resets and reaches both agents regardless of when their sessions started.
+**Room note** (`/note <text>`, or Settings) is a standing instruction every agent sees at the top of every prompt — project context, conventions, tone. It survives session resets and reaches every seat regardless of when its session started. Each seat also has its own standing instructions, model and (where supported) reasoning effort; these can be set when creating a room and changed later in Settings.
 
 ## Elsewhere in the UI
 
-Live "thinking…" indicators and streamed reply text; markdown rendering with copy-able code blocks; multiple rooms in the sidebar, each with its own config, sessions and transcript; **New conversation** to archive the transcript and reset both agents' sessions; a **Retry** button on failed turns; hover any message for a copy button; very long replies collapse with "Show more"; the tab title shows ● when replies land while you're in another window; and one click to **download the room transcript as Markdown** or **open the shared workspace folder**.
+Live "thinking…" indicators and streamed reply text; markdown rendering with copy-able code blocks; multiple rooms in the sidebar, each with its own config, sessions and transcript; **New conversation** to archive the transcript and reset every seat's session; a **Retry** button on failed turns; hover any message for a copy button; very long replies collapse with "Show more"; the tab title shows ● when replies land while you're in another window; and one click to **download the room transcript as Markdown** or **open the shared workspace folder**.
 
 The allowance control beside the composer (labelled **Automatic turns**, or **Extra exchanges** in a legacy room) is a sticky per-room browser-session shortcut: Room default, Solo, Until settled, or `0`–`8`. Overrides are identified visibly and Until settled shows the actual server safety ceiling. The selected policy survives page reloads and is snapshotted onto every accepted user message until the user changes it; taskless `/pair start` and `/pair end` controls carry no relay policy. Solo permits exactly one selected responder for a message, so it cannot be combined with `@both` or a Pair turn; the suppressed seat can still receive the message later as ordinary transcript context. While an exchange is active, the adjacent **used/limit** status shows server-counted launches against that exchange's immutable starting budget: every automatic provider start under Automatic turns, or only **charged request launches** under legacy Extra exchanges, where structural requests and the one free answer return owed by each launched request do not increment it. Changing the shortcut never rewrites a running or queued exchange.
 
@@ -125,13 +129,13 @@ historical error resolved. Causal failures do not offer an ordinary root Retry.
 
 ## Seats and providers
 
-A room has two **seats**. A seat's **id** is its @mention name, its key in `room.json` and `state.json`, and the author on every transcript line and receipt — it is the primary key of everything durable in the room, so it is fixed for the room's life. Its **provider** (`agents.<id>.provider`) says which CLI drives it.
+A room has one to eight **seats**. A seat's **id** is its @mention name, its key in `room.json` and `state.json`, and the author on every transcript line and receipt — it is the primary key of everything durable in the room, so it is fixed for the room's life. Its **provider** (`agents.<id>.provider`) says which CLI drives it.
 
-The id defaults to the provider name, which is why every room created before the two were separate keeps working: it gains one field and renames nothing. Two seats may share a provider as long as their names differ, so a Claude-vs-Claude room (say `alpha` and `beta`, one on Opus and one on Sonnet) is an ordinary room.
+The id defaults to the provider name for the default seats, which is why older rooms keep working. Any seats may share a provider as long as their names differ; each seat has a separate Parley session, cursor and configuration. For example, `alpha` and `beta` can both use Claude Code while selecting Opus and Sonnet respectively.
 
 Seat names are lowercase letters, numbers and dashes, up to 20 characters, and cannot be `both`, `user`, `system`, `all` or `none` — those would collide with routing or with Parley's own voices in the transcript.
 
-In the **+** form, picking the same provider in both dropdowns reveals a pair of name fields, prefilled `claude` / `claude2`; type over them to get `@opus` and `@sonnet`. A seat whose name differs from its provider labels itself by that name, and the second seat on a provider is given a shifted colour, so the two are told apart at a glance in pills, avatars and receipt dots.
+In the **+** form, every roster row has a name and provider selector, plus optional model, effort and standing-instructions fields. Give seats using the same provider different names, such as `@opus` and `@sonnet`. A seat whose name differs from its provider is labeled by that name in pills, avatars and receipts.
 
 ```jsonc
 "agents": {

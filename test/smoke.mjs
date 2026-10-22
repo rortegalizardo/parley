@@ -34,7 +34,7 @@ function ok(name, cond, detail) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let TOKEN = ""; // read out of the served page, exactly as the browser does
-const RUNTIME_PROTOCOL = "12";
+const RUNTIME_PROTOCOL = "13";
 
 async function api(method, route, body) {
   const res = await fetch(base + route, method === "GET"
@@ -658,6 +658,9 @@ async function checkFolderPickerUi() {
     constructor(id, attrs) {
       this.id = id || null;
       this.attrs = attrs || {};
+      this.open = false;
+      this.showModalCount = 0;
+      this.closeCount = 0;
       this.children = [];
       this.listeners = {};
       this._text = "";
@@ -693,6 +696,8 @@ async function checkFolderPickerUi() {
     appendChild(c) { this.children.push(c); if (c.id) byId.set(c.id, c); return c; }
     append(...children) { children.forEach((child) => this.appendChild(child)); }
     addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
+    showModal() { this.open = true; this.showModalCount++; }
+    close() { this.open = false; this.closeCount++; }
     click() { this.clicked = (this.clicked || 0) + 1; return this.onclick && this.onclick({ target: this }); }
     removeEventListener() {} setAttribute() {} removeAttribute() {}
     getAttribute() { return null; } closest() { return null; }
@@ -768,6 +773,11 @@ async function checkFolderPickerUi() {
 ;globalThis.__probe = {
   openPicker: $("newRoomProj").onclick,
   resetForm: $("addRoomBtn").onclick,
+  cancelNewRoom: $("newRoomCancel").onclick,
+  dialogState() {
+    const dialog = $("newRoomDialog");
+    return { open: dialog.open, showModalCount: dialog.showModalCount, closeCount: dialog.closeCount };
+  },
   send,
   choose(target) { state.chipRevision++; selectChip(target); },
   get chip() { return state.chip; },
@@ -846,6 +856,8 @@ async function checkFolderPickerUi() {
   try { probe.resetForm(); } catch (e) { crash = e; }
   ok("folder picker UI: resetting the form mid-pick doesn't destroy the button's contents",
     !crash, crash && crash.message);
+  ok("new-room UI: opening the form uses the native modal dialog",
+    probe.dialogState().open && probe.dialogState().showModalCount === 1, JSON.stringify(probe.dialogState()));
 
   // …and the result that finally arrives belongs to a form the user has left.
   let settle;
@@ -858,6 +870,9 @@ async function checkFolderPickerUi() {
   ok("folder picker UI: a result arriving after the form was reset is discarded",
     probe.projectDir === null, String(probe.projectDir));
   await Promise.race([openWhileReset, sleep(0)]);
+  probe.cancelNewRoom();
+  ok("new-room UI: cancel closes the native dialog and retires its pending picker",
+    !probe.dialogState().open && probe.dialogState().closeCount === 1, JSON.stringify(probe.dialogState()));
 
   // The worktree name earns its place only on a linked worktree; on an ordinary
   // checkout it would just repeat the workspace button directly above it.
@@ -1722,9 +1737,12 @@ async function main() {
   ok("pair banner renders zero rounds as until approved",
     typeof pairLabel === "function" && pairLabel(0) === "until approved" &&
     pairLabel(1) === "up to 1 round per message" && page.includes("pairRoundsLabel(pair.rounds)"));
-  ok("model and effort controls reopen the complete suggestion list",
-    !page.includes("<datalist id=") && page.includes('class="freecombo-toggle"') &&
-    page.includes('setFreeComboOpen(combo, opening, "")'));
+  ok("new-room model and effort fields expose provider datalists while settings retain full-list comboboxes",
+    page.includes('list="roster-models-${i}"') &&
+    page.includes('<datalist id="roster-models-${i}">${suggestions(catalog.models)}</datalist>') &&
+    page.includes('list="roster-efforts-${i}"') &&
+    page.includes('<datalist id="roster-efforts-${i}">${suggestions(catalog.efforts)}</datalist>') &&
+    page.includes('class="freecombo-toggle"') && page.includes('setFreeComboOpen(combo, opening, "")'));
   ok("Claude Full access is a warned structured setting",
     page.includes('<option value="bypassPermissions">full access') &&
     page.includes("Give ${who} Full access in this room?") &&
@@ -1821,11 +1839,8 @@ async function main() {
   // An auto-composed "Continue responding to this message." must be visibly an
   // ask, not something the user appears to have typed — the quote header and
   // the badge are the whole of that evidence.
-  // The new-room form has no submit button by default and relied on implicit
-  // submission, which the HTML spec only performs when the form has exactly one
-  // field that blocks it. Adding the seat-name inputs made three, and Enter
-  // silently stopped creating rooms at all. The button is the fix, and this
-  // pins it: any future field added to that form is harmless with it there.
+  // The native dialog still needs a real submit button because its multiple
+  // room and seat fields prevent implicit Enter submission.
   const newRoomForm = (page.match(/<form id="newRoomForm">[\s\S]*?<\/form>/) || [""])[0];
   ok("the new-room form has a real submit button, so Enter still creates a room",
     /type="submit"/.test(newRoomForm),
@@ -7129,8 +7144,8 @@ async function main() {
     const crlfFingerprint = evalConst("PROMPT_FINGERPRINT", {
       crypto, STANDING_CONTRACT_TEMPLATE: standingTemplate.replace(/\n/g, "\r\n"),
     });
-    ok("the repaired standing contract ships as version 4 with a platform-stable fingerprint",
-      promptVersion === 4 && /^[a-f0-9]{64}$/.test(promptFingerprint) &&
+    ok("the roster-aware standing contract ships as version 5 with a platform-stable fingerprint",
+      promptVersion === 5 && /^[a-f0-9]{64}$/.test(promptFingerprint) &&
       crlfFingerprint === promptFingerprint,
       JSON.stringify({ promptVersion, promptFingerprint, crlfFingerprint }));
     ok("the standing peer contract preserves authority provenance and withholding",
@@ -7511,7 +7526,7 @@ async function main() {
     const src = fs.readFileSync(SERVER, "utf8");
     const promptVersion = Number((/const PROMPT_VERSION = (\d+);/.exec(src) || [])[1]);
     ok("success stamps the exact contract, session, and note revision together",
-      promptVersion === 4 && verState.agents.codex.briefingVersion === promptVersion &&
+      promptVersion === 5 && verState.agents.codex.briefingVersion === promptVersion &&
       /^[a-f0-9]{64}$/.test(verState.agents.codex.briefingFingerprint) &&
       verState.agents.codex.promptSessionRef === "fake-thread-stale" &&
       verState.agents.codex.roomNoteRevision === verState.roomNoteRevision,

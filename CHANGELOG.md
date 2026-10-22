@@ -2,6 +2,14 @@
 
 Notable changes per published version. Dates are release dates on npm.
 
+## 1.3.0-personal.0 — personal fork, unpublished
+
+- Rooms support 1–8 individually named Claude, Codex, or Gemini agents. Choose each agent's model, supported effort, and persistent role instructions at creation or in Settings.
+- Address a named agent directly, or use `@all` (`@both` remains compatible). Pair keeps one worker and one reviewer; other agents retain independent delivery lanes.
+- Refresh the sidebar, participant header, menus, and room creation dialog for desktop and mobile, with readable light/dark colors for custom agent names.
+- Keep same-provider processes and sessions separate, including targeted Stop and recovery when a CLI does not return a stable session ID.
+- Add the [fork setup guide](docs/FORK.md), a [plain-language guide to upstream features](docs/CURRENT-FEATURES.md), and multi-agent/browser regression coverage.
+
 ## 1.2.1 — 2026-10-11
 
 Two Claude Code fixes.
