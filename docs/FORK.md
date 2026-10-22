@@ -4,19 +4,20 @@ Based on upstream `parley-room@1.2.1` (`c4cd237`). The original MIT license and 
 
 ## Run it
 
-From this checkout, run `npm start`. No install or build step is needed to use the app. The CLI accounts you already use supply authentication and model access.
+Launch with `parley-mine`. Install that command once with `npm link` from the checkout; `npm start` from the checkout also uses the same launcher. No build step or runtime dependencies are needed. The CLI accounts you already use supply authentication and model access.
 
-To try it with a separate room library:
+The fork uses its own port and room library by default:
 
 ```sh
-node parley.mjs --root ~/.parley-personal --port 0
+parley-mine
+# http://127.0.0.1:4142 · rooms in ~/.parley-fork
 ```
 
-The default library remains `~/.parley`, and existing rooms keep their names, agent identities, transcripts, and sessions. Stop an older Parley server before running this fork against the same library. `npx parley-room@1.2.1` still launches the original upstream version.
+The original `~/.parley` library and its server on port 4141 remain separate. Existing upstream rooms retain their names, agent identities, transcripts, and sessions. `npx parley-room@1.2.1` still launches the original upstream version. Explicit `--root` and `--port` overrides are supported; do not point two running servers at the same room library.
 
 ## Build your four-agent table
 
-Choose **New room**, give the room a name, and add agents. A room accepts **1–8 agents**, with any mixture of the installed providers. Each agent needs a unique name; that name becomes its `@mention` and stays fixed for the room's life.
+Choose **New room** in the header or **Build your room** on the first screen. **Use the four-agent setup** opens an editable roster with Fable, Astra, an adversary, and a privacy reviewer, including suggested standing instructions. A room accepts **1–8 agents**, with any mixture of the installed providers. Each agent needs a unique name; that name becomes its `@mention` and stays fixed for the room's life.
 
 | Name | Provider | Model | Suggested standing instructions |
 | --- | --- | --- | --- |

@@ -4,6 +4,8 @@ Notable changes per published version. Dates are release dates on npm.
 
 ## 1.3.0-personal.0 — personal fork, unpublished
 
+- Put room creation on the opening screen and header, with a one-click Fable, Astra, adversary, and privacy template. Fix empty-room scrolling and compact-window header wrapping.
+- Add `parley-mine` (also `npm start`): defaults to port 4142 and `~/.parley-fork`, reopens an existing fork, and refuses an occupied port instead of silently starting a second server.
 - Rooms support 1–8 individually named Claude, Codex, or Gemini agents. Choose each agent's model, supported effort, and persistent role instructions at creation or in Settings.
 - Address a named agent directly, or use `@all` (`@both` remains compatible). Pair keeps one worker and one reviewer; other agents retain independent delivery lanes.
 - Refresh the sidebar, participant header, menus, and room creation dialog for desktop and mobile, with readable light/dark colors for custom agent names.

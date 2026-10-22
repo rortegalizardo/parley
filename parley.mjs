@@ -7838,7 +7838,7 @@ process.on("uncaughtException", (err) => {
 let port = PORT_WANTED;
 function listen(attempt = 0) {
   server.once("error", (e) => {
-    if (e.code === "EADDRINUSE" && attempt < 20) { port++; listen(attempt + 1); }
+    if (e.code === "EADDRINUSE" && process.env.PARLEY_EXACT_PORT !== "1" && attempt < 20) { port++; listen(attempt + 1); }
     else { console.error("Failed to start:", e.message); process.exit(1); }
   });
   server.listen(port, "127.0.0.1", () => {
