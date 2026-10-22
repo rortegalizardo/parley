@@ -34,3 +34,11 @@ QA room `bridge-qa-mvk3j5n4-af98c6` used only a dedicated fake-provider wrapper,
 **Port 4141 was not contacted, signaled, restarted or reconfigured, and its library was not modified.** No normal/global harness configuration was installed. The bridge is available on 4142; the caller chooses the project and room scope when following the [setup guide](HARNESS-BRIDGE.md).
 
 An early smoke process loaded an intermediate source version and found six related Ask/Stop-and-Ask failures from an out-of-scope variable. That insertion was removed. The later full smoke passed all 839 checks, and the primary agent independently retested explicit Ask, default Ask text and Stop-and-Ask against corrected code.
+
+## Subsequent requested harness installation
+
+The user later explicitly requested installation. Both Codex and Claude now have user-scope `parley` registrations for the same adapter, with separate credentials restricted to `default` on 4142. No central multi-service gateway or duplicate MCP project was created.
+
+Before installation, Sol 6.1 added an ancestry guard that detects original and fork Parley provider contexts before credential access. Such contexts expose zero tools and reject direct calls; unknown/unsupported ancestry is also suppressed. A real fake-original subprocess test verifies this without an environment marker or credential file. This protects normal inherited-provider execution, not deliberately detached same-user processes.
+
+The primary agent ran the full bridge suite (8 checks plus independent end-to-end cases) and packaged startup (22 files), verified the persisted Codex registration, observed Claude's actual user-scope Connected status, and repeated Codex app-server discovery/read with the installed credential. Process-metadata-only checks confirmed the actual original and fork ancestor contexts are suppressed while the normal harness context is allowed. Neither server was restarted, no message was submitted, and no 4141 API or library was accessed. Existing sessions may need a fresh harness connection to load their newly installed tools.

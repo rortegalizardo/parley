@@ -26,7 +26,7 @@ The idempotent command writes an owner-only credential beneath the fork library'
 
 Default URL is `http://127.0.0.1:4142`. `--base-url` allows a different explicit `127.0.0.1` port for isolated tests. Port **4141**, the original `~/.parley`/`~/.roundtable` library, remote URLs, redirects and browser-origin credential use are rejected. Keep credential files outside repositories and model input; never paste their contents into a chat or put tokens in tool arguments, command arguments or configuration snippets. Provisioning must target the same persistent library used by that backend.
 
-## Connect a caller-selected project
+## Connect a harness
 
 Use the absolute Node executable, adapter path and credential path printed by setup. Both clients run the **same** `bin/parley-bridge.mjs`; only the credential differs.
 
@@ -41,6 +41,8 @@ tool_timeout_sec = 35
 
 Codex loads project configuration for trusted projects. See [official OpenAI MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli). Start a fresh harness connection after configuring it; `codex mcp list` can inspect discovery.
 
+For a reusable installation across projects, merge the same section into the user's `~/.codex/config.toml` instead. For Claude Code, use `--scope user` in the command below instead of `--scope local`.
+
 For Claude Code, run from the intended caller project:
 
 ```sh
@@ -51,7 +53,7 @@ claude mcp add --transport stdio --scope local parley -- \
 
 Claude's local scope applies to that project and stores its private registration in the user's Claude configuration. `claude mcp get parley` or `/mcp` inspects it. Alternatively merge the printed `mcpServers` object into a caller-selected `.mcp.json` for Claude project scope or a compatible MCP client's configuration. See [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp).
 
-Choose a caller project that is not used by the protected original server's room agents. **Do not install global client configuration while those agents could inherit it.** Setup merely prints snippets; installation scope is an explicit caller choice. The fork marks room-launched provider processes with `PARLEY_ROOM_AGENT=1`; the adapter and provisioning command refuse startup in that environment to prevent automatic reflection. Existing original servers predate that guard, which is why project isolation still matters.
+Setup merely prints snippets; installation scope is an explicit caller choice. The adapter checks `PARLEY_ROOM_AGENT=1` and inspects local ancestor process metadata before opening its credential. Node ancestors running the original `parley`/`roundtable` entrypoint or the fork's `parley-mine` entrypoint suppress all tools, including for older original servers without the environment marker. Suppressed adapters initialize with an empty tool list and reject direct calls without reading credentials or contacting a backend. Failed or unsupported ancestry inspection also suppresses tools; this check currently supports macOS and Linux. It does not contact, signal or reconfigure the original server. Provisioning still refuses startup under the room marker. This guard covers normal provider subprocess inheritance; it is not a security boundary against a same-user process deliberately evading its ancestry.
 
 ## Tool contract
 

@@ -1,6 +1,20 @@
 # Parley fork checkpoint — 2026-10-22
 
-## Current checkpoint — shared harness MCP bridge
+## Current checkpoint — harnesses installed
+
+User explicitly requested installation, not a setup guide. Both harnesses now have an enabled user-scope MCP named `parley`, reusable across projects, bound to `http://127.0.0.1:4142`. Each has a distinct private credential restricted to the existing `default` room. Broader room access was not installed.
+
+- Codex registration: `~/.codex/config.toml`. Claude registration: `~/.claude.json`. Both run the shared `bin/parley-bridge.mjs` from this checkout. Credential contents stay in owner-only files under `~/.parley-fork/.bridge/clients/` and were never printed. No private harness settings were copied into the fork.
+- Architecture decision: one focused, reusable Parley MCP, not a central gateway for unrelated services. Therefore no separate central MCP project was created; the implementation remains in `/Users/ortega/Desktop/Projects/parley`.
+- Sol 6.1 added a startup ancestry check before credential access. Both the original npm `parley` entrypoint and the fork's `parley-mine` suppress the MCP's tools for their own provider descendants, even without the newer environment marker. Suppressed/unknown contexts initialize with zero tools and deny direct calls. Ordinary harnesses retain all four tools.
+- Primary-agent validation: bridge suite passed (8 checks plus independent end-to-end cases); packed startup passed (22 files). Codex's installed registration is enabled, its app-server discovered four tools and executed authenticated list/read with the installed credential. Claude's actual user-scope registration reports Connected. Credentials are mode 600 and scoped to `default`/4142. Metadata-only checks confirmed both actual Parley ancestor contexts are blocked and a normal harness is allowed.
+- Neither server was restarted or signaled. No requests were sent to 4141 and its library was untouched. No test messages were added to the existing conversation. A fresh harness session loads the new MCP registration; the already-running chat's tool inventory may predate installation.
+
+Next action: in a new Codex or Claude session, ask it to use Parley room `default`, targeting a named agent or `@all`. No setup commands remain for the user.
+
+---
+
+## Historical checkpoint — shared harness MCP bridge
 
 Implemented the approved [bridge proposal](docs/HARNESS-BRIDGE-PROPOSAL.md). One reusable stdio MCP adapter supports Codex, Claude Code and other compatible clients across projects. Distinct registered identities share the same Parley backend. User chose implementation by Sol 6.1 with primary-agent validation; continue that division for future coding. Deliver verified changes directly to the fork, without leaving new PRs awaiting the user.
 
