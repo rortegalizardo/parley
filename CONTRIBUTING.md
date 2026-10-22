@@ -76,8 +76,7 @@ Two rules follow from it:
    file tree, or embedded terminal. The chat is the interface; the user's editor
    is right next door and is better at being an editor.
 
-Other standing decisions: exactly two seats per room (right of reply and the
-pair-review workflow depend on it); loopback binding only; and Parley does not
+Other standing decisions: one to eight seats per room (Pair review still has exactly one worker and one reviewer); loopback binding only; and Parley does not
 read, store or forward credentials. Extra CLI args remain a trusted-user escape
 hatch, but raw `--dangerously-*` / `--allow-dangerously-*` flags and raw Claude
 bypass arguments are rejected. Parley's first-class UI exposes host-level Full
@@ -90,7 +89,7 @@ trusted hand-edited config and custom wrappers remain outside those guardrails.
 
 A *provider* is a CLI harness that Parley drives: Claude Code, Codex and Gemini
 CLI today. Parley never calls a model API itself; it launches the harness, gives
-it a prompt on stdin, and reads what it prints. A room seats two providers, and
+it a prompt on stdin, and reads what it prints. A room seats one to eight named agents, and
 a seat's provider is `room.cfg.agents.<seat>.provider`.
 
 Adding one means writing an **adapter** and a **registry entry**. Most of it is

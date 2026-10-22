@@ -60,7 +60,7 @@ function toast(msg, isErr) {
 // This blocks blind/cross-origin requests; it is not a secret from local
 // processes, which can fetch the public page and read the embedded token.
 const TOKEN = (document.querySelector('meta[name="parley-token"]') || {}).content || "";
-const REQUIRED_RUNTIME_PROTOCOL = "12";
+const REQUIRED_RUNTIME_PROTOCOL = "13";
 const PAGE_RUNTIME_PROTOCOL = (document.querySelector('meta[name="parley-runtime-protocol"]') || {}).content || "";
 const withToken = (url) => url + (url.includes("?") ? "&" : "?") +
   "token=" + encodeURIComponent(TOKEN) + "&protocol=" + encodeURIComponent(REQUIRED_RUNTIME_PROTOCOL);
@@ -1913,11 +1913,16 @@ function seatLabel(a) {
 }
 function injectSeatStyles() {
   let css = "";
-  for (const [id, p] of Object.entries(state.providers)) {
+  const catalog = { ...state.providers, ...(state.summary && state.summary.seatInfo || {}) };
+  for (const [id, p] of Object.entries(catalog)) {
     const c = p.color || "#7aa2f7";
-    css += `.msg.${id} .who{color:${c}} .msg.${id} .avatar{background:${c}} ` +
-      `.msg.${id} .bubble{border-left:2px solid ${c}88} .activity.${id} .adot{background:${c}} ` +
-      `.hdot.${id}{--hc:${c}} .chip.active[data-t="${id}"]{background:${c};border-color:${c}}\n`;
+    const selectors = `.msg.${id},.activity.${id},.hdot.${id},.chip[data-t="${id}"]`;
+    css += `${selectors}{--seat-color:${c}}\n` +
+      `@media(prefers-color-scheme:light){${selectors}{--seat-color:color-mix(in srgb,${c} 72%,#172030)}}\n` +
+      `.msg.${id} .who{color:var(--seat-color)} .msg.${id} .avatar{background:var(--seat-color)} ` +
+      `.msg.${id} .bubble{border-left:2px solid color-mix(in srgb,var(--seat-color) 55%,transparent)} ` +
+      `.activity.${id} .adot{background:var(--seat-color)} .hdot.${id}{--hc:var(--seat-color)} ` +
+      `.chip.active[data-t="${id}"]{background:var(--seat-color);border-color:var(--seat-color)}\n`;
   }
   let el = $("seatStyles");
   if (!el) { el = document.createElement("style"); el.id = "seatStyles"; document.head.appendChild(el); }
@@ -1926,18 +1931,20 @@ function injectSeatStyles() {
 function renderSeatsUI(s) {
   const seats = s.seats;
   $("pills").innerHTML = seats.map((a) =>
-    `<div class="pill" data-seat="${esc(a)}" id="pill_${esc(a)}"><span class="st"></span>` +
-    `<b style="color:${seatColor(a)}">${esc(seatLabel(a))}</b><span class="pinfo"></span>` +
+    `<div class="pill" data-seat="${esc(a)}" id="pill_${esc(a)}" style="--seat-accent:${seatColor(a)}"><span class="st"></span>` +
+    `<b>${esc(seatLabel(a))}</b><span class="pinfo"></span>` +
     `<button class="ear" data-seat="${esc(a)}">👂</button>` +
     `<button class="moon" data-seat="${esc(a)}">😴</button></div>`).join("");
   $("seatChips").innerHTML = seats.map((a) => `<button class="chip" data-t="${esc(a)}">@${esc(a)}</button>`).join("");
+  const allChip = document.querySelector('.chip[data-t="both"]');
+  if (allChip) allChip.textContent = seats.length > 2 ? "@all" : "@both";
   document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.t === state.chip));
-  $("tagline").textContent = `you · ${seats.join(" · ")}`;
-  input.placeholder = `Message the table…  (@${seats.join(", @")}, @both)`;
+  $("tagline").textContent = `Your shared workspace · ${seats.length} agent${seats.length === 1 ? "" : "s"}`;
+  input.placeholder = `Message the table…  type @ to choose an agent`;
   $("starters").innerHTML =
-    `<button class="starter" data-fill="@both Introduce yourselves in one sentence each."><b class="c3">@both</b> Introduce yourselves in one sentence each.</button>` +
+    `<button class="starter" data-fill="@${seats.length > 1 ? (seats.length > 2 ? "all" : "both") : esc(seats[0])} Introduce yourselves in one sentence each."><b class="c3">@${seats.length > 1 ? (seats.length > 2 ? "all" : "both") : seats[0]}</b> ${seats.length > 1 ? "Introduce yourselves in one sentence each." : "Start with a focused question."}</button>` +
     seats.map((a, i) => `<button class="starter" data-fill="@${esc(a)} "><b class="${i ? "c2" : "c1"}">@${esc(a)}</b> ask ${esc(seatLabel(a))} something…</button>`).join("") +
-    `<button class="starter" data-fill="/pair start @${esc(seats[0])} "><b class="c1">/pair start</b> one builds, the other reviews…</button>`;
+    (seats.length > 1 ? `<button class="starter" data-fill="/pair start @${esc(seats[0])} "><b class="c1">/pair start</b> one builds, the other reviews…</button>` : "");
 }
 function syncChipUI() {
   document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.t === state.chip));
@@ -2033,7 +2040,11 @@ function applySummary(s) {
   state.summary = s;
   state.providers = s.providers || state.providers;
   injectSeatStyles();
-  if (!$("pill_" + s.seats[0]) || !$("pill_" + s.seats[1])) renderSeatsUI(s);
+  const rosterKey = JSON.stringify([s.name, s.seats, s.seatInfo]);
+  if (state.renderedRosterKey !== rosterKey) {
+    renderSeatsUI(s);
+    state.renderedRosterKey = rosterKey;
+  }
   syncChipUI();
   $("roomTitle").textContent = s.name;
   for (const a of s.seats) {
@@ -2240,7 +2251,7 @@ function renderAskMenu(btn) {
   const contested = state.summary.workingPair || aimed.some((a) => busy.includes(a));
   const chips = [...seats, ...(seats.length > 1 ? ["both"] : [])].map((t) =>
     `<button data-ask-seat="${esc(t)}" class="${t === askDraft.target ? "active" : ""}">` +
-    `${esc(t === "both" ? "Both" : seatLabel(t))}</button>`).join("");
+    `${esc(t === "both" ? (seats.length > 2 ? "All" : "Both") : seatLabel(t))}</button>`).join("");
   const draft = ($("askText") || {}).value || "";
   const actions = !contested
     ? `<button role="menuitem" data-ask-mode="now">↪ Ask now<span class="sm-sub">the seat is free</span></button>`
@@ -2675,9 +2686,9 @@ function guessTextTarget(raw) {
   // Mirror server textTarget exactly. User text routing is intentionally
   // separate from the masked agent-mention grammar used for automatic calls.
   const alt = seats.map((s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  const tags = new Set([...text.matchAll(new RegExp(`@(${alt}|both)\\b`, "gi"))].map((m) => m[1].toLowerCase()));
-  if (tags.has("both") || seats.every((s) => tags.has(s))) return "both";
-  const lead = new RegExp(`^[*_~]*@(${alt})\\b[*_~]*[\\s:,]*`, "i").exec(text);
+  const tags = new Set([...text.matchAll(new RegExp(`@(${alt}|both|all)(?![a-z0-9-])`, "gi"))].map((m) => m[1].toLowerCase()));
+  if (tags.has("both") || tags.has("all") || seats.every((s) => tags.has(s))) return "both";
+  const lead = new RegExp(`^[*_~]*@(${alt})(?![a-z0-9-])[*_~]*[\\s:,]*`, "i").exec(text);
   if (lead) return lead[1].toLowerCase();
   for (const s of seats) if (tags.has(s)) return s;
   return null;
@@ -3257,34 +3268,63 @@ async function refreshRooms() {
 // choice is discoverable, never a required step.
 function fillSeatPickers() {
   const ids = Object.keys(state.providers);
-  if (!ids.length || $("seat1").options.length) return;
-  for (const [sel, def] of [[$("seat1"), "claude"], [$("seat2"), "codex"]]) {
-    sel.innerHTML = ids.map((p) => `<option value="${esc(p)}">${esc(state.providers[p].label)}</option>`).join("");
-    sel.value = ids.includes(def) ? def : ids[sel === $("seat2") ? 1 : 0] || ids[0];
-    sel.onchange = syncSeatNames;
+  if (!ids.length) return;
+  for (const sel of [$("seat1"), $("seat2")]) {
+    if (sel && !sel.options.length) sel.innerHTML = ids.map((p) => `<option value="${esc(p)}">${esc(state.providers[p].label)}</option>`).join("");
   }
-  syncSeatNames();
+  if (!newRoster.length) newRoster = [{ id: "claude", provider: ids.includes("claude") ? "claude" : ids[0] }, { id: "codex", provider: ids.includes("codex") ? "codex" : ids[Math.min(1, ids.length - 1)] }];
+  renderRoster();
 }
-// Two seats may run the same provider — what has to differ is their names,
-// because a seat id is its @mention, its config key and the author on every
-// line it writes. The name fields only appear when they are actually needed;
-// picking two different providers keeps the form exactly as it was.
-function syncSeatNames() {
-  const p1 = $("seat1").value, p2 = $("seat2").value;
-  const same = !!p1 && p1 === p2;
-  $("seatNames").style.display = same ? "flex" : "none";
-  $("seatNamesHint").style.display = same ? "block" : "none";
-  if (!same) return;
-  // Prefill rather than demand: "claude" and "claude2" are a fine default, and
-  // anyone who wants "opus"/"sonnet" can just type over them.
-  if (!$("seat1Name").value.trim()) $("seat1Name").value = p1;
-  if (!$("seat2Name").value.trim()) $("seat2Name").value = p2 + "2";
-  $("seat1Name").placeholder = p1;
-  $("seat2Name").placeholder = p2 + "2";
+
+let newRoster = [];
+function renderRoster() {
+  const list = $("rosterList"); if (!list) return;
+  const ids = Object.keys(state.providers || {});
+  $("rosterCount").textContent = `Your agents · ${newRoster.length} of 8`;
+  $("addSeatBtn").disabled = newRoster.length >= 8;
+  $("newRoomReview").hidden = newRoster.length < 2;
+  if (newRoster.length < 2) $("newRoomReviewChk").checked = false;
+  list.innerHTML = newRoster.map((agent, i) => {
+    const options = ids.map((p) => `<option value="${esc(p)}" ${p === agent.provider ? "selected" : ""}>${esc(state.providers[p].label || p)}</option>`).join("");
+    const catalog = state.providers[agent.provider] || {};
+    const effort = (catalog.fields || []).includes("effort");
+    if (!effort) agent.effort = "";
+    const suggestions = (values) => (values || []).map((v) => `<option value="${esc(typeof v === "string" ? v : v.value)}">${esc(typeof v === "string" ? v : v.label || v.value)}</option>`).join("");
+    return `<article class="roster-row" data-roster-index="${i}" aria-label="Agent ${i + 1}">
+      <div class="roster-main">
+        <label class="roster-field">Name / @mention<input class="roster-name" ${i < 2 ? `id="seat${i + 1}Name"` : ""} value="${esc(agent.id || "agent" + (i + 1))}" maxlength="20" placeholder="e.g. privacy" aria-label="Agent ${i + 1} name" spellcheck="false"></label>
+        <label class="roster-field">Provider<select class="roster-provider" ${i < 2 ? `id="seat${i + 1}"` : ""} aria-label="Agent ${i + 1} provider">${options}</select></label>
+        <button type="button" class="ract roster-remove" title="Remove agent" aria-label="Remove agent ${i + 1}" ${newRoster.length === 1 ? "disabled" : ""}>×</button>
+      </div>
+      <div class="roster-advanced">
+        <label class="roster-field ${effort ? "" : "roster-wide"}">Model<input class="roster-model" placeholder="Provider default" aria-label="Model for agent ${i + 1}" list="roster-models-${i}" value="${esc(agent.model || "")}" maxlength="200"><datalist id="roster-models-${i}">${suggestions(catalog.models)}</datalist></label>
+        ${effort ? `<label class="roster-field">Reasoning effort<input class="roster-effort" placeholder="Default" aria-label="Reasoning effort for agent ${i + 1}" value="${esc(agent.effort || "")}" list="roster-efforts-${i}" maxlength="40"><datalist id="roster-efforts-${i}">${suggestions(catalog.efforts)}</datalist></label>` : ""}
+        <label class="roster-field roster-wide">Identity &amp; instructions<textarea class="roster-instructions" rows="2" aria-label="Standing instructions for agent ${i + 1}" maxlength="8000" placeholder="A role, point of view, or rules to keep throughout the conversation…">${esc(agent.instructions || "")}</textarea></label>
+      </div>
+    </article>`;
+  }).join("");
+  list.querySelectorAll(".roster-row").forEach((row) => {
+    const i = Number(row.dataset.rosterIndex);
+    row.querySelector(".roster-provider").onchange = (e) => { newRoster[i].provider = e.target.value; renderRoster(); };
+    row.querySelector(".roster-name").oninput = (e) => { newRoster[i].id = e.target.value.toLowerCase(); };
+    row.querySelector(".roster-model").oninput = (e) => { newRoster[i].model = e.target.value; };
+    const effortInput = row.querySelector(".roster-effort");
+    if (effortInput) effortInput.oninput = (e) => { newRoster[i].effort = e.target.value; };
+    row.querySelector(".roster-instructions").oninput = (e) => { newRoster[i].instructions = e.target.value; };
+    row.querySelector(".roster-remove").onclick = () => { if (newRoster.length <= 1) return toast("A room needs at least one agent.", true); newRoster.splice(i, 1); renderRoster(); };
+  });
 }
+$("addSeatBtn").onclick = () => {
+  if (newRoster.length >= 8) return toast("Rooms support up to 8 agents.", true);
+  const providers = Object.keys(state.providers || {});
+  let next = newRoster.length + 1;
+  while (newRoster.some((agent) => agent.id === `agent${next}`)) next++;
+  newRoster.push({ id: `agent${next}`, provider: providers[newRoster.length % Math.max(1, providers.length)] || "claude" });
+  renderRoster();
+};
 // Mirrors the server's rule so the message names the problem instead of
 // bouncing back a 400. The server still validates; this is only the wording.
-const RESERVED_SEAT_NAMES = new Set(["both", "user", "system", "all", "none"]);
+const RESERVED_SEAT_NAMES = new Set(["both", "user", "system", "all", "none", "auto", "constructor", "prototype"]);
 function seatNameIssue(id) {
   if (!/^[a-z][a-z0-9-]{0,19}$/.test(id)) {
     return `"${id}" — seat names are lowercase letters, numbers and dashes, starting with a letter.`;
@@ -3771,11 +3811,23 @@ function mentionKeydown(e) {
 // ------------------------------------------------------------ rooms sidebar
 $("addRoomBtn").onclick = () => {
   clearNewRoomProject(); // a fresh form never inherits the last one's folder
-  $("seat1Name").value = ""; $("seat2Name").value = "";
-  syncSeatNames();
-  $("newRoomForm").style.display = "block";
+  const providers = Object.keys(state.providers || {});
+  newRoster = [{ id: "claude", provider: providers.includes("claude") ? "claude" : providers[0] || "claude" }, { id: "codex", provider: providers.includes("codex") ? "codex" : providers[1] || providers[0] || "codex" }];
+  renderRoster();
+  setNavOpen(false);
+  $("newRoomDialog").showModal();
   $("newRoomInput").focus();
 };
+function closeNewRoom() {
+  newRoomPick++;
+  $("newRoomDialog").close();
+  $("newRoomInput").value = "";
+  newRoster = [];
+  clearNewRoomProject();
+}
+$("newRoomCancel").onclick = closeNewRoom;
+$("newRoomCancelBottom").onclick = closeNewRoom;
+$("newRoomDialog").addEventListener("cancel", (e) => { e.preventDefault(); closeNewRoom(); });
 let newRoomProjectDir = null;
 // The OS dialog isn't modal to this page, so the form can be submitted while it
 // is still open. Each pick is stamped, and anything that ends the form's life
@@ -3800,19 +3852,12 @@ $("newRoomForm").onsubmit = async (e) => {
   e.preventDefault();
   const name = $("newRoomInput").value.trim();
   if (!name) return;
-  const providers = [$("seat1").value, $("seat2").value].filter(Boolean);
-  let seats = providers;
-  if (providers.length === 2 && providers[0] === providers[1]) {
-    // Same provider twice is a real room; the names are what distinguish them.
-    const ids = [$("seat1Name").value.trim().toLowerCase() || providers[0],
-      $("seat2Name").value.trim().toLowerCase() || providers[1] + "2"];
-    if (ids[0] === ids[1]) return toast("Give the two seats different names.", true);
-    const issue = ids.map(seatNameIssue).find(Boolean);
-    if (issue) return toast(issue, true);
-    seats = ids.map((id, i) => ({ id, provider: providers[i] }));
-  }
+  const seats = newRoster.map((a, i) => ({ id: (a.id || `agent${i + 1}`).trim().toLowerCase(), provider: a.provider, ...(a.model ? { model: a.model.trim() } : {}), ...(a.effort ? { effort: a.effort.trim() } : {}), ...(a.instructions ? { instructions: a.instructions.trim() } : {}) }));
+  if (!seats.length) return toast("Add at least one agent.", true);
+  const names = new Set();
+  for (const seat of seats) { if (names.has(seat.id)) return toast("Give each agent a different name.", true); names.add(seat.id); const issue = seatNameIssue(seat.id); if (issue) return toast(issue, true); }
   const body = { name };
-  if (seats.length === 2) body.seats = seats;
+  body.seats = seats;
   if (newRoomProjectDir) body.projectDir = newRoomProjectDir;
   // Retire this form's pick: a dialog still open belongs to the room being
   // created now, not to whatever is typed next. The chosen folder itself is
@@ -3826,8 +3871,8 @@ $("newRoomForm").onsubmit = async (e) => {
     // create, flip to work, turn on the reviewer's ear, then find lurkStyle.
     // As a preset it is one checkbox — configured after creation so the room
     // exists to configure, and reported rather than silently half-applied.
-    const reviewerId = typeof seats[1] === "string" ? seats[1] : (seats[1] || {}).id;
-    if (asReview && seats.length === 2 && reviewerId) {
+    const reviewerId = seats[1] && seats[1].id;
+    if (asReview && seats.length >= 2 && reviewerId) {
       try {
         await api("/api/config", {
           room: name,
@@ -3836,9 +3881,12 @@ $("newRoomForm").onsubmit = async (e) => {
       } catch (err) { toast(`Room created, but the review preset didn't apply: ${err.message}`, true); }
     }
     $("newRoomInput").value = "";
-    $("seat1Name").value = ""; $("seat2Name").value = "";
+    const s1n = $("seat1Name"), s2n = $("seat2Name");
+    if (s1n) s1n.value = "";
+    if (s2n) s2n.value = "";
+    newRoster = [];
     $("newRoomReviewChk").checked = false;
-    $("newRoomForm").style.display = "none";
+    $("newRoomDialog").close();
     clearNewRoomProject();
     await loadRoom(name);
   } catch (err) { toast(err.message, true); }
@@ -3932,6 +3980,11 @@ function seatFieldHTML(a, field, p) {
   if (field === "extraArgs") return `<div class="fld"><label>Extra CLI args</label><input ${d(a, "extraArgs")} spellcheck="false"></div>`;
   return "";
 }
+// Persistent per-agent identity/instructions are deliberately separate from the
+// shared room note: they are included in that seat's briefing for every turn.
+function seatInstructionsHTML(a) {
+  return `<div class="fld"><label>Standing instructions for ${esc(seatLabel(a))}</label><textarea rows="3" data-seat="${esc(a)}" data-f="instructions" placeholder="Role, point of view, or review criteria…"></textarea><div class="note">This identity follows the agent through the whole room.</div></div>`;
+}
 function setFreeComboOpen(combo, open, query = "") {
   const input = combo.querySelector(".freecombo-input");
   const menu = combo.querySelector(".freecombo-menu");
@@ -4020,6 +4073,7 @@ function renderSeatCards(s) {
     const p = (s.seatInfo && s.seatInfo[a]) || s.providers[a] || {};
     const ag = s.agents[a];
     let f = (p.fields || []).map((field) => seatFieldHTML(a, field, p)).join("");
+    f += seatInstructionsHTML(a);
     f += `<div class="fld"><label>Lurk assertiveness (when 👂 is on)</label><select data-seat="${esc(a)}" data-f="lurkStyle">` +
       `<option value="quiet">quiet — only uncorrected errors</option>` +
       `<option value="balanced">balanced — errors, real disagreements, critical caveats</option>` +

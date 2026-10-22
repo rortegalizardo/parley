@@ -1,8 +1,8 @@
 {
   "name": "parley-room",
-  "version": "1.2.1",
-  "private": false,
-  "description": "Multi-agent chat room for you, Claude Code, and Codex - runs locally, using the CLI sessions you're already signed into.",
+  "version": "1.3.0-personal.0",
+  "private": true,
+  "description": "A local conversation room with up to eight individually configured Claude, Codex, and Gemini agents.",
   "type": "module",
   "bin": {
     "parley": "parley.mjs"
@@ -22,9 +22,10 @@
     "test:provenance": "node test/provenance.mjs",
     "test:sequences": "node test/scheduler-sequences.mjs",
     "bench": "node test/benchmark.mjs",
-    "test:integration": "npm run test:retry && npm run test:provenance && npm run test:sequences && npm run test:automatic && npm run test:claude-sessions",
+    "test:integration": "npm run test:retry && npm run test:provenance && npm run test:sequences && npm run test:automatic && npm run test:claude-sessions && npm run test:multi-agent",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:smoke && npm run test:browser && npm run test:package",
-    "test:package": "node test/package.mjs"
+    "test:package": "node test/package.mjs",
+    "test:multi-agent": "node test/multi-agent.mjs"
   },
   "license": "MIT",
   "publishConfig": {
@@ -32,9 +33,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/auspex0/parley.git"
+    "url": "git+https://github.com/rortegalizardo/parley.git"
   },
-  "homepage": "https://github.com/auspex0/parley#readme",
+  "homepage": "https://github.com/rortegalizardo/parley#readme",
   "keywords": [
     "claude-code",
     "codex",

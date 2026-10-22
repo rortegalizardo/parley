@@ -18,33 +18,7 @@
       <div><b>Parley</b><span id="tagline">you · claude · codex</span></div>
     </div>
     <div class="side-label">Rooms <button id="addRoomBtn" title="New room">+</button></div>
-    <form id="newRoomForm">
-      <input id="newRoomInput" placeholder="room name…" maxlength="40" spellcheck="false">
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <select id="seat1" title="Seat 1 provider" style="flex:1"></select>
-        <select id="seat2" title="Seat 2 provider" style="flex:1"></select>
-      </div>
-      <div id="seatNames" style="display:none;gap:6px;margin-top:6px">
-        <input id="seat1Name" maxlength="20" spellcheck="false" style="flex:1" aria-label="Seat 1 name">
-        <input id="seat2Name" maxlength="20" spellcheck="false" style="flex:1" aria-label="Seat 2 name">
-      </div>
-      <div id="seatNamesHint" class="hint" style="display:none;margin-top:4px">
-        Two seats on the same provider need different names — these become their @mentions.
-      </div>
-      <button type="button" id="newRoomProj" class="ract"
-        style="display:block;width:100%;text-align:left;margin-top:6px;padding:4px 2px;font-size:11.5px;color:var(--text-faint)"
-        title="Point this room at an existing project folder"><span data-picker-label>📁 Link a project folder…</span> <span id="newRoomProjVal"></span></button>
-      <label id="newRoomReview" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px;font-size:11.5px;color:var(--text-faint);cursor:pointer">
-        <input type="checkbox" id="newRoomReviewChk" style="margin-top:2px">
-        <span>Pair review room — seat 1 codes, seat 2 lurks and reviews every change</span>
-      </label>
-      <!-- A real submit button, not decoration. Without one the form relied on
-           implicit submission, which the HTML spec only performs when there is
-           exactly one text field — so adding the seat-name inputs silently
-           stopped Enter from creating anything at all. -->
-      <button type="submit" id="newRoomCreate" class="btn primary"
-        style="width:100%;margin-top:8px;padding:6px 10px;font-size:12px">Create room</button>
-    </form>
+
     <nav id="roomList"></nav>
     <div class="side-foot">
       <button id="openWs"><span class="ico">📁</span> <span id="openWsLabel">Open workspace</span></button>
@@ -52,7 +26,7 @@
       <a id="dlTranscript" href="#"><span class="ico">📄</span> Download transcript</a>
       <button id="openRoomDir"><span class="ico">🗂️</span> Room folder</button>
       <button id="settingsBtn2"><span class="ico">⚙️</span> Settings</button>
-      <a href="https://github.com/auspex0/parley#readme" target="_blank" rel="noreferrer noopener"><span class="ico">?</span> Docs</a>
+      <a href="https://github.com/rortegalizardo/parley#readme" target="_blank" rel="noreferrer noopener"><span class="ico">?</span> Docs</a>
     </div>
   </aside>
 
@@ -82,7 +56,7 @@
       <div id="empty" style="display:none">
         <div class="big">🃏</div>
         <h2>The table is set</h2>
-        <p>One conversation, three seats. Tag an agent, or just type — Parley remembers who you were talking to.</p>
+        <p>One conversation, many seats. Tag an agent, or just type — Parley remembers who you were talking to.</p>
         <div class="starters" id="starters"></div>
       </div>
     </div>
@@ -136,7 +110,7 @@
         <div class="box">
           <input id="fileInput" type="file" multiple hidden aria-label="Choose files to attach">
           <button id="attachBtn" type="button" title="Attach files" aria-label="Attach files">📎</button>
-          <textarea id="input" rows="1" placeholder="Message the table…  (@claude, @codex, @both)"></textarea>
+          <textarea id="input" rows="1" placeholder="Message the table…  (@claude, @codex, @all)"></textarea>
           <div id="stopWrap">
             <button id="stopBtn" title="Stop the running response">■</button>
             <button id="stopMore" title="Choose what to stop" aria-label="Stop options"
@@ -150,6 +124,32 @@
     </div>
   </div>
 </div>
+
+<dialog id="newRoomDialog" aria-labelledby="newRoomTitle">
+    <form id="newRoomForm">
+      <div class="form-title"><div><strong id="newRoomTitle">Create a room</strong><span>Choose the agents that should share this conversation.</span></div><button type="button" id="newRoomCancel" class="modal-close" aria-label="Close create room">×</button></div>
+      <label class="form-label" for="newRoomInput">Room name</label>
+      <input id="newRoomInput" placeholder="room name…" maxlength="40" spellcheck="false">
+      <div class="roster-heading"><span id="rosterCount">Your agents</span><button type="button" id="addSeatBtn" class="ract" title="Add an agent">＋ Add agent</button></div>
+      <div id="rosterList" class="roster-list"></div>
+      <div id="seatNamesHint" class="hint" style="display:none;margin-top:4px">
+        Each agent gets its own @mention, model, effort, and standing instructions.
+      </div>
+      <button type="button" id="newRoomProj" class="ract"
+        style="display:block;width:100%;text-align:left;margin-top:6px;padding:4px 2px;font-size:11.5px;color:var(--text-faint)"
+        title="Point this room at an existing project folder"><span data-picker-label>📁 Link a project folder…</span> <span id="newRoomProjVal"></span></button>
+      <label id="newRoomReview" class="review-preset">
+        <input type="checkbox" id="newRoomReviewChk" >
+        <span>Start in Work mode with the second agent listening for review</span>
+      </label>
+      <!-- A real submit button, not decoration. Without one the form relied on
+           implicit submission, which the HTML spec only performs when there is
+           exactly one text field — so adding the seat-name inputs silently
+           stopped Enter from creating anything at all. -->
+      <div class="form-actions"><button type="button" id="newRoomCancelBottom" class="btn">Cancel</button><button type="submit" id="newRoomCreate" class="btn primary"
+        style="padding:8px 18px;font-size:12px">Create room</button></div>
+    </form>
+</dialog>
 
 <div id="wakeMenu" role="menu"></div>
 <div id="askMenu" role="menu"></div>
