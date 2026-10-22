@@ -8,12 +8,14 @@ This is the personal fork of [auspex0/parley](https://github.com/auspex0/parley)
 
 See the [full interface review](docs/UI-REVIEW.md) for the conversation, Settings, menus, and mobile layouts—not just the welcome screen.
 
+Use a room from an existing Codex or Claude conversation through the shared [Parley MCP bridge](docs/HARNESS-BRIDGE.md). One adapter serves compatible clients with distinct registered sender identities, durable request tickets and `@all` agreement results.
+
 ![Parley Mine with a visible four-agent room setup](docs/fork-home.png)
 
 ![Create a room with four individually named and configured agents](docs/fork-room-setup.png)
 
 [![CI](https://github.com/rortegalizardo/parley/actions/workflows/ci.yml/badge.svg)](https://github.com/rortegalizardo/parley/actions/workflows/ci.yml)
-![deps: zero](https://img.shields.io/badge/deps-zero-brightgreen)
+![MCP: stdio](https://img.shields.io/badge/MCP-stdio-blue)
 ![node: ≥20](https://img.shields.io/badge/node-%E2%89%A520-blue)
 [![license: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 
@@ -48,11 +50,12 @@ Whether it speaks is the model's own judgment — there is no keyword trigger. A
 You need **Node.js ≥ 20** and the CLI for each provider you choose, installed and authenticated (`claude`, `codex`, or `gemini`). From this checkout, install the fork's command once, then launch it:
 
 ```bash
+npm ci
 npm link
 parley-mine
 ```
 
-`parley-mine` serves this personal fork at `http://127.0.0.1:4142` and keeps its rooms, transcripts and settings in `~/.parley-fork`, separate from the usual Parley library at `~/.parley`. It accepts `--port N`, `--root DIR`, `--no-open`, `--version` and `--help`. `npm start` uses the same safe launcher. There are no runtime dependencies or build step. `npx parley-room@1.2.1` runs the original upstream release; it does not run this fork.
+`parley-mine` serves this personal fork at `http://127.0.0.1:4142` and keeps its rooms, transcripts and settings in `~/.parley-fork`, separate from the usual Parley library at `~/.parley`. It accepts `--port N`, `--root DIR`, `--no-open`, `--version` and `--help`. `npm start` uses the same safe launcher. There is no build step; the MCP adapter uses the official MCP SDK and Zod dependencies installed by `npm ci`. `npx parley-room@1.2.1` runs the original upstream release; it does not run this fork.
 
 The UI opens automatically at the configured loopback URL. `--port 0` asks the OS for any free port.
 

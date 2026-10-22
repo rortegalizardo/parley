@@ -1,6 +1,6 @@
 # Harness → Parley bridge
 
-Status: proposed, not implemented or installed. 2026-10-22.
+Status: implemented and verified on 2026-10-22 following user approval. The original proposal below is retained as the design record. See [setup](HARNESS-BRIDGE.md) and [verification](HARNESS-BRIDGE-VERIFICATION.md) for delivered behavior and installation status.
 
 ## Outcome
 

@@ -899,7 +899,7 @@ function whyRunHTML(e) {
     : meta.catchUp || meta.lurkCatchUp || meta.catchUpReturn ? "catch-up"
       : meta.causalAttention || meta.lurkClosure ? "answer-return" : meta.causalRequest ? meta.causalRequest.kind
         : meta.lurk ? "lurk" : meta.hop ? "hop" : source && source.kind === "user" ? "root" : "");
-  const trigger = source ? `${source.kind === "user" ? "your message" : seatLabel(source.author)} #${source.n}`
+  const trigger = source ? `${source.kind === "user" ? (source.meta?.harness?.label || "your message") : seatLabel(source.author)} #${source.n}`
     : sourceN == null ? "not recorded" : `entry #${sourceN}`;
   const launch = meta.relayLaunch;
   const automatic = (launch?.accounting || delivery.accounting || policy?.accounting) === "automatic";
@@ -1035,7 +1035,7 @@ function entryEl(e) {
       : ' <span style="opacity:.6" title="Asked again about an earlier message">· ↪ ask again</span>')
     : "";
   const label = e.kind === "user"
-    ? `You <span style="opacity:.65">→ @${esc(e.target)}${e.meta && e.meta.discussion ? " · 💬 discussion" : ""}${userPair}</span>${askTag}`
+    ? `${e.meta?.harness ? esc(e.meta.harness.label) + ' <span class="badge">external · ' + esc(e.meta.harness.intent === "context" ? "context only" : "delegated") + "</span>" : "You"} <span style="opacity:.65">→ @${esc(e.target === "both" ? "all" : e.target)}${e.meta && e.meta.discussion ? " · 💬 discussion" : ""}${userPair}</span>${askTag}`
     : esc(seatLabel(e.author)) + lurkTag + provenanceBadges(e.meta);
   const av = e.kind === "user" ? "" : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
@@ -1354,12 +1354,12 @@ function refFromN(n) {
   return { n: e.n, kind: e.kind, author: e.author, target: e.target || null, ts: e.ts, text: snippet(e.text) };
 }
 function refWho(src) {
-  return src.kind === "user" ? "you" : seatLabel(src.author);
+  return src.kind === "user" ? (entryByN(src.n)?.meta?.harness?.label || (src.author?.startsWith("harness:") ? src.author : "you")) : seatLabel(src.author);
 }
 
 function quoteRefHTML(src, label = "↩ replying to", title = "Jump to this message") {
   if (!src || src.n === undefined || src.n === null) return "";
-  const heading = label === "invoked by your message" ? label : `${label} ${refWho(src)}`;
+  const heading = label === "invoked by your message" ? (refWho(src) === "you" ? label : `invoked by ${refWho(src)}`) : `${label} ${refWho(src)}`;
   return `<button class="quote-ref" data-jump-n="${esc(String(src.n))}" title="${esc(title)}">` +
     `<span class="qr-bar"></span><span class="qr-body">` +
     `<span class="qr-head"><span>${esc(heading)}</span><span>${esc(hhmm(src.ts))}</span></span>` +
@@ -1760,7 +1760,7 @@ chatWrap.addEventListener("scroll", scheduleVisibility);
 function stripRowHTML(b) {
   const src = b.source;
   const direct = b.deliveryKind === "root" || b.deliveryKind === "start";
-  const verb = direct ? "invoked by your message" : PHASE_VERB[b.phase] || "replying to";
+  const verb = direct ? (src && refWho(src) !== "you" ? `invoked by ${refWho(src)}` : "invoked by your message") : PHASE_VERB[b.phase] || "replying to";
   return `<span class="bs-dot" style="background:${esc(seatColor(b.agent))}"></span>` +
     `<span class="bs-agent">${esc(seatLabel(b.agent))}</span>` +
     `<span class="bs-verb">→ ${esc(verb)}${src && !direct ? ` ${esc(refWho(src))}` : ""}</span>` +

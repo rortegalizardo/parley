@@ -1,6 +1,21 @@
 # Parley fork checkpoint — 2026-10-22
 
-## Current checkpoint — convergence and compact recipients
+## Current checkpoint — shared harness MCP bridge
+
+Implemented the approved [bridge proposal](docs/HARNESS-BRIDGE-PROPOSAL.md). One reusable stdio MCP adapter supports Codex, Claude Code and other compatible clients across projects. Distinct registered identities share the same Parley backend. User chose implementation by Sol 6.1 with primary-agent validation; continue that division for future coding. Deliver verified changes directly to the fork, without leaving new PRs awaiting the user.
+
+- Four tools discover rooms, read bounded conversation pages, send named-agent or `@all` requests, and wait on durable correlated tickets. `@all` preserves convergence and returns the exact agreed handoff plus reservations. Context-only notes launch no providers. Busy, stale, unresolved and incomplete outcomes remain explicit.
+- Credentials are private, room-scoped and bound to the fork instance. Idempotency prevents repeated submissions; signed cursors isolate clients. Completed results survive restart/reset; resumed convergence can update nonfinal tickets. External sender badges, prompts and quotes do not impersonate the human. Room-launched providers cannot start the bridge. Protected original libraries and port 4141 are rejected.
+- Verified: 16 unit checks; all existing integration suites; 839 smoke checks; 42 browser tests after final UI corrections; adapter/backend/lifecycle and independent SDK end-to-end suites; installed-package startup. Early smoke captured an intermediate Ask regression; corrected code passed all 839 and the primary agent independently retested Ask/Stop-and-Ask.
+- **Actual 4142**: SDK clients exchanged named requests and an agreed handoff with fake providers in an isolated QA room. Installed Codex app-server connected, discovered all four tools and executed authenticated list/read without a model turn. Installed Claude Code completed its MCP health check with temporary configuration. Actual UI inspection confirmed harness attribution, `@all`, approval record and reservations. No paid provider calls.
+- Fork refreshed only after exact ownership and idle checks. Last observed PID **54615**, protocol **14**, UI version **ed9452f70611a6987d97**. QA room moved into recoverable trash; its two credentials were revoked and temporary fake provider removed. Existing default transcript and config match the pre-validation snapshot. **4141 and its library remained untouched.**
+- No normal/global harness configuration was installed. Setup is explicit and scoped to a caller-selected project, so the protected original's agents do not inherit new MCP tools. [Setup guide](docs/HARNESS-BRIDGE.md); [verification record](docs/HARNESS-BRIDGE-VERIFICATION.md); [actual UI capture](docs/bridge-live-4142.png).
+
+Next action: connect the desired caller project using the setup guide. The bridge backend is already loaded on 4142. Process IDs above are observations, never instructions to signal without freshly checking ownership/activity.
+
+---
+
+## Historical checkpoint — convergence and compact recipients
 
 This section supersedes the historical checkpoints below. Branch: `main`. User approved `@all` convergence by default and explicitly authorized implementation, delegation, and live fork verification. PR #5 merged on 2026-10-22 as `40ca75d2ca1c34afa44309c48c43e35306269e65`.
 

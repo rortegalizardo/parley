@@ -13,7 +13,7 @@ try {
   assert.equal(packed.status, 0, packed.stderr);
   const manifest = JSON.parse(packed.stdout)[0];
   const paths = new Set(manifest.files.map((file) => file.path));
-  for (const file of ["parley.mjs", "bin/parley-mine.mjs", "lib/budget-policy.mjs", "lib/budget-prompts.mjs", "lib/causal-coordinator.mjs", "lib/client-assets.mjs", "ui/index.html", "ui/styles.css", "ui/app.js"]) {
+  for (const file of ["parley.mjs", "bin/parley-mine.mjs", "bin/parley-bridge.mjs", "bin/parley-bridge-setup.mjs", "lib/bridge-adapter.mjs", "lib/bridge-store.mjs", "docs/HARNESS-BRIDGE.md", "lib/budget-policy.mjs", "lib/budget-prompts.mjs", "lib/causal-coordinator.mjs", "lib/client-assets.mjs", "ui/index.html", "ui/styles.css", "ui/app.js"]) {
     assert.ok(paths.has(file), `packed package contains ${file}`);
   }
   assert.ok(![...paths].some((file) => /^(?:test|node_modules)\//.test(file)));
@@ -21,8 +21,15 @@ try {
   const unpacked = spawnSync("tar", ["-xzf", manifest.filename], { cwd: temporary, encoding: "utf8", windowsHide: true });
   assert.equal(unpacked.status, 0, unpacked.stderr);
   const cfg = JSON.parse(fs.readFileSync(path.join(temporary, "package", "package.json"), "utf8"));
-  assert.deepEqual(cfg.dependencies || {}, {}, "zero runtime dependencies");
+  assert.deepEqual(Object.keys(cfg.dependencies || {}).sort(), ["@modelcontextprotocol/sdk", "zod"], "supported MCP runtime dependencies");
   assert.equal(cfg.bin["parley-mine"], "bin/parley-mine.mjs");
+  assert.equal(cfg.bin["parley-bridge"], "bin/parley-bridge.mjs");
+  // Install only inside the throwaway extracted package, never the checkout or a user home.
+  const installed = spawnSync(process.execPath, [process.env.npm_execpath, "install", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: path.join(temporary, "package"), encoding: "utf8", windowsHide: true, timeout: 120000 });
+  assert.equal(installed.status, 0, installed.stderr);
+  const bridge = spawnSync(process.execPath, [path.join(temporary, "package", "bin/parley-bridge.mjs"), "--help"], { encoding: "utf8", windowsHide: true });
+  assert.equal(bridge.status, 0, bridge.stderr);
+  assert.match(bridge.stderr, /MCP stdio adapter/);
   server = spawn(process.execPath, [path.join(temporary, "package", "bin/parley-mine.mjs"), "--port", "0", "--no-open", "--root", path.join(temporary, "rooms")], {
     cwd: temporary, stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
   });
@@ -46,7 +53,7 @@ try {
     assert.equal(asset.status, 200);
     assert.ok((await asset.text()).length > 100);
   }
-  console.log(`Packed runtime verified: ${paths.size} files, all modules/assets present, startup without installation.`);
+  console.log(`Packed runtime verified: ${paths.size} files, all modules/assets and MCP dependencies present, server and adapter startup.`);
 } finally {
   if (server && server.exitCode === null) {
     server.kill();

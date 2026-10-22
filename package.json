@@ -6,7 +6,9 @@
   "type": "module",
   "bin": {
     "parley": "parley.mjs",
-    "parley-mine": "bin/parley-mine.mjs"
+    "parley-mine": "bin/parley-mine.mjs",
+    "parley-bridge": "bin/parley-bridge.mjs",
+    "parley-bridge-setup": "bin/parley-bridge-setup.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -23,13 +25,15 @@
     "test:provenance": "node test/provenance.mjs",
     "test:sequences": "node test/scheduler-sequences.mjs",
     "bench": "node test/benchmark.mjs",
-    "test:integration": "npm run test:retry && npm run test:provenance && npm run test:sequences && npm run test:automatic && npm run test:claude-sessions && npm run test:multi-agent && npm run test:roster-edit && npm run test:launcher && npm run test:convergence",
+    "test:integration": "npm run test:retry && npm run test:provenance && npm run test:sequences && npm run test:automatic && npm run test:claude-sessions && npm run test:multi-agent && npm run test:roster-edit && npm run test:launcher && npm run test:convergence && npm run test:bridge",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:smoke && npm run test:browser && npm run test:package",
     "test:package": "node test/package.mjs",
     "test:launcher": "node test/launcher.mjs",
     "test:multi-agent": "node test/multi-agent.mjs",
     "test:roster-edit": "node test/roster-edit.mjs",
-    "test:convergence": "node --test test/convergence-integrity.mjs && node test/convergence.mjs"
+    "test:convergence": "node --test test/convergence-integrity.mjs && node test/convergence.mjs",
+    "test:bridge-adapter": "node --test test/bridge-adapter.mjs",
+    "test:bridge": "node --test test/bridge-adapter.mjs test/bridge-backend.mjs test/bridge-backend-lifecycle.mjs && node test/bridge-e2e.mjs"
   },
   "license": "MIT",
   "publishConfig": {
@@ -54,9 +58,14 @@
     "ui/",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/HARNESS-BRIDGE.md"
   ],
   "devDependencies": {
     "@playwright/test": "^1.62.1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
   }
 }
