@@ -988,3 +988,103 @@
   #mention button { border-radius: 7px; }
 
 #convergenceRoundsWrap[hidden] { display: none !important; }
+
+/* Settings and room creation share bounded, readable geometry. */
+[hidden] { display:none !important; }
+#newRoomDialog { width:min(900px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; }
+#newRoomForm { min-width:0; }
+.room-template { position:sticky; top:0; z-index:3; background:var(--panel); padding:10px 0 14px; margin:0 0 14px; }
+.room-template button { white-space:normal; text-align:left; line-height:1.45; }
+.roster-list { align-items:start; gap:12px; }
+.roster-row { min-width:0; padding:14px; }
+.roster-main { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 28px; }
+.roster-field, .roster-main > *, .roster-advanced > * { min-width:0; }
+.roster-field input, .roster-field select, .roster-field textarea { box-sizing:border-box; min-width:0; width:100%; max-width:100%; }
+.roster-field textarea { min-height:140px; font-size:14px; line-height:1.55; resize:vertical; }
+.roster-advanced .fld { margin-bottom:0; }
+.roster-advanced .fld label { font-size:12px; }
+#generalDialog { color:var(--text); background:var(--panel); border:1px solid var(--border2); border-radius:16px; padding:24px; width:min(500px, calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; }
+#generalDialog::backdrop { background:rgba(0,0,0,.55); }
+#generalDialog input[type="checkbox"] { width:auto; flex-shrink:0; }
+#generalDialog .form-title { align-items:center; }
+#generalDialog .fld label { font-size:14px; }
+#overlay .modal { width:min(800px, calc(100vw - 28px)); max-height:calc(100dvh - 28px); padding:24px; overflow:auto; }
+.settings-tabs, .settings-agent-nav { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.settings-tabs { border-bottom:1px solid var(--border2); padding-bottom:12px; }
+.settings-tabs button, .settings-agent-nav button { border:1px solid var(--border2); border-radius:9px; padding:8px 14px; color:var(--text-dim); font-size:13px; overflow-wrap:anywhere; }
+.settings-tabs [aria-selected="true"], .settings-agent-nav [aria-pressed="true"] { color:var(--text); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,var(--panel)); }
+#seatCards .mgroup { padding:18px; }
+.agent-main-fields { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+#seatCards .fld label, #roomSettingsPane .fld > label { font-size:13px; color:var(--text-dim); line-height:1.5; overflow-wrap:anywhere; }
+#seatCards .fld input, #seatCards .fld select, #seatCards .fld textarea { font-size:14px; }
+.instructions-field textarea { min-height:190px; line-height:1.6; }
+.instructions-field.expanded textarea { min-height:min(55dvh,500px); }
+.instructions-field > label { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.expand-instructions { color:var(--accent); font-size:12px; white-space:nowrap; }
+.agent-advanced { margin-top:16px; border-top:1px solid var(--border); padding-top:12px; }
+.agent-advanced > summary { color:var(--text-dim); cursor:pointer; font-size:13px; margin-bottom:14px; }
+.info-tip { position:relative; display:inline-block; color:var(--accent); cursor:help; font-size:14px; }
+.info-tip::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 8px); left:0; width:min(260px,65vw); padding:10px 12px; border:1px solid var(--border2); border-radius:8px; background:var(--panel2); color:var(--text); box-shadow:0 8px 24px #0004; font-size:12px; font-weight:normal; line-height:1.5; z-index:30; opacity:0; pointer-events:none; }
+.info-tip:hover::after, .info-tip:focus::after { opacity:1; }
+.freecombo-menu { z-index:20; max-height:230px; overflow:auto; }
+.freecombo-option { width:100%; white-space:normal; overflow-wrap:anywhere; text-align:left; }
+.freecombo-option[hidden] { display:none !important; }
+.freecombo-input { width:100%; box-sizing:border-box; min-width:0; }
+#empty.room-selected .marketing-welcome { display:none; }
+#empty:not(.room-selected) .current-room-start { display:none; }
+#empty.room-selected { max-width:760px; padding:36px 26px; margin:auto; }
+#empty.room-selected h2 { font-size:28px; letter-spacing:-.5px; margin:0 0 10px; overflow-wrap:anywhere; }
+#empty.room-selected .current-room-start { border:0; padding:0; margin:0; }
+#empty.room-selected .welcome-copy { margin-bottom:22px; }
+#archivedRooms { padding:14px 16px; color:var(--text-faint); font-size:12px; }
+#archivedRooms > summary { cursor:pointer; }
+#archivedCount { margin-left:5px; }
+.archived-room-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; }
+.archived-room-row span { overflow:hidden; text-overflow:ellipsis; }
+.archived-room-row button { flex-shrink:0; }
+#chatWrap > .convergence-panel { margin:12px auto 20px; width:calc(100% - 48px); max-width:1000px; flex-shrink:0; }
+.agent-option-copy small { white-space:normal; line-height:1.5; overflow-wrap:anywhere; }
+.mrow { flex-wrap:wrap; gap:14px; }
+.mrow > div { flex-wrap:wrap; min-width:0; }
+.mrow .btn { white-space:normal; }
+#roomSettingsPane .fld > div[style*="display:flex"] { flex-wrap:wrap; }
+header { min-width:0; }
+header .pills { min-width:0; }
+#roomTitle { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+@media(max-width:600px) {
+  #overlay .modal { padding:18px 14px; }
+  .agent-main-fields, .roster-list { grid-template-columns:minmax(0,1fr); }
+  .room-template { gap:6px; }
+  .room-template > span { width:100%; }
+  .room-template button { flex:1 1 130px; }
+  #seatCards .mgroup { padding:14px; }
+  .settings-agent-nav { gap:6px; }
+  .settings-agent-nav button { padding:7px 9px; }
+  #chatWrap > .convergence-panel { width:calc(100% - 28px); }
+}
+@media(max-width:440px) {
+  header { grid-template-columns:24px 8px minmax(0,1fr) auto auto 30px; }
+  header > #settingsBtn { grid-column:6; }
+  .roster-main { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 24px; }
+  #newRoomDialog { width:calc(100vw - 16px); }
+  #newRoomForm { padding:16px 12px; }
+  .form-title { gap:10px; }
+  .form-title span { overflow-wrap:anywhere; }
+}
+.field-help { display:inline-block; position:relative; vertical-align:middle; }
+.field-help-button { color:var(--accent); font-size:14px; padding:0 3px; cursor:help; }
+.field-tooltip { display:none; position:absolute; z-index:40; top:calc(100% + 4px); left:-12px; width:min(390px,calc(100vw - 80px)); max-height:260px; overflow:auto; padding:12px 14px; color:var(--text); background:var(--panel2); border:1px solid var(--border2); border-radius:9px; box-shadow:0 12px 32px #0005; font-weight:normal; line-height:1.5; }
+.field-help:hover .field-tooltip, .field-help:focus-within .field-tooltip, .field-help.help-open .field-tooltip { display:block; }
+.field-tooltip .note { font-size:12px; color:var(--text-dim); margin:0; }
+.field-tooltip .note + .note { margin-top:10px; }
+.field-tooltip .note.danger { color:var(--danger-fg); }
+#roomSettingsPane textarea { min-height:140px; }
+#mention button { display:flex; gap:12px; align-items:baseline; }
+#mention button b { flex-shrink:0; }
+#mention button > span:not(.mdot) { white-space:normal; color:var(--text-faint); font-size:12px; }
+#chat { flex-shrink:0; }
+.field-help .field-tooltip { position:fixed; width:min(390px,calc(100vw - 32px)); }
+#confirmDialog { width:min(460px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; background:var(--panel); color:var(--text); border:1px solid var(--border2); border-radius:16px; padding:24px; }
+#confirmDialog::backdrop { background:rgba(0,0,0,.55); }
+#confirmDialog h2 { font-size:20px; margin:0 0 12px; overflow-wrap:anywhere; }
+#confirmDialog p { color:var(--text-dim); font-size:14px; line-height:1.6; overflow-wrap:anywhere; }

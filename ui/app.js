@@ -1956,8 +1956,11 @@ function injectSeatStyles() {
 }
 function renderSeatsUI(s) {
   const seats = s.seats;
+  $("empty").classList.toggle("room-selected", !!state.room);
+  $("roomStartTitle").textContent = `Start ${s.name || state.room}`;
+  $("roomStartCopy").textContent = `${seats.length} agent${seats.length === 1 ? "" : "s"} ready for your first message.`;
   $("pills").innerHTML = seats.map((a) =>
-    `<div class="pill" data-seat="${esc(a)}" id="pill_${esc(a)}" style="--seat-accent:${seatColor(a)}"><span class="st"></span>` +
+    `<div class="pill" tabindex="0" data-seat="${esc(a)}" id="pill_${esc(a)}" style="--seat-accent:${seatColor(a)}"><span class="st"></span>` +
     `<b>${esc(seatLabel(a))}</b><span class="pinfo"></span>` +
     `<button class="ear" data-seat="${esc(a)}">👂</button>` +
     `<button class="moon" data-seat="${esc(a)}">😴</button></div>`).join("");
@@ -1987,6 +1990,13 @@ function renderSeatsUI(s) {
     seats.map((a, i) => `<button class="starter" data-fill="@${esc(a)} "><b class="${i ? "c2" : "c1"}">@${esc(a)}</b> ask ${esc(seatLabel(a))} something…</button>`).join("") +
     (seats.length > 1 ? `<button class="starter" data-fill="/pair start @${esc(seats[0])} "><b class="c1">/pair start</b> one builds, the other reviews…</button>` : "");
 }
+function seatIdentity(a) {
+  const meta = seatMeta(a);
+  const cfg = state.summary?.cfg?.agents?.[a] || {};
+  const providerId = meta.provider || cfg.provider || a;
+  const providerLabel = state.providers?.[providerId]?.label || providerId;
+  return `@${a} · ${providerLabel} · ${cfg.model || "model: provider default"} · ${cfg.effort || "effort: provider default"}${cfg.serviceTier === "fast" ? " · Fast mode" : ""}`;
+}
 function renderAgentOptions(s) {
   const box = $("agentsOptions");
   if (!box) return;
@@ -1998,9 +2008,9 @@ function renderAgentOptions(s) {
     const role = cfg.instructions || info.role || info.description || "";
     const provider = info.provider || cfg.provider || "";
     const status = runtime.asleep ? "sleeping" : (s.busy || []).includes(a) ? "working" : "ready";
-    return { a, label: seatLabel(a), provider, role, status };
-  }).filter((x) => !q || [x.a, x.label, x.provider, x.role, x.status].join(" ").toLowerCase().includes(q));
-  box.innerHTML = rows.length ? rows.map((x) => `<button type="button" role="option" class="agent-option${state.chip === x.a ? " selected" : ""}" aria-selected="${state.chip === x.a}" data-agent-target="${esc(x.a)}"><span class="agent-dot" style="--seat-accent:${seatColor(x.a)}"></span><span class="agent-option-copy"><b>@${esc(x.a)}</b><small>${esc([x.label, x.provider, x.role].filter(Boolean).join(" · "))}</small></span><span class="agent-status">${esc(x.status)}</span></button>`).join("") : `<div class="agent-empty">No agents match “${esc(q)}”.</div>`;
+    return { a, label: seatLabel(a), provider, role, status, identity: seatIdentity(a) };
+  }).filter((x) => !q || [x.a, x.label, x.provider, x.role, x.status, x.identity].join(" ").toLowerCase().includes(q));
+  box.innerHTML = rows.length ? rows.map((x) => `<button type="button" role="option" class="agent-option${state.chip === x.a ? " selected" : ""}" aria-selected="${state.chip === x.a}" data-agent-target="${esc(x.a)}"><span class="agent-dot" style="--seat-accent:${seatColor(x.a)}"></span><span class="agent-option-copy"><b>@${esc(x.a)}</b><small>${esc([x.identity, x.role].filter(Boolean).join(" · "))}</small></span><span class="agent-status">${esc(x.status)}</span></button>`).join("") : `<div class="agent-empty">No agents match “${esc(q)}”.</div>`;
 }
 function renderDiscussionMode() {
   document.querySelectorAll("[data-discussion-mode]").forEach((el) => {
@@ -2210,9 +2220,10 @@ function applySummary(s) {
       txt = bits.join(" · ");
     }
     pill.querySelector(".pinfo").textContent = txt ? " · " + txt : "";
-    pill.title = ag.command.ok
+    pill.setAttribute("aria-label", seatIdentity(a));
+    pill.title = `${seatIdentity(a)}\n` + (ag.command.ok
       ? (ag.linked ? `session linked (${ag.sessionRef}…) · seen through turn ${ag.cursor}` : "fresh session")
-      : ag.command.detail;
+      : ag.command.detail);
     const moon = pill.querySelector(".moon");
     const reason = (ag.sleep && ag.sleep.reason) || "";
     moon.classList.toggle("on", asleep);
@@ -3279,9 +3290,10 @@ async function loadRoom(name) {
   try {
     data = await api("/api/room?name=" + encodeURIComponent(name));
   } catch (e) {
-    if (name === "default") throw e;
-    toast(`Room "${name}" no longer exists — opening default.`, true);
-    return loadRoom("default");
+    const rooms = await api("/api/rooms");
+    const fallback = (rooms.rooms || []).find((room) => (room.name || room) !== name);
+    if (fallback) return loadRoom(fallback.name || fallback);
+    showNoRoom(); await refreshRooms(); return;
   }
   if (state.es) {
     const old = state.es;
@@ -3302,6 +3314,8 @@ async function loadRoom(name) {
     loadDiscussionPrefs(roomName);
   }
   state.room = roomName;
+  for (const id of ["openWs", "openRoomDir", "dlTranscript", "gitId"]) $(id).hidden = false;
+  $("composerWrap").hidden = false; $("modeToggle").hidden = false; $("settingsBtn").hidden = false; $("convergencePanel").style.display = "";
   refreshDoctor(roomName);
   history.replaceState(null, "", roomName === "default" ? location.pathname : "?room=" + encodeURIComponent(roomName));
   // Keep an explicit destination if it exists in the destination room. Only a
@@ -3376,6 +3390,18 @@ async function refreshRooms() {
   const data = await api("/api/rooms");
   state.providers = data.providers || state.providers;
   fillSeatPickers();
+  $("archivedCount").textContent = String((data.archivedRooms || []).length);
+  $("archivedRoomList").replaceChildren();
+  for (const room of data.archivedRooms || []) {
+    const row = document.createElement("div"); row.className = "archived-room-row";
+    const name = document.createElement("span"); name.textContent = room.name;
+    const restore = document.createElement("button"); restore.className = "ract"; restore.textContent = "Restore";
+    restore.onclick = async () => {
+      try { const restored = await api("/api/room/restore", {archiveId: room.archiveId}); await loadRoom(restored.name); }
+      catch (error) { toast(error.message, true); }
+    };
+    row.append(name, restore); $("archivedRoomList").append(row);
+  }
   const list = $("roomList");
   list.innerHTML = "";
   for (const r of data.rooms) {
@@ -3404,7 +3430,7 @@ async function refreshRooms() {
       `<button type="button" class="ropen"><span class="dot"></span>` +
       `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left">${esc(name)}</span>` +
       `<span class="rmeta">${seatTag}${linked ? "📁" : ""}${mode === "work" ? "🔨" : ""}</span></button>` +
-      `<span class="racts"><button type="button" class="ract" data-act="rename" title="Rename room" aria-label="Rename ${esc(name)}">✎</button>` +
+      `<span class="racts"><button type="button" class="ract" data-act="archive" title="Archive room" aria-label="Archive ${esc(name)}">▤</button><button type="button" class="ract" data-act="rename" title="Rename room" aria-label="Rename ${esc(name)}">✎</button>` +
       // the default room is the app's fallback; it can be emptied, not removed
       (name === "default" ? "" : `<button type="button" class="ract del" data-act="delete" title="Delete room" aria-label="Delete ${esc(name)}">✕</button>`) +
       `</span>`;
@@ -3412,7 +3438,7 @@ async function refreshRooms() {
       const act = e.target.closest(".ract");
       if (!act) { setNavOpen(false); return loadRoom(name); }
       e.stopPropagation();
-      if (act.dataset.act === "rename") renameFlow(name); else deleteFlow(name);
+      if (act.dataset.act === "rename") renameFlow(name); else if (act.dataset.act === "archive") archiveRoom(name); else deleteFlow(name);
     };
     list.appendChild(row);
   }
@@ -3430,13 +3456,21 @@ function fillSeatPickers() {
 }
 
 let newRoster = [];
+let newRoomPreset = null;
+function updateRoomPresetState() {
+  const pair = newRoomPreset === "pair" && newRoster.length === 2;
+  const team = newRoomPreset === "team" && newRoster.length === 4;
+  $("twoAgentTemplate").setAttribute("aria-pressed", String(pair));
+  $("fourAgentTemplate").setAttribute("aria-pressed", String(team));
+  document.querySelector(".room-template > span").textContent = pair || team ? "Start with" : "Custom agents";
+}
 function renderRoster() {
   const list = $("rosterList"); if (!list) return;
   const ids = Object.keys(state.providers || {});
+  updateRoomPresetState();
   $("rosterCount").textContent = `Your agents · ${newRoster.length}`;
-  $("addSeatBtn").disabled = false;
-  $("newRoomReview").hidden = newRoster.length < 2;
-  if (newRoster.length < 2) $("newRoomReviewChk").checked = false;
+  $("addSeatBtn").disabled = newRoster.length >= 4;
+
   list.innerHTML = newRoster.map((agent, i) => {
     const options = ids.map((p) => `<option value="${esc(p)}" ${p === agent.provider ? "selected" : ""}>${esc(state.providers[p].label || p)}</option>`).join("");
     const catalog = state.providers[agent.provider] || {};
@@ -3450,27 +3484,36 @@ function renderRoster() {
         <button type="button" class="ract roster-remove" title="Remove agent" aria-label="Remove agent ${i + 1}" ${newRoster.length === 1 ? "disabled" : ""}>×</button>
       </div>
       <div class="roster-advanced">
-        <label class="roster-field ${effort ? "" : "roster-wide"}">Model<input class="roster-model" placeholder="Provider default" aria-label="Model for agent ${i + 1}" list="roster-models-${i}" value="${esc(agent.model || "")}" maxlength="200"><datalist id="roster-models-${i}">${suggestions(catalog.models)}</datalist></label>
-        ${effort ? `<label class="roster-field">Reasoning effort<input class="roster-effort" placeholder="Default" aria-label="Reasoning effort for agent ${i + 1}" value="${esc(agent.effort || "")}" list="roster-efforts-${i}" maxlength="40"><datalist id="roster-efforts-${i}">${suggestions(catalog.efforts)}</datalist></label>` : ""}
-        <label class="roster-field roster-wide">Identity &amp; instructions<textarea class="roster-instructions" rows="2" aria-label="Standing instructions for agent ${i + 1}" maxlength="8000" placeholder="A role, point of view, or rules to keep throughout the conversation…">${esc(agent.instructions || "")}</textarea></label>
+        ${seatFieldHTML(`new${i}`, "model", catalog)}
+        ${effort ? seatFieldHTML(`new${i}`, "effort", catalog) : ""}
+        ${agent.provider === "codex" ? `<label class="roster-field">Fast mode<select class="roster-fast" aria-label="Fast mode for agent ${i + 1}"><option value="default" ${agent.serviceTier !== "fast" ? "selected" : ""}>Off — standard</option><option value="fast" ${agent.serviceTier === "fast" ? "selected" : ""}>On — faster processing</option></select></label>` : ""}
+        <label class="roster-field roster-wide">Identity &amp; instructions<textarea class="roster-instructions" rows="5" aria-label="Standing instructions for agent ${i + 1}" maxlength="8000" placeholder="A role, point of view, or rules to keep throughout the conversation…">${esc(agent.instructions || "")}</textarea></label>
       </div>
     </article>`;
   }).join("");
+  compactFieldNotes(list);
   list.querySelectorAll(".roster-row").forEach((row) => {
     const i = Number(row.dataset.rosterIndex);
     row.querySelector(".roster-provider").onchange = (e) => { newRoster[i].provider = e.target.value; renderRoster(); };
     row.querySelector(".roster-name").oninput = (e) => { newRoster[i].id = e.target.value.toLowerCase(); };
-    row.querySelector(".roster-model").oninput = (e) => { newRoster[i].model = e.target.value; };
-    const effortInput = row.querySelector(".roster-effort");
-    if (effortInput) effortInput.oninput = (e) => { newRoster[i].effort = e.target.value; };
+    for (const name of ["model", "effort"]) {
+      const field = row.querySelector(`[data-f="${name}"]`);
+      if (!field) continue;
+      field.value = newRoster[i][name] || "";
+      field.oninput = field.onchange = (e) => { newRoster[i][name] = e.target.value; };
+    }
+    const fast = row.querySelector(".roster-fast");
+    if (fast) fast.onchange = (event) => { newRoster[i].serviceTier = event.target.value; };
     row.querySelector(".roster-instructions").oninput = (e) => { newRoster[i].instructions = e.target.value; };
-    row.querySelector(".roster-remove").onclick = () => { if (newRoster.length <= 1) return toast("A room needs at least one agent.", true); newRoster.splice(i, 1); renderRoster(); };
+    row.querySelector(".roster-remove").onclick = () => { if (newRoster.length <= 1) return toast("A room needs at least one agent.", true); newRoomPreset = null; newRoster.splice(i, 1); renderRoster(); };
   });
 }
 $("addSeatBtn").onclick = () => {
+  if (newRoster.length >= 4) return toast("Rooms support up to four agents.", true);
   const providers = Object.keys(state.providers || {});
   let next = newRoster.length + 1;
   while (newRoster.some((agent) => agent.id === `agent${next}`)) next++;
+  newRoomPreset = null;
   newRoster.push({ id: `agent${next}`, provider: providers[newRoster.length % Math.max(1, providers.length)] || "claude" });
   renderRoster();
 };
@@ -3661,6 +3704,8 @@ function localSystemNote(html) {
 async function handleSlash(text) {
   const cmd = (text.split(/\s+/)[0] || "").toLowerCase();
   const rest = text.slice(cmd.length).trim();
+  if (cmd === "/clear") { await newConversation(); return true; }
+  if (cmd === "/archive") { await archiveRoom(state.room); return true; }
   if (cmd === "/pair") return false; // server handles
   if (cmd === "/note") {
     try {
@@ -3712,6 +3757,8 @@ async function handleSlash(text) {
       "<b>/pair end</b> — leave pair mode (also the End button in the banner)<br>" +
       "<b>/note [text]</b> — standing room note every agent sees every turn (empty clears)<br>" +
       "<b>/sleep @agent [reason]</b> — stop launching that seat (rate limited?); <b>/wake @agent</b> brings it back<br>" +
+      "<b>/clear</b> — save the conversation in history and reset agent sessions (asks first)<br>" +
+      "<b>/archive</b> — move this room to Archived rooms (asks first)<br>" +
       "<b>/summarize [@agent]</b> — ask for a recap of the room<br>" +
       "<b>👂</b> on a pill = lurk · <b>😴</b> = sleep/wake that seat · <b>💬/🔨</b> = talk/work mode · dots under messages = who heard what");
     return true;
@@ -3998,6 +4045,22 @@ let mItems = [], mSel = 0;
 function mentionCheck() {
   const pos = input.selectionStart;
   const before = input.value.slice(0, pos);
+  const commandMatch = /^\/([a-z]*)$/i.exec(before);
+  if (commandMatch) {
+    const commands = [
+      ["/help", "Show all commands"], ["/clear", "Save conversation history and reset sessions…"],
+      ["/archive", "Move room to Archived rooms…"], ["/note", "Set instructions shared by every agent"],
+      ["/summarize", "Ask for decisions and next steps"], ["/sleep", "Pause an agent"],
+      ["/wake", "Wake an agent"], ["/pair start", "Start a work and review cycle"], ["/pair end", "End pair mode"],
+    ];
+    mItems = commands.filter(([tag]) => tag.slice(1).startsWith(commandMatch[1].toLowerCase())).map(([tag, description]) => ({tag, description, color:"var(--accent)", command:true}));
+    if (!mItems.length) return hideMention();
+    mSel = 0;
+    $("mention").innerHTML = mItems.map((x,i) => `<button data-i="${i}" class="${i === 0 ? "sel" : ""}"><b>${esc(x.tag)}</b><span>${esc(x.description)}</span></button>`).join("");
+    $("mention").style.display = "block";
+    $("mention").querySelectorAll("button").forEach((button) => button.onclick = () => pickMention(+button.dataset.i));
+    return;
+  }
   const m = /(^|\s)@([a-z0-9]*)$/i.exec(before);
   if (!m) return hideMention();
   const prefix = m[2].toLowerCase();
@@ -4013,7 +4076,7 @@ function mentionCheck() {
 function hideMention() { $("mention").style.display = "none"; mItems = []; }
 function pickMention(i) {
   const pos = input.selectionStart;
-  const before = input.value.slice(0, pos).replace(/@[a-z0-9]*$/i, mItems[i].tag + " ");
+  const before = input.value.slice(0, pos).replace(mItems[i].command ? /^\/[a-z]*$/i : /@[a-z0-9]*$/i, mItems[i].tag + " ");
   input.value = before + input.value.slice(pos);
   input.selectionStart = input.selectionEnd = before.length;
   hideMention(); updateRouteHint(); input.focus();
@@ -4032,6 +4095,7 @@ function mentionKeydown(e) {
 
 // ------------------------------------------------------------ rooms sidebar
 function applyRoomTemplate(kind) {
+  newRoomPreset = kind;
   const providers = Object.keys(state.providers || {});
   const claude = providers.includes("claude") ? "claude" : providers[0] || "claude";
   const codex = providers.includes("codex") ? "codex" : providers[1] || providers[0] || "codex";
@@ -4094,8 +4158,9 @@ $("newRoomForm").onsubmit = async (e) => {
   e.preventDefault();
   const name = $("newRoomInput").value.trim();
   if (!name) return;
-  const seats = newRoster.map((a, i) => ({ id: (a.id || `agent${i + 1}`).trim().toLowerCase(), provider: a.provider, ...(a.model ? { model: a.model.trim() } : {}), ...(a.effort ? { effort: a.effort.trim() } : {}), ...(a.instructions ? { instructions: a.instructions.trim() } : {}) }));
+  const seats = newRoster.map((a, i) => ({ id: (a.id || `agent${i + 1}`).trim().toLowerCase(), provider: a.provider, ...(a.model ? { model: a.model.trim() } : {}), ...(a.effort ? { effort: a.effort.trim() } : {}), ...(a.instructions ? { instructions: a.instructions.trim() } : {}), ...(a.provider === "codex" ? {serviceTier: a.serviceTier || "default"} : {}) }));
   if (!seats.length) return toast("Add at least one agent.", true);
+  if (seats.length > 4) return toast("Rooms support up to four agents.", true);
   const names = new Set();
   for (const seat of seats) { if (names.has(seat.id)) return toast("Give each agent a different name.", true); names.add(seat.id); const issue = seatNameIssue(seat.id); if (issue) return toast(issue, true); }
   const body = { name };
@@ -4109,18 +4174,9 @@ $("newRoomForm").onsubmit = async (e) => {
   const asReview = $("newRoomReviewChk").checked;
   try {
     await api("/api/rooms", body);
-    // The flagship workflow used to take four separate actions to assemble:
-    // create, flip to work, turn on the reviewer's ear, then find lurkStyle.
-    // As a preset it is one checkbox — configured after creation so the room
-    // exists to configure, and reported rather than silently half-applied.
-    const reviewerId = seats[1] && seats[1].id;
-    if (asReview && seats.length >= 2 && reviewerId) {
-      try {
-        await api("/api/config", {
-          room: name,
-          config: { mode: "work", agents: { [reviewerId]: { lurk: true, lurkStyle: "balanced" } } },
-        });
-      } catch (err) { toast(`Room created, but the review preset didn't apply: ${err.message}`, true); }
+    if (asReview) {
+      try { await api("/api/config", { room: name, config: { mode: "work" } }); }
+      catch (err) { toast(`Room created, but Work mode wasn't applied: ${err.message}`, true); }
     }
     $("newRoomInput").value = "";
     const s1n = $("seat1Name"), s2n = $("seat2Name");
@@ -4170,6 +4226,30 @@ $("openRoomDir").onclick = () => api("/api/open", { room: state.room, what: "roo
 // ------------------------------------------------------------ settings modal
 // Seat cards render from the provider catalog: each provider declares which
 // fields it understands, so a new provider's settings appear automatically.
+let fieldHelpSequence = 0;
+function compactFieldNotes(root) {
+  for (const field of root.querySelectorAll(".fld")) {
+    const notes = [...field.children].filter((el) => el.classList.contains("note"));
+    if (!notes.length) continue;
+    const label = field.querySelector("label");
+    if (!label) continue;
+    const help = document.createElement("span"); help.className = "field-help";
+    const button = document.createElement("button"); button.type = "button"; button.className = "field-help-button";
+    button.textContent = "ⓘ"; button.setAttribute("aria-label", `About ${label.textContent.trim()}`);
+    const content = document.createElement("span"); content.className = "field-tooltip";
+    content.id = `field_help_${++fieldHelpSequence}`; content.setAttribute("role", "tooltip");
+    button.setAttribute("aria-describedby", content.id); button.setAttribute("aria-expanded", "false");
+    const positionHelp = () => {
+      const rect = button.getBoundingClientRect();
+      content.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - content.offsetWidth - 12))}px`;
+      content.style.top = `${Math.max(12, Math.min(rect.bottom + 6, window.innerHeight - content.offsetHeight - 12))}px`;
+    };
+    help.onmouseenter = positionHelp; help.onfocusin = positionHelp;
+    button.onclick = () => { const open = help.classList.toggle("help-open"); button.setAttribute("aria-expanded", String(open)); positionHelp(); };
+    for (const note of notes) content.append(note);
+    help.append(button, content); label.append(" ", help);
+  }
+}
 function seatFieldHTML(a, field, p) {
   const d = (n, f) => `data-seat="${esc(a)}" data-f="${f}"`;
   if (field === "command") return `<div class="fld"><label>Command</label><input ${d(a, "command")} spellcheck="false" placeholder="${esc((p.defaults && p.defaults.command) || p.command || "provider")} (default)"></div>`;
@@ -4182,7 +4262,8 @@ function seatFieldHTML(a, field, p) {
   // selected value, so reopening one can hide every other choice.
   const combo = (fieldName, list, placeholder) => {
     const id = `combo_${a}_${fieldName}`;
-    const choices = (list || []).map((o, i) => {
+    const choices = (list || []).map((item, i) => {
+      const o = typeof item === "string" ? {value: item, label: item} : item;
       const detail = [o.label !== o.value ? o.label : "", o.hint || ""].filter(Boolean).join(" — ");
       return `<button type="button" class="freecombo-option" role="option" id="${esc(id)}_${i}" ` +
         `data-combo-value="${esc(o.value)}"><b>${esc(o.value)}</b>` +
@@ -4196,7 +4277,7 @@ function seatFieldHTML(a, field, p) {
       `<div class="freecombo-menu" id="${esc(id)}" role="listbox" hidden>${choices}` +
       `<div class="freecombo-empty" hidden>No matching suggestions — you can still use the value you typed.</div></div></div>`;
   };
-  if (field === "model") return `<div class="fld"><label>Model override (blank = default)</label>` +
+  if (field === "model") return `<div class="fld"><label>Model</label>` +
     combo("model", p.models, "blank = the CLI's default") +
     `<div class="note">Any value the CLI accepts — aliases or full model names.</div></div>`;
   if (field === "effort") return `<div class="fld"><label>Reasoning effort</label>` +
@@ -4225,7 +4306,7 @@ function seatFieldHTML(a, field, p) {
 // Persistent per-agent identity/instructions are deliberately separate from the
 // shared room note: they are included in that seat's briefing for every turn.
 function seatInstructionsHTML(a) {
-  return `<div class="fld"><label>Standing instructions for ${esc(seatLabel(a))}</label><textarea rows="3" data-seat="${esc(a)}" data-f="instructions" placeholder="Role, point of view, or review criteria…"></textarea><div class="note">This identity follows the agent through the whole room.</div></div>`;
+  return `<div class="fld instructions-field"><label>Standing instructions <button type="button" class="ract expand-instructions">Expand editor</button></label><textarea rows="7" data-seat="${esc(a)}" data-f="instructions" placeholder="Role, point of view, or review criteria…"></textarea><div class="note">This identity follows the agent through the whole room.</div></div>`;
 }
 function setFreeComboOpen(combo, open, query = "") {
   const input = combo.querySelector(".freecombo-input");
@@ -4260,6 +4341,10 @@ function chooseFreeCombo(option) {
   input.focus();
 }
 $("seatCards").addEventListener("click", (e) => {
+  const expand = e.target.closest(".expand-instructions");
+  if (expand) { const field = expand.closest(".instructions-field"); field.classList.toggle("expanded"); expand.textContent = field.classList.contains("expanded") ? "Collapse editor" : "Expand editor"; return; }
+});
+document.addEventListener("click", (e) => {
   const toggle = e.target.closest(".freecombo-toggle");
   if (toggle) {
     const combo = toggle.closest(".freecombo");
@@ -4271,11 +4356,11 @@ $("seatCards").addEventListener("click", (e) => {
   const option = e.target.closest(".freecombo-option");
   if (option) chooseFreeCombo(option);
 });
-$("seatCards").addEventListener("input", (e) => {
+document.addEventListener("input", (e) => {
   const input = e.target.closest(".freecombo-input");
   if (input) setFreeComboOpen(input.closest(".freecombo"), true, input.value);
 });
-$("seatCards").addEventListener("keydown", (e) => {
+document.addEventListener("keydown", (e) => {
   const input = e.target.closest(".freecombo-input");
   if (!input) return;
   const combo = input.closest(".freecombo");
@@ -4310,6 +4395,15 @@ document.addEventListener("click", (e) => {
     document.querySelectorAll(".freecombo.open").forEach((combo) => setFreeComboOpen(combo, false));
   }
 });
+let selectedSettingsAgent = 0;
+function showSettingsPane(which) {
+  for (const name of ["agents", "room"]) {
+    $(name + "SettingsPane").hidden = name !== which;
+    $(name + "SettingsTab").setAttribute("aria-selected", String(name === which));
+  }
+}
+$("agentsSettingsTab").onclick = () => showSettingsPane("agents");
+$("roomSettingsTab").onclick = () => showSettingsPane("room");
 let settingsRosterDraft = null;
 let settingsRosterVersion = null;
 function rosterDraftFromSummary(s) {
@@ -4335,19 +4429,31 @@ function refreshSettingsDefaultOptions() {
 }
 function renderSeatCards(s) {
   const roster = settingsRosterDraft || rosterDraftFromSummary(s);
+  selectedSettingsAgent = Math.min(selectedSettingsAgent, Math.max(0, roster.length - 1));
+  $("settingsAddSeat").disabled = roster.length >= 4;
+  $("settingsRosterNote").textContent = roster.length > 4 ? "This existing roster is preserved. Remove agents to bring it within the four-agent limit." : `${roster.length} of 4 agents · edits stay in draft until you save.`;
+  $("settingsAgentNav").innerHTML = roster.map((seat, i) => `<button type="button" data-edit-agent="${i}" aria-pressed="${i === selectedSettingsAgent}">@${esc(seat.id)}</button>`).join("");
+  $("settingsAgentNav").onclick = (event) => {
+    const button = event.target.closest("[data-edit-agent]");
+    if (!button) return;
+    captureSettingsDraft(); selectedSettingsAgent = Number(button.dataset.editAgent); renderSeatCards(s);
+  };
   $("seatCards").innerHTML = roster.map((seat, index) => {
     const a = seat.id;
     const p = (s.seatInfo && s.seatInfo[a]) || s.providers[seat.provider] || state.providers[seat.provider] || {};
     const ag = s.agents[a] || { linked: false };
-    let f = (p.fields || []).map((field) => seatFieldHTML(a, field, p)).join("");
+    let f = `<div class="agent-main-fields">${(p.fields || []).filter((field) => ["model", "effort"].includes(field)).map((field) => seatFieldHTML(a, field, p)).join("")}</div>`;
+    if (seat.provider === "codex") f += `<div class="fld"><label for="fast_${esc(a)}">Fast mode <span class="info-tip" tabindex="0" role="note" aria-label="Requests faster Codex processing using the Fast service tier. Availability and cost depend on your account." data-tip="Requests faster Codex processing. Availability and cost depend on your account.">ⓘ</span></label><select id="fast_${esc(a)}" data-seat="${esc(a)}" data-f="serviceTier"><option value="default">Off — standard processing</option><option value="fast">On — faster processing</option></select></div>`;
     f += seatInstructionsHTML(a);
-    f += `<div class="fld"><label>Lurk assertiveness (when 👂 is on)</label><select data-seat="${esc(a)}" data-f="lurkStyle">` +
+    f += `<details class="agent-advanced"><summary>Advanced agent settings <span class="info-tip" tabindex="0" role="note" aria-label="Controls how this agent runs commands, requests permissions, and joins conversations." data-tip="Controls commands, permissions, and how this agent joins conversations.">ⓘ</span></summary>${(p.fields || []).filter((field) => !["model", "effort", "serviceTier"].includes(field)).map((field) => seatFieldHTML(a, field, p)).join("")}`;
+    f += `<div class="fld"><label>When listening: participation</label><select data-seat="${esc(a)}" data-f="lurkStyle">` +
       `<option value="quiet">Quiet</option>` +
       `<option value="balanced">Balanced</option>` +
       `<option value="vocal">Vocal</option></select>` +
       `<div class="note">Quiet: only uncorrected errors. Balanced: errors, disagreements, and critical caveats. Vocal: anything with real signal.</div></div>`;
-    f += `<div class="fld"><label>Custom lurk criteria (optional, overrides preset; [pass] protocol stays active)</label>` +
-      `<input data-seat="${esc(a)}" data-f="lurkPrompt" placeholder="e.g. Interject whenever you disagree." spellcheck="false"></div>`;
+    f += `<div class="fld"><label>When listening: custom criteria</label>` +
+      `<input data-seat="${esc(a)}" data-f="lurkPrompt" placeholder="e.g. Interject whenever you disagree." spellcheck="false"><div class="note">Optional criteria override the participation preset. The agent can still return [pass] when it has nothing to add.</div></div>`;
+    f += "</details>";
     const sess = ag.linked
       ? `Session linked (${ag.sessionRef}…), seen through turn ${ag.cursor}.`
       : "No session yet — next message starts one.";
@@ -4356,7 +4462,7 @@ function renderSeatCards(s) {
       : `<input class="settings-agent-name" data-roster-index="${index}" value="${esc(a)}" maxlength="20" aria-label="Agent ${index + 1} name" spellcheck="false">`;
     const provider = p.label || seat.provider || "provider";
     const providerSelect = seat.existing ? `<small>${esc(provider)} · existing seat</small>` : `<select class="settings-agent-provider" data-roster-index="${index}" aria-label="Provider for agent ${index + 1}">${Object.entries(state.providers || {}).map(([id, meta]) => `<option value="${esc(id)}" ${id === seat.provider ? "selected" : ""}>${esc(meta.label || id)}</option>`).join("")}</select>`;
-    return `<div class="mgroup" data-roster-index="${index}"><div class="settings-agent-bar"><div class="agent-identity">${identity}${providerSelect}</div><button type="button" class="btn settings-remove-agent" data-remove-roster="${index}" aria-label="Remove agent ${index + 1}">Remove</button></div>${f}<div class="sess">${sess}</div></div>`;
+    return `<div class="mgroup" data-roster-index="${index}" ${index !== selectedSettingsAgent ? "hidden" : ""}><div class="settings-agent-bar"><div class="agent-identity">${identity}${providerSelect}</div><button type="button" class="btn settings-remove-agent" data-remove-roster="${index}" aria-label="Remove agent ${index + 1}">Remove</button></div>${f}<div class="sess">${sess}</div></div>`;
   }).join("");
   for (const [rosterIndex, seat] of roster.entries()) {
     const a = seat.id;
@@ -4368,6 +4474,7 @@ function renderSeatCards(s) {
       if (!hasDraft && !v && el.tagName === "SELECT" && el.options.length) el.value = el.options[0].value;
     }
   }
+  compactFieldNotes($("seatCards"));
   $("seatCards").querySelectorAll("[data-remove-roster]").forEach((button) => {
     button.onclick = () => {
       const i = Number(button.dataset.removeRoster);
@@ -4408,6 +4515,7 @@ function openSettings() {
   setNavOpen(false);
   settingsOpener = document.activeElement;
   retireSettingsPick();
+  selectedSettingsAgent = 0;
   settingsRosterDraft = rosterDraftFromSummary(s);
   settingsRosterVersion = s.rosterVersion;
   $("roomPath").textContent = s.dir;
@@ -4429,21 +4537,37 @@ function openSettings() {
     "Automatic turns: zero means only initial requested responses. Changes apply to messages you send after saving. Discussions already started keep their original rules, including later agent replies. Sticky composer overrides take precedence." +
     (previousAccounting ? " This room still uses previous accounting. Select Automatic turns and review the allowance to switch; saving other settings alone will not switch it." : "");
   $("s_pairrounds").value = s.cfg.pairRounds || 0;
+  compactFieldNotes($("roomSettingsPane"));
+  showSettingsPane("agents");
   $("overlay").classList.add("open");
 }
 $("settingsAddSeat").onclick = () => {
   if (!settingsRosterDraft) return;
+  if (settingsRosterDraft.length >= 4) return toast("Rooms support up to four agents. Existing larger rosters are preserved.", true);
   captureSettingsDraft();
   const providers = Object.keys(state.providers || {});
   let n = settingsRosterDraft.length + 1;
   let id = `agent${n}`;
   while (settingsRosterDraft.some((seat) => seat.id === id)) id = `agent${++n}`;
+  selectedSettingsAgent = settingsRosterDraft.length;
   settingsRosterDraft.push({ id, provider: providers[settingsRosterDraft.length % Math.max(1, providers.length)] || "claude", model: "", effort: "", instructions: "", existing: false });
   renderSeatCards(state.summary);
   refreshSettingsDefaultOptions();
 };
 $("settingsBtn").onclick = openSettings;
-$("settingsBtn2").onclick = openSettings;
+$("settingsBtn2").onclick = () => {
+  setNavOpen(false);
+  $("s_notify").checked = notifyEnabled();
+  $("generalDialog").showModal();
+};
+$("generalClose").onclick = () => $("generalDialog").close();
+$("generalSave").onclick = async () => {
+  if ($("s_notify").checked && !notifyEnabled()) {
+    if (await requestNotifyPermission()) setNotifyEnabled(true);
+    else return toast("Your browser blocked notifications for this page.", true);
+  } else if (!$("s_notify").checked) setNotifyEnabled(false);
+  $("generalDialog").close();
+};
 $("mCancel").onclick = () => closeSettings();
 $("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) closeSettings(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
@@ -4508,16 +4632,6 @@ $("mSave").onclick = async () => {
     roomNote: $("s_roomnote").value.trim() || null,
     agents,
   };
-  // The notification preference is this browser's, not the room's, so it is
-  // applied here rather than sent to the server. Asking for permission only
-  // when it is switched on keeps the prompt tied to a deliberate action.
-  const wantNotify = $("s_notify").checked;
-  if (wantNotify && !notifyEnabled()) {
-    if (await requestNotifyPermission()) setNotifyEnabled(true);
-    else toast("Your browser blocked notifications for this page.", true);
-  } else if (!wantNotify) {
-    setNotifyEnabled(false);
-  }
   retireSettingsPick();
   try {
     const seats = roster.map((seat) => {
@@ -4536,9 +4650,58 @@ $("mSave").onclick = async () => {
       : "Settings saved.");
   } catch (e) { toast(e.message, true); }
 };
+function showNoRoom() {
+  if (state.es) { state.es.close(); state.es = null; }
+  clearDraftAttachments(); clearAttachmentUrls();
+  state.room = null; state.summary = null; state.entries = []; state.live = {}; state.queue = [];
+  chat.replaceChildren(); $("pills").replaceChildren();
+  $("roomTitle").textContent = "Your workspace";
+  $("tagline").textContent = "Your shared workspace";
+  $("empty").classList.remove("room-selected"); $("empty").style.display = "";
+  for (const id of ["openWs", "openRoomDir", "dlTranscript", "gitId"]) $(id).hidden = true;
+  $("composerWrap").hidden = true; $("modeToggle").hidden = true; $("settingsBtn").hidden = true;
+  for (const id of ["workBanner", "pairBanner", "setupBanner", "convergencePanel", "busyStrip"]) $(id).style.display = "none";
+  history.replaceState(null, "", location.pathname);
+}
+let pendingConfirmation = null;
+function confirmRoomAction(title, body, acceptLabel) {
+  if (pendingConfirmation) return Promise.resolve(false);
+  const dialog = $("confirmDialog");
+  const opener = document.activeElement;
+  $("confirmTitle").textContent = title;
+  $("confirmBody").textContent = body;
+  $("confirmAccept").textContent = acceptLabel;
+  dialog.returnValue = "cancel";
+  return new Promise((resolve) => {
+    pendingConfirmation = {resolve, opener};
+    dialog.showModal();
+  });
+}
+$("confirmDialog").addEventListener("keydown", (event) => event.stopPropagation());
+$("confirmDialog").addEventListener("cancel", () => { $("confirmDialog").returnValue = "cancel"; });
+$("confirmDialog").addEventListener("close", () => {
+  const pending = pendingConfirmation;
+  pendingConfirmation = null;
+  if (!pending) return;
+  if (pending.opener && document.contains(pending.opener)) pending.opener.focus();
+  pending.resolve($("confirmDialog").returnValue === "confirm");
+});
+async function archiveRoom(name) {
+  if (!name || !await confirmRoomAction(`Archive room "${name}"?`, "Its conversation, agents and workspace are kept in Archived rooms. You can restore it later.", "Archive room")) return;
+  try {
+    const result = await api("/api/room/archive", {room:name}); closeSettings();
+    if (state.room === name) {
+      if (result.rooms?.length) await loadRoom(result.rooms[0].name || result.rooms[0]);
+      else showNoRoom();
+    }
+    await refreshRooms(); toast(`Room "${name}" archived.`);
+  } catch (error) { toast(error.message, true); }
+}
 async function newConversation() {
-  if (!confirm(`Archive this conversation and reset ${state.summary?.seats?.length || 0} agent sessions?`)) return;
-  try { await api("/api/new", { room: state.room }); closeSettings(); }
+  const roomName = state.room;
+  if (!roomName || !await confirmRoomAction("Clear conversation?", `Save this conversation in history and reset ${state.summary?.seats?.length || 0} agent sessions in "${roomName}"? The room and its agents stay available.`, "Clear conversation")) return;
+  if (state.room !== roomName) return;
+  try { await api("/api/new", { room: roomName }); closeSettings(); }
   catch (e) { toast(e.message, true); }
 }
 // Rename/delete work on any room — the one you're viewing (Settings) or one
@@ -4590,7 +4753,7 @@ async function deleteFlow(name) {
 $("mRename").onclick = () => renameFlow(state.room);
 $("mDelete").onclick = () => deleteFlow(state.room);
 $("mDelete").hidden = false;
-$("newConvBtn").onclick = newConversation;
+$("mArchive").onclick = () => archiveRoom(state.room);
 $("mNewConv").onclick = newConversation;
 
 // ------------------------------------------------------------ boot

@@ -251,8 +251,8 @@ const PROVIDERS = {
   codex: {
     label: "Codex", sub: "OpenAI Codex CLI", desc: "OpenAI's coding agent",
     avatar: "X", color: "#2fd6a8",
-    defaults: { command: "codex", model: null, effort: null, sandbox: "read-only", extraArgs: [], lurk: false, lurkStyle: "balanced", lurkPrompt: null },
-    fields: ["command", "model", "effort", "sandbox", "extraArgs"],
+    defaults: { command: "codex", model: null, effort: null, serviceTier: "default", sandbox: "read-only", extraArgs: [], lurk: false, lurkStyle: "balanced", lurkPrompt: null },
+    fields: ["command", "model", "effort", "serviceTier", "sandbox", "extraArgs"],
     // Fallbacks — discover() below prefers Codex's own models cache.
     efforts: ["low", "medium", "high", "xhigh", "max", "ultra"],
     models: ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
@@ -288,6 +288,12 @@ const PROVIDERS = {
       sentinelNote: "Note: {seat} did not report a thread id, so Parley will resume its most recent session (--last). Using {seat} outside Parley at the same time could cross threads.",
       sessionFixedFields: ["sandbox"],
       resetOnRoomModeChange: true,
+      enums: {
+        serviceTier: {
+          values: () => new Set(["fast", "default"]), fallback: "default",
+          error: () => "serviceTier must be fast or default.",
+        },
+      },
     },
   },
   gemini: {
@@ -509,6 +515,13 @@ function agentText(value, field, max) {
   return value.trim() || null;
 }
 
+const MAX_ROOM_SEATS = 4;
+function agentServiceTier(value, provider) {
+  if (provider !== "codex") throw Object.assign(new Error("Fast mode is available for Codex agents only."), { status: 400 });
+  if (!["fast", "default"].includes(value)) throw Object.assign(new Error("serviceTier must be fast or default."), { status: 400 });
+  return value;
+}
+
 function defaultConfig(seats = DEFAULT_SEATS) {
   const specs = seatSpecs(seats);
   return {
@@ -532,6 +545,7 @@ function defaultConfig(seats = DEFAULT_SEATS) {
     agents: Object.fromEntries(specs.map((s) => [s.id, {
       provider: s.provider, ...providerById(s.provider).defaults,
       model: s.model ?? null, ...(providerById(s.provider).fields.includes("effort") ? { effort: s.effort ?? null } : {}),
+      ...(s.provider === "codex" ? { serviceTier: s.serviceTier ?? "default" } : {}),
       instructions: s.instructions ?? null,
     }])),
   };
@@ -1534,6 +1548,9 @@ async function codexSend(room, { seat = "codex", prompt, briefing, onStream, onA
   if (cfg.model) args.push("-m", cfg.model);
   if (cfg.effort) args.push("-c", "model_reasoning_effort=" + cfg.effort);
   args.push(...extraArgs);
+  // Last override wins over inherited config and Extra CLI args. Off is an
+  // explicit standard tier; omission can inherit an account's Fast default.
+  args.push("-c", `service_tier="${cfg.serviceTier === "fast" ? "fast" : "default"}"`);
   args.push("-"); // prompt on stdin
 
   const input = briefing ? briefing + "\n\n---\n\n" + prompt : prompt;
@@ -5792,7 +5809,7 @@ function scheduleCatchUps(room) {
   // One scheduled scan is enough; every completion schedules another. The
   // room object is captured intentionally, while a generation check inside
   // the runner prevents an archived conversation from writing into the next.
-  if (room.catchUpScheduled) return;
+  if (room.closed || room.catchUpScheduled) return;
   room.catchUpScheduled = true;
   setImmediate(() => {
     room.catchUpScheduled = false;
@@ -5801,6 +5818,7 @@ function scheduleCatchUps(room) {
 }
 
 function maybeRunCatchUp(room, agent) {
+  if (room.closed) return;
   const pending = catchUpState(room, agent);
   if (!pending) return;
   // Wait for every accepted user exchange to settle. This both gives user work
@@ -7150,14 +7168,15 @@ if ($picked) { Write-Output $picked }`;
 function closeRoom(room) {
   for (const res of room.clients) { try { res.end(); } catch { /* already gone */ } }
   room.clients.clear();
+  room.closed = true;
   rooms.delete(room.name); // evict the cache, or a later state flush rebuilds the folder
 }
 
 function deleteRoom(room) {
-  // `default` is the room the app falls back to and re-creates on boot, so
-  // deleting it only produces an empty ghost. Refuse rather than half-work.
+  // Default has a dedicated recoverable archive path. Keep the historical
+  // delete guard so old clients cannot accidentally trash their landing room.
   if (room.name === "default") {
-    throw Object.assign(new Error("the default room can't be deleted — archive its conversation with New conversation instead"), { status: 400 });
+    throw Object.assign(new Error("the default room can't be deleted — use Archive room or /clear instead"), { status: 400 });
   }
   // Both of these move the room's folder, which is a live working directory for
   // any process the room might still launch — so they wait for the whole
@@ -7176,6 +7195,55 @@ function deleteRoom(room) {
   closeRoom(room);
   fs.renameSync(room.dir, dest); // same volume: atomic, and keeps the workspace intact
   return dest;
+}
+
+// Room archives are distinct from deleted rooms in .trash. Only archives
+// created here carry metadata and appear in the restore picker.
+function archiveRoot() {
+  const dir = path.join(ROOT, ".archives");
+  if (fs.existsSync(dir) && (!fs.lstatSync(dir).isDirectory() || fs.lstatSync(dir).isSymbolicLink())) {
+    throw Object.assign(new Error("invalid room archive directory"), { status: 400 });
+  }
+  return dir;
+}
+function archivedRooms() {
+  const root = archiveRoot();
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory() && /^[0-9a-f-]{36}$/.test(d.name)).flatMap((d) => {
+    try {
+      const meta = readJSON(path.join(root, d.name, "archive.json"));
+      if (!validRoomName(meta.name) || typeof meta.archivedAt !== "string") return [];
+      const cfg = readJSON(path.join(root, d.name, "room.json"));
+      const seats = Object.keys(cfg.agents || {}).filter((id) => providerIdFor(cfg.agents[id], id));
+      return [{ name: meta.name, archiveId: d.name, archivedAt: meta.archivedAt,
+        mode: cfg.mode || "talk", linked: !!cfg.projectDir, seats,
+        providers: Object.fromEntries(seats.map((id) => [id, providerIdFor(cfg.agents[id], id)])) }];
+    } catch { return []; }
+  }).sort((a, b) => b.archivedAt.localeCompare(a.archivedAt));
+}
+function archiveRoom(room) {
+  if (roomWorkInFlight(room) || convergenceActive(room) || room.runs.size) throw Object.assign(new Error("that room's agents are still working — stop them first"), { status: 409 });
+  if (fs.lstatSync(room.dir).isSymbolicLink()) throw Object.assign(new Error("cannot archive a linked room directory"), { status: 400 });
+  const root = archiveRoot();
+  fs.mkdirSync(root, { recursive: true });
+  const archiveId = crypto.randomUUID();
+  const dest = path.join(root, archiveId);
+  saveState(room);
+  saveConfig(room);
+  fs.writeFileSync(path.join(room.dir, "archive.json"), JSON.stringify({ name: room.name, archivedAt: new Date().toISOString() }, null, 2));
+  fs.renameSync(room.dir, dest);
+  closeRoom(room);
+  return archiveId;
+}
+function restoreRoom(archiveId) {
+  if (typeof archiveId !== "string" || !/^[0-9a-f-]{36}$/.test(archiveId)) throw Object.assign(new Error("invalid room archive id"), { status: 400 });
+  const meta = archivedRooms().find((r) => r.archiveId === archiveId);
+  if (!meta) throw Object.assign(new Error("no such room archive"), { status: 404 });
+  const dest = path.join(ROOT, meta.name);
+  if (fs.existsSync(dest) || rooms.has(meta.name)) throw Object.assign(new Error(`a room called "${meta.name}" already exists — rename it before restoring this archive`), { status: 409 });
+  fs.renameSync(path.join(archiveRoot(), archiveId), dest);
+  fs.unlinkSync(path.join(dest, "archive.json"));
+  return meta.name;
 }
 
 function renameRoom(room, newName) {
@@ -7343,7 +7411,6 @@ function listRooms() {
   const names = fs.readdirSync(ROOT, { withFileTypes: true })
     .filter((d) => d.isDirectory() && validRoomName(d.name))
     .map((d) => d.name);
-  if (!names.includes("default")) names.unshift("default");
   return names.sort((a, b) => (a === "default" ? -1 : b === "default" ? 1 : a.localeCompare(b)));
 }
 
@@ -7431,7 +7498,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 403, { error: "forbidden — the Parley API needs the session token from its own page" });
     }
 
-    if (route === "GET /api/rooms") return json(res, 200, { rooms: roomsWithModes(), providers: providerCatalog(), maxSeats: null });
+    if (route === "GET /api/rooms") return json(res, 200, { rooms: roomsWithModes(), providers: providerCatalog(), maxSeats: MAX_ROOM_SEATS, archivedRooms: archivedRooms() });
 
     if (route === "POST /api/rooms") {
       const { name, seats, projectDir } = await readBody(req);
@@ -7447,6 +7514,7 @@ const server = http.createServer(async (req, res) => {
       let picked;
       if (seats !== undefined && !Array.isArray(seats)) return json(res, 400, { error: "seats must be an array." });
       if (Array.isArray(seats)) {
+        if (seats.length > MAX_ROOM_SEATS) return json(res, 400, { error: "Rooms support at most four agents." });
         // A seat is either a bare provider name (its id is that name, which is
         // every room ever created before ids and providers were separate) or
         // { id, provider } — which is what makes two seats of one provider
@@ -7465,6 +7533,7 @@ const server = http.createServer(async (req, res) => {
           if (typeof raw === "object" && raw) {
             if (Object.hasOwn(raw, "model")) spec.model = agentText(raw.model, "Model", 200);
             if (Object.hasOwn(raw, "effort")) spec.effort = agentText(raw.effort, "Effort", 40);
+            if (Object.hasOwn(raw, "serviceTier")) spec.serviceTier = agentServiceTier(raw.serviceTier, spec.provider);
             if (Object.hasOwn(raw, "instructions")) spec.instructions = agentText(raw.instructions, "Agent instructions", MAX_AGENT_INSTRUCTIONS);
             if (spec.effort && !PROVIDERS[spec.provider].fields.includes("effort")) {
               return json(res, 400, { error: `${PROVIDERS[spec.provider].label} does not expose an effort setting.` });
@@ -7493,6 +7562,18 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, await pickFolder(start));
     }
 
+    if (route === "POST /api/room/archive") {
+      const { room: name } = await readBody(req);
+      if (!validRoomName(name)) return json(res, 400, { error: "invalid room name" });
+      const archiveId = archiveRoom(loadRoom(name));
+      return json(res, 200, { ok: true, archiveId, rooms: roomsWithModes(), archivedRooms: archivedRooms() });
+    }
+    if (route === "POST /api/room/restore") {
+      const { archiveId } = await readBody(req);
+      const name = restoreRoom(archiveId);
+      return json(res, 200, { ok: true, name, rooms: roomsWithModes(), archivedRooms: archivedRooms() });
+    }
+
     if (route === "POST /api/room/delete") {
       const { room: name } = await readBody(req);
       const room = loadRoom(name || "default");
@@ -7509,7 +7590,7 @@ const server = http.createServer(async (req, res) => {
 
     if (route === "GET /api/room") {
       const wanted = url.searchParams.get("name") || "default";
-      const room = loadRoom(wanted, undefined, wanted === "default");
+      const room = loadRoom(wanted);
       const snapshot = { room: roomSummary(room), entries: room.entries, receipts: room.receipts };
       // Deliberate room activation resumes a persisted catch-up. Merely listing
       // rooms must never launch agents in every room on disk.
@@ -7524,7 +7605,7 @@ const server = http.createServer(async (req, res) => {
     // What a first run actually needs to know, per seat, before anything is
     // spent: is the CLI there, is it signed in, and if not, what to do about it.
     if (route === "GET /api/doctor") {
-      const room = loadRoom(url.searchParams.get("room") || "default", undefined, true);
+      const room = loadRoom(url.searchParams.get("room") || "default");
       return json(res, 200, {
         node: process.version,
         parley: packageVersion(),
@@ -7539,7 +7620,7 @@ const server = http.createServer(async (req, res) => {
 
     if (route === "GET /api/room/summary") {
       const wanted = url.searchParams.get("name") || "default";
-      const room = loadRoom(wanted, undefined, wanted === "default");
+      const room = loadRoom(wanted);
       return json(res, 200, { room: roomSummary(room) });
     }
 
@@ -7810,12 +7891,19 @@ const server = http.createServer(async (req, res) => {
           if (typeof raw === "object" && raw) {
             if (Object.hasOwn(raw, "model")) spec.model = agentText(raw.model, "Model", 200);
             if (Object.hasOwn(raw, "effort")) spec.effort = agentText(raw.effort, "Effort", 40);
+            if (Object.hasOwn(raw, "serviceTier")) spec.serviceTier = agentServiceTier(raw.serviceTier, spec.provider);
             if (Object.hasOwn(raw, "instructions")) spec.instructions = agentText(raw.instructions, "Agent instructions", MAX_AGENT_INSTRUCTIONS);
             if (spec.effort && !PROVIDERS[spec.provider].fields.includes("effort")) {
               return json(res, 400, { error: `${PROVIDERS[spec.provider].label} does not expose an effort setting.` });
             }
           }
           rosterSpecs.push(spec);
+        }
+        // Legacy larger rosters remain intact. They may shrink, but cannot
+        // add seats while above the limit or replace seats to evade it.
+        if (rosterSpecs.length > MAX_ROOM_SEATS &&
+            (rosterSpecs.length > seatIds(room).length || rosterSpecs.some((spec) => !Object.hasOwn(room.cfg.agents, spec.id)))) {
+          return json(res, 400, { error: "Rooms support at most four agents. Reduce this legacy roster before adding agents." });
         }
         const desired = new Set(rosterSpecs.map((s) => s.id));
         const removed = seatIds(room).filter((id) => !desired.has(id));
@@ -7870,6 +7958,7 @@ const server = http.createServer(async (req, res) => {
           for (const [field, max] of [["model", 200], ["effort", 40], ["instructions", MAX_AGENT_INSTRUCTIONS]]) {
             if (Object.hasOwn(patch, field)) patch[field] = agentText(patch[field], field, max);
           }
+          if (Object.hasOwn(patch, "serviceTier")) patch.serviceTier = agentServiceTier(patch.serviceTier, expectedProvider);
           if (patch.effort && !PROVIDERS[expectedProvider].fields.includes("effort")) {
             return json(res, 400, { error: `${PROVIDERS[expectedProvider].label} does not expose an effort setting.` });
           }
@@ -7899,6 +7988,7 @@ const server = http.createServer(async (req, res) => {
           const agent = { ...prior, provider: spec.provider };
           if (Object.hasOwn(spec, "model")) agent.model = spec.model;
           if (Object.hasOwn(spec, "effort") && PROVIDERS[spec.provider].fields.includes("effort")) agent.effort = spec.effort;
+          if (Object.hasOwn(spec, "serviceTier")) agent.serviceTier = spec.serviceTier;
           if (Object.hasOwn(spec, "instructions")) agent.instructions = spec.instructions;
           return [spec.id, agent];
         }));
@@ -8278,7 +8368,10 @@ function listen(attempt = 0) {
   });
   server.listen(port, "127.0.0.1", () => {
     const u = `http://127.0.0.1:${server.address().port}`;
-    loadRoom("default", undefined, true); // bootstrap: always somewhere to land
+    // Archive is an intentional empty/absent state, including for default.
+    if (!fs.existsSync(path.join(ROOT, "default")) && !archivedRooms().some((r) => r.name === "default")) {
+      loadRoom("default", undefined, true);
+    }
     console.log(`\n  Parley ${packageVersion()} is running\n\n  UI:     ${u}\n  Rooms:  ${ROOT}\n\n  Ctrl+C to quit.\n`);
     if (!NO_OPEN) openBrowser(u);
   });

@@ -1,6 +1,16 @@
-# Parley fork checkpoint — 2026-10-22
+# Parley fork checkpoint — 2026-10-23
 
-## Current checkpoint — harnesses installed
+## Current checkpoint — room UX repairs live
+
+User-requested UX fixes implemented by Sol 6.1; primary agent performed browser and focused runtime QA. Four-agent maximum now explicitly replaces the earlier unlimited-roster requirement; existing larger rosters are preserved. Create presets/selects, room empty states, settings separation, instructions editor, Fast mode, slash clear/archive/restore, and transcript handoff placement are delivered. [Verification](docs/UX-REPAIR-VERIFICATION.md); [session and routing behavior](docs/ROOM-BEHAVIOR.md).
+
+The idle fork was refreshed only on 4142 (last observed PID 62963), with served UI bytes verified against the checkout. Original default and Test 4 config/transcript/event hashes match. Native MCP still lists both rooms. Port 4141 and its library were untouched. All destructive-flow QA used disposable isolated rooms with fake providers; no unit-test suite was added/run.
+
+Next action: use the updated fork on 4142. Existing browser tabs may need reload. Continue to use Sol 6.1 for implementation and the primary agent for QA, and deliver verified work directly to main without new PRs.
+
+---
+
+## Historical checkpoint — harnesses installed
 
 User explicitly requested installation, not a setup guide. Both harnesses now have an enabled user-scope MCP named `parley`, reusable across projects, bound to `http://127.0.0.1:4142`. Each has a distinct private credential allowing all current and future rooms on 4142 (`rooms: ["*"]`), explicitly authorized by the user after the initial default-only installation.
 

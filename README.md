@@ -81,7 +81,7 @@ Two notes at the door:
 | The page says the runtime protocol doesn't match | Parley was updated under a page that's still open. Reload the tab. |
 | Windows: the folder picker seems to do nothing | It can open behind the browser. Look for **Parley — Choose a project folder** in the taskbar. |
 
-The fork's rooms, transcripts and settings live in `~/.parley-fork` (override with `--root`); deleted rooms go into its `.trash` directory. The original `parley` command continues to default to `~/.parley`.
+The fork's rooms, transcripts and settings live in `~/.parley-fork` (override with `--root`); archived rooms go into `.archives` and can be restored from the sidebar; deleted rooms remain in the separate `.trash` directory. The original `parley` command continues to default to `~/.parley`.
 
 ## How you talk to it
 
@@ -96,7 +96,7 @@ Each agent has its own **lane**: tag them back-to-back and they genuinely work a
 
 **Stop is scoped.** With one agent replying and nothing queued, ■ stops that response and its pending follow-ups. When two seats, queued work or Pair mode make that ambiguous, it opens a chooser: stop one response, active responses, queued work, or everything. Each click is pinned to the response you meant, so it cannot kill work that began after you clicked.
 
-**Token-frugal by default.** Tagging one agent costs nothing for the other when the addressed reply does not call it; a single-seat, untagged reply never wakes an unrelated peer. That peer catches up from its cursor on its next real delivery. A live session gets only its unseen delta, a fresh or recovered one gets a single bounded briefing — history is never resent wholesale.
+**Token-frugal by default.** Tagging one agent costs nothing for the other when the addressed reply does not call it; a single-seat, untagged reply never wakes an unrelated peer. That peer catches up from its cursor on its next real delivery. A live session receives its unseen room delta; a fresh or recovered session also receives a bounded history excerpt. The CLI maintains its native context and compaction. See [room behavior](docs/ROOM-BEHAVIOR.md) for limits and reset behavior.
 
 ## The rest of it
 
@@ -109,7 +109,7 @@ Each agent has its own **lane**: tag them back-to-back and they genuinely work a
   *Personal highlight: that little attachment paperclip. Shoutout to Codex.*
 - **Receipt dots** — under every message: who heard it live, who lurked it, who is queued to catch up, who caught up later, where a causal answer was returned, and where a cap or structural terminal deliberately ended the exchange — including deliveries you cancelled and terminal lurk outcomes.
 - **Per-reply token counts** — output (and Codex reasoning) tokens straight from the CLI, not model self-reporting.
-- **Two seats, extensible providers** — adding another CLI agent is one adapter function and a registry entry.
+- **One to four agents per room** — name each seat and choose its provider. Legacy larger rooms keep their agents and can be reduced. Codex seats have an independent Fast mode toggle; off explicitly selects the standard tier.
 
 ## Why you can trust it
 

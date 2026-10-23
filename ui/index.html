@@ -20,13 +20,13 @@
     <button id="addRoomBtn" class="new-room-action" title="New room"><span aria-hidden="true">＋</span> New room</button>
     <div class="side-label">Your rooms</div>
 
-    <nav id="roomList"></nav>
+    <nav id="roomList"></nav><details id="archivedRooms"><summary>Archived rooms <span id="archivedCount">0</span></summary><div id="archivedRoomList"></div></details>
     <div class="side-foot">
       <button id="openWs"><span class="ico">📁</span> <span id="openWsLabel">Open workspace</span></button>
       <div id="gitId" style="display:none"></div>
       <a id="dlTranscript" href="#"><span class="ico">📄</span> Download transcript</a>
       <button id="openRoomDir"><span class="ico">🗂️</span> Room folder</button>
-      <button id="settingsBtn2"><span class="ico">⚙️</span> Settings</button>
+      <button id="settingsBtn2"><span class="ico">⚙️</span> General settings</button>
       <a href="https://github.com/rortegalizardo/parley#readme" target="_blank" rel="noreferrer noopener"><span class="ico">?</span> Docs</a>
     </div>
   </aside>
@@ -42,8 +42,7 @@
       </div>
       <div class="pills" id="pills"></div>
       <button class="hbtn new-room-header" id="newRoomHeaderBtn" type="button">＋ New room</button>
-      <button class="hbtn" id="newConvBtn" title="Archive this conversation and start fresh">✨ New conversation</button>
-      <button class="hbtn" id="settingsBtn" title="Settings">⚙️</button>
+      <button class="hbtn" id="settingsBtn" title="Room settings" aria-label="Room settings">⚙️</button>
     </header>
     <div id="pairBanner" style="display:none">
       <span id="pairBannerText"></span>
@@ -55,8 +54,9 @@
 
     <div id="chatWrap">
       <div id="chat" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation"></div>
+      <section id="convergencePanel" class="convergence-panel" hidden aria-live="polite" aria-label="Convergence progress"></section>
       <div id="empty" style="display:none">
-        <div class="welcome-eyebrow"><span class="welcome-mark" aria-hidden="true">◈</span> YOUR AGENT WORKSPACE</div>
+        <div class="marketing-welcome"><div class="welcome-eyebrow"><span class="welcome-mark" aria-hidden="true">◈</span> YOUR AGENT WORKSPACE</div>
         <h2>Different perspectives.<br>One conversation.</h2>
         <p class="welcome-copy">Build a room with the agents you want. Choose each one's provider, model, effort, and point of view.</p>
         <div class="welcome-actions">
@@ -69,8 +69,8 @@
           <div class="team-role role-critic"><span class="role-symbol" aria-hidden="true">↗</span><div><b>Adversary</b><span>Challenge assumptions</span></div><small>YOUR CHOICE</small></div>
           <div class="team-role role-privacy"><span class="role-symbol" aria-hidden="true">◇</span><div><b>Privacy</b><span>Protect sensitive data</span></div><small>YOUR CHOICE</small></div>
         </div>
-        <div class="welcome-detail"><span>Any number of agents</span><span>Individual @mentions</span><span>Persistent role instructions</span></div>
-        <div class="current-room-start"><div class="starter-label">Or start with this room's agents</div><div class="starters" id="starters"></div></div>
+        <div class="welcome-detail"><span>Up to four agents</span><span>Individual @mentions</span><span>Persistent role instructions</span></div>
+        </div><div class="current-room-start"><h2 id="roomStartTitle">Start this room</h2><p id="roomStartCopy" class="welcome-copy"></p><div class="starter-label">Choose an agent or write a message below</div><div class="starters" id="starters"></div></div>
       </div>
     </div>
     <button id="jump">↓ New messages</button>
@@ -135,7 +135,7 @@
           <span id="routeHint"></span>
         </div>
         <div id="busyStrip" aria-live="polite"></div>
-        <section id="convergencePanel" class="convergence-panel" hidden aria-live="polite" aria-label="Convergence progress"></section>
+
         <div id="draftImages" aria-label="Attachments ready to send"></div>
         <div class="box">
           <input id="fileInput" type="file" multiple hidden aria-label="Choose files to attach">
@@ -158,7 +158,7 @@
 <dialog id="newRoomDialog" aria-labelledby="newRoomTitle">
     <form id="newRoomForm">
       <div class="form-title"><div><strong id="newRoomTitle">Create a room</strong><span>Your agents, your models, your perspectives.</span></div><button type="button" id="newRoomCancel" class="modal-close" aria-label="Close create room">×</button></div>
-      <div class="room-template"><span>Start with</span><button type="button" id="twoAgentTemplate" aria-pressed="true">Two agents</button><button type="button" id="fourAgentTemplate" aria-pressed="false">Drivers + adversary + privacy</button></div>
+      <div class="room-template"><span>Start with</span><button type="button" id="twoAgentTemplate" aria-pressed="true">Two agents</button><button type="button" id="fourAgentTemplate" aria-pressed="false">Four agents: 2 drivers + adversary + privacy</button></div>
       <label class="form-label" for="newRoomInput">Room name</label>
       <input id="newRoomInput" placeholder="room name…" maxlength="40" spellcheck="false">
       <div class="roster-heading"><span id="rosterCount">Your agents</span><button type="button" id="addSeatBtn" class="ract" title="Add an agent">＋ Add agent</button></div>
@@ -171,7 +171,7 @@
         title="Point this room at an existing project folder"><span data-picker-label>📁 Link a project folder…</span> <span id="newRoomProjVal"></span></button>
       <label id="newRoomReview" class="review-preset">
         <input type="checkbox" id="newRoomReviewChk" >
-        <span>Start in Work mode with the second agent listening for review</span>
+        <span>Start in Work mode</span>
       </label>
       <!-- A real submit button, not decoration. Without one the form relied on
            implicit submission, which the HTML spec only performs when there is
@@ -189,24 +189,19 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle">Room settings</h2>
     <div class="sub" id="roomPath"></div>
-    <div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">Add or remove agents while keeping the transcript.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
-    <div class="mgrid" id="seatCards"></div>
-    <div class="fld" style="margin-top:14px"><label>Room note (standing instruction every agent sees on every turn — also /note)</label>
-      <input id="s_roomnote" placeholder="e.g. We're building a YT-transcription app; keep answers short." spellcheck="false"></div>
-    <div class="fld"><label>Notifications</label>
-      <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-dim);cursor:pointer">
-        <input type="checkbox" id="s_notify" style="margin-top:3px">
-        <span>Tell me when a reply lands, a pair cycle needs my decision, or a turn fails — only while this tab is in the background.</span>
-      </label>
-      <div class="note">Per browser, not per room. Your browser will ask for permission the first time.</div></div>
-    <div class="fld" style="margin-top:14px"><label>Project folder (blank = room's own sandbox workspace)</label>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button></div>
+    <section id="agentsSettingsPane" role="tabpanel" aria-labelledby="agentsSettingsTab"><div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">Add or remove agents while keeping the transcript.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
+    <div id="settingsAgentNav" class="settings-agent-nav" aria-label="Agent to edit"></div><div id="seatCards"></div></section><section id="roomSettingsPane" role="tabpanel" aria-labelledby="roomSettingsTab" hidden>
+    <div class="fld" style="margin-top:14px"><label>Shared room instructions</label><div class="note">Every agent sees these instructions on every turn. You can also update them with /note.</div>
+      <textarea id="s_roomnote" rows="5" placeholder="Shared context and instructions for every agent…" spellcheck="false"></textarea></div>
+    <div class="fld" style="margin-top:14px"><label>Project folder</label><div class="note">Leave blank to use this room’s own sandbox workspace.</div>
       <div style="display:flex;gap:8px">
         <input id="s_projdir" placeholder="e.g. D:\Projects\my-app" spellcheck="false" style="flex:1">
         <button class="btn" id="s_browse" type="button" style="white-space:nowrap"><span data-picker-label>Browse…</span></button>
       </div>
       <div class="note">Point this room at a real project — the agents work and read there, and pick up its CLAUDE.md / AGENTS.md automatically. Changing it resets linked sessions.</div></div>
     <div class="mgrid" style="margin-top:14px">
-      <div class="fld"><label>Default agent (first message, before any tag)</label>
+      <div class="fld"><label>Default agent</label><div class="note">Receives the first message when you haven’t selected or tagged an agent.</div>
         <select id="s_default"></select></div>
       <div class="fld"><label>Timeout (seconds)</label><input id="s_timeout" type="number" min="10" step="10">
         <div class="note">Work rooms always get at least 900s.</div></div>
@@ -217,15 +212,15 @@
           <label>Allowance per message</label>
         <input id="s_hopbudget" type="number" min="-1" step="1">
         <div class="note" id="hopSettingsNote">Every automatic start counts. Initial requested responses do not. Changes apply to messages you send after saving. Discussions already started keep their original rules, including later agent replies.</div></div>
-      <div class="fld"><label>Pair review rounds per message (0 = until approved)</label>
+      <div class="fld"><label>Pair review rounds</label><div class="note">Use 0 to continue until approved.</div>
         <input id="s_pairrounds" type="number" min="0" max="99" step="1">
         <div class="note">Pair mode ends when the reviewer approves, so a limit is optional. A high safety stop still catches two agents that never converge.</div></div>
     </div>
-    <div class="mrow">
+    </section><div class="mrow">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="mRename">Rename…</button>
-        <button class="btn danger" id="mNewConv">Archive &amp; start fresh</button>
-        <button class="btn danger" id="mDelete">Delete room</button>
+        <button class="btn danger" id="mNewConv">Clear conversation…</button>
+        <button class="btn" id="mArchive">Archive room…</button><button class="btn danger" id="mDelete">Delete room</button>
       </div>
       <div style="display:flex;gap:10px">
         <button class="btn" id="mCancel">Cancel</button>
@@ -235,6 +230,20 @@
   </div>
 </div>
 
+<dialog id="generalDialog" aria-labelledby="generalTitle"><div class="form-title"><strong id="generalTitle">General settings</strong><button type="button" class="modal-close" id="generalClose" aria-label="Close general settings">×</button></div>    <div class="fld"><label>Notifications</label>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-dim);cursor:pointer">
+        <input type="checkbox" id="s_notify" style="margin-top:3px">
+        <span>Tell me when a reply lands, a pair cycle needs my decision, or a turn fails — only while this tab is in the background.</span>
+      </label>
+      <div class="note">Per browser, not per room. Your browser will ask for permission the first time.</div></div>
+<div class="form-actions"><button type="button" class="btn primary" id="generalSave">Save</button></div></dialog>
+<dialog id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmBody">
+  <form method="dialog">
+    <h2 id="confirmTitle"></h2>
+    <p id="confirmBody"></p>
+    <div class="form-actions"><button type="submit" class="btn" value="cancel" autofocus>Cancel</button><button type="submit" class="btn primary" id="confirmAccept" value="confirm">Confirm</button></div>
+  </form>
+</dialog>
 <div id="toast"></div>
 
 <script src="/ui/app.js?v=__PARLEY_ASSET_VERSION__"></script>
