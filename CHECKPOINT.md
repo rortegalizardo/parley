@@ -2,15 +2,17 @@
 
 ## Current checkpoint — harnesses installed
 
-User explicitly requested installation, not a setup guide. Both harnesses now have an enabled user-scope MCP named `parley`, reusable across projects, bound to `http://127.0.0.1:4142`. Each has a distinct private credential restricted to the existing `default` room. Broader room access was not installed.
+User explicitly requested installation, not a setup guide. Both harnesses now have an enabled user-scope MCP named `parley`, reusable across projects, bound to `http://127.0.0.1:4142`. Each has a distinct private credential allowing all current and future rooms on 4142 (`rooms: ["*"]`), explicitly authorized by the user after the initial default-only installation.
 
 - Codex registration: `~/.codex/config.toml`. Claude registration: `~/.claude.json`. Both run the shared `bin/parley-bridge.mjs` from this checkout. Credential contents stay in owner-only files under `~/.parley-fork/.bridge/clients/` and were never printed. No private harness settings were copied into the fork.
 - Architecture decision: one focused, reusable Parley MCP, not a central gateway for unrelated services. Therefore no separate central MCP project was created; the implementation remains in `/Users/ortega/Desktop/Projects/parley`.
 - Sol 6.1 added a startup ancestry check before credential access. Both the original npm `parley` entrypoint and the fork's `parley-mine` suppress the MCP's tools for their own provider descendants, even without the newer environment marker. Suppressed/unknown contexts initialize with zero tools and deny direct calls. Ordinary harnesses retain all four tools.
-- Primary-agent validation: bridge suite passed (8 checks plus independent end-to-end cases); packed startup passed (22 files). Codex's installed registration is enabled, its app-server discovered four tools and executed authenticated list/read with the installed credential. Claude's actual user-scope registration reports Connected. Credentials are mode 600 and scoped to `default`/4142. Metadata-only checks confirmed both actual Parley ancestor contexts are blocked and a normal harness is allowed.
+- Primary-agent validation: bridge suite passed (8 checks plus independent end-to-end cases); packed startup passed (22 files). Codex's installed registration is enabled, its app-server discovered four tools and executed authenticated list/read with the installed credential. Claude's actual user-scope registration reports Connected. Credentials are mode 600 and scoped to all rooms on 4142. Metadata-only checks confirmed both actual Parley ancestor contexts are blocked and a normal harness is allowed.
 - Neither server was restarted or signaled. No requests were sent to 4141 and its library was untouched. No test messages were added to the existing conversation. A fresh harness session loads the new MCP registration; the already-running chat's tool inventory may predate installation.
 
-Next action: in a new Codex or Claude session, ask it to use Parley room `default`, targeting a named agent or `@all`. No setup commands remain for the user.
+- All-room follow-up verification: both installed credentials discovered every existing room, then discovered and read a newly created empty QA room on the same MCP connections. Only that QA room was archived afterward. Tokens and harness registrations were preserved; no server restart, provider calls, messages, or access to 4141 occurred. Future rooms require no configuration changes.
+
+Next action: ask Codex or Claude to list Parley rooms and use the desired room, targeting a named agent or `@all`. No setup commands remain for the user.
 
 ---
 
