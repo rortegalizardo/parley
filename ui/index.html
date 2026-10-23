@@ -37,13 +37,14 @@
       <div id="connDot" title="connection"></div>
       <div id="roomTitle">default</div>
       <div id="modeToggle" title="Talk: conversational, conservative defaults; explicit seat permission overrides remain active. Work: agents can write files in the workspace and run commands.">
-        <button class="mbtn active" data-m="talk"><span class="mode-icon" aria-hidden="true">💬 </span>Talk</button>
-        <button class="mbtn" data-m="work"><span class="mode-icon" aria-hidden="true">🔨 </span>Work</button>
+        <button class="mbtn active" data-m="talk">Talk</button>
+        <button class="mbtn" data-m="work">Work</button>
       </div>
-      <div class="pills" id="pills"></div>
+      <button class="hbtn" id="agentToolbarBtn" type="button" aria-expanded="true" aria-controls="agentToolbar">Agents</button>
       <button class="hbtn new-room-header" id="newRoomHeaderBtn" type="button">＋ New room</button>
-      <button class="hbtn" id="settingsBtn" title="Room settings" aria-label="Room settings">⚙️</button>
+      <button class="hbtn" id="settingsBtn" title="Room settings" aria-label="Room settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 5 2 5 3 1 1 3h6l1-3 3-1 2-5-2-5-3-1-1-3z"/><circle cx="12" cy="12" r="3"/></svg></button>
     </header>
+    <div id="agentToolbar" aria-label="Room agents"><div class="pills" id="pills"></div></div>
     <div id="pairBanner" style="display:none">
       <span id="pairBannerText"></span>
       <button id="pairEndBtn">End pair mode</button>
@@ -139,15 +140,15 @@
         <div id="draftImages" aria-label="Attachments ready to send"></div>
         <div class="box">
           <input id="fileInput" type="file" multiple hidden aria-label="Choose files to attach">
-          <button id="attachBtn" type="button" title="Attach files" aria-label="Attach files">📎</button>
+          <button id="attachBtn" type="button" title="Attach files" aria-label="Attach files"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></svg></button>
           <textarea id="input" rows="1" placeholder="Message the table…  type @ to choose an agent"></textarea>
           <div id="stopWrap">
-            <button id="stopBtn" title="Stop the running response">■</button>
+            <button id="stopBtn" title="Stop the running response" aria-label="Stop the running response"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
             <button id="stopMore" title="Choose what to stop" aria-label="Stop options"
-                    aria-haspopup="menu" aria-expanded="false">▾</button>
+                    aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg></button>
             <div id="stopMenu" role="menu"></div>
           </div>
-          <button id="sendBtn" title="Send (Enter)">➤</button>
+          <button id="sendBtn" title="Send (Enter)" aria-label="Send message"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
         </div>
         <div class="hint">Enter to send · Shift+Enter newline · attach or drop files · paste images · <b>/help</b> for commands · replies stream live</div>
       </div>
@@ -175,8 +176,7 @@
 
         <div class="fld"><label for="newRoomNote">Shared room instructions</label><textarea id="newRoomNote" rows="7" maxlength="8000" placeholder="Goals, shared context, or rules for every agent…"></textarea><div class="note">Every agent receives these instructions on each turn.</div></div>
         <div class="fld"><label for="newRoomProjectPath">Project folder <span class="note">optional</span></label><div class="project-folder-field"><input id="newRoomProjectPath" spellcheck="false" placeholder="/path/to/your/project"><button type="button" id="newRoomProj" class="btn"><span data-picker-label>Browse…</span></button></div><div class="note">Leave blank to use a new room workspace.</div></div>
-        <label id="newRoomReview" class="review-preset"><input type="checkbox" id="newRoomReviewChk"><span>Start in Work mode</span></label>
-        <div class="note">Work allows project edits and commands. Talk starts with conservative provider defaults.</div>
+        <label id="newRoomReview" class="review-preset"><input type="checkbox" id="newRoomReviewChk"><span><b>Start in Work mode</b><small>Allows project edits and commands. Talk uses conservative defaults.</small></span></label>
       </section>
       </div>
       <!-- A real submit button, not decoration. Without one the form relied on
@@ -193,9 +193,10 @@
 
 <div id="overlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-    <h2 id="settingsTitle">Room settings</h2>
+    <div class="settings-fixed-head"><h2 id="settingsTitle">Room settings</h2>
     <div class="sub" id="roomPath"></div>
-    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button></div>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="false">Context</button></div></div>
+    <div class="settings-scroll-body">
     <section id="agentsSettingsPane" role="tabpanel" aria-labelledby="agentsSettingsTab"><div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">Add or remove agents while keeping the transcript.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
     <div id="settingsAgentNav" class="settings-agent-nav" aria-label="Agent to edit"></div><div id="seatCards"></div></section><section id="roomSettingsPane" role="tabpanel" aria-labelledby="roomSettingsTab" hidden>
     <div class="fld" style="margin-top:14px"><label>Shared room instructions</label><div class="note">Every agent sees these instructions on every turn. You can also update them with /note.</div>
@@ -222,8 +223,8 @@
         <input id="s_pairrounds" type="number" min="0" max="99" step="1">
         <div class="note">Pair mode ends when the reviewer approves, so a limit is optional. A high safety stop still catches two agents that never converge.</div></div>
     </div>
-    <div class="mode-policy note">Talk uses conservative provider defaults; Work enables project edits and commands.<details><summary>How agent permissions follow the mode</summary><p>Claude and Gemini follow Talk/Work when set to automatic; their explicit permission choices remain active. Codex promotes read-only to workspace-write in Work. Use Talk with read-only or Plan for a discussion without project edits.</p></details></div><section id="contextSettings" aria-label="Persistent context"></section>
-    </section><div class="mrow">
+    <div class="mode-policy note">Talk uses conservative provider defaults; Work enables project edits and commands.<details><summary>How agent permissions follow the mode</summary><p>Claude and Gemini follow Talk/Work when set to automatic; their explicit permission choices remain active. Codex promotes read-only to workspace-write in Work. Use Talk with read-only or Plan for a discussion without project edits.</p></details></div>
+    </section><section id="contextSettingsPane" role="tabpanel" aria-labelledby="contextSettingsTab" hidden><section id="contextSettings" aria-label="Persistent context"></section></section></div><div class="mrow settings-fixed-foot">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="mRename">Rename…</button>
         <button class="btn danger" id="mNewConv">Clear conversation…</button>

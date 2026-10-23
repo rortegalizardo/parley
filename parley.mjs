@@ -27,6 +27,7 @@ import { snapshotClientAssets } from "./lib/client-assets.mjs";
 import { claudeLoggedIn } from "./lib/claude-auth.mjs";
 import { createBridgeBackend } from "./lib/bridge-backend.mjs";
 import { createConvergenceRun, draftHash, classifyReview, composeDraft, allApproved } from "./lib/convergence.mjs";
+import { observeCodexContext } from "./lib/codex-context-observer.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Keep the browser and backend on the same build. Previously the server read
@@ -1573,6 +1574,17 @@ async function codexSend(room, { seat = "codex", prompt, briefing, onStream, onA
   args.push("-"); // prompt on stdin
 
   const input = briefing ? briefing + "\n\n---\n\n" + prompt : prompt;
+  const contextGeneration = room.generation, contextEpoch = seatEpoch(room, seat);
+  const contextCurrent = () => room.generation === contextGeneration && seatEpoch(room, seat) === contextEpoch && !!room.cfg.agents[seat];
+  const observer = observeCodexContext({
+    home: process.env.CODEX_HOME || path.join(os.homedir(), ".codex"), sessionRef: sess,
+    ephemeral: extraArgs.includes("--ephemeral"), isCurrent: contextCurrent,
+    onCompaction: (details) => contextEvent(room, seat, "compaction", "Codex compacted its conversation history", details),
+    onStatus: (status) => {
+      (room.contextObservations ||= {})[seat] = status;
+      broadcast(room, { type: "room", room: roomSummary(room) });
+    },
+  });
   let threadRef = sess || null, acc = "", lastMsg = null, usage = null;
   const seenItems = new Set();
   const onLine = (line) => {
@@ -1584,6 +1596,7 @@ async function codexSend(room, { seat = "codex", prompt, briefing, onStream, onA
     if (obj.type === "thread.started" && obj.thread_id) threadRef = obj.thread_id;
     else if (obj.thread_id && (!threadRef || threadRef === "--last")) threadRef = obj.thread_id;
     else if (obj.msg && obj.msg.type === "session_configured" && obj.msg.session_id) threadRef = obj.msg.session_id;
+    if (threadRef && threadRef !== "--last") observer.setThread(threadRef);
     const item = obj.item;
     if (item && (item.type === "agent_message" || item.item_type === "assistant_message")) {
       const t = item.text ?? item.message ?? null;
@@ -1608,9 +1621,12 @@ async function codexSend(room, { seat = "codex", prompt, briefing, onStream, onA
     }
   };
 
-  const r = await runCli(resolveCommand(cfg.command), args, {
-    cwd: workDir(room), timeoutMs: seatTimeout(room, seat), input, onLine, room, agent: seat,
-  });
+  let r;
+  try {
+    r = await runCli(resolveCommand(cfg.command), args, {
+      cwd: workDir(room), timeoutMs: seatTimeout(room, seat), input, onLine, room, agent: seat,
+    });
+  } finally { observer.finish(); }
 
   let fileText = null;
   try { fileText = fs.readFileSync(tmp, "utf8").trim() || null; } catch { /* no file */ }
@@ -2153,11 +2169,11 @@ function decisionContextText(decisions) {
 function contextSummary(room) {
   const ledger = contextLedger(room);
   const usedChars = decisionContextText(ledger.decisions).length;
-  return { decisions: ledger.decisions, events: ledger.events,
+  return { decisions: ledger.decisions, events: ledger.events, observations: room.contextObservations || {},
     budget: { maxChars: CONTEXT_MAX_CHARS, usedChars, overflow: usedChars > CONTEXT_MAX_CHARS },
     visibility: {
       claude: "Compaction shown when Claude reports it; remaining context size is unavailable.",
-      codex: "Codex does not report internal compaction to Parley. Session resets are recorded.",
+      codex: "Codex compaction is shown when its conversation activity is available. Session resets are recorded.",
       gemini: "Gemini does not report internal compaction to Parley. Session resets are recorded.",
     } };
 }
@@ -2185,6 +2201,8 @@ function contextEvent(room, seat, type, reason, details = {}) {
 }
 function resetNativeSession(room, seat, reason, force = false) {
   const previous = room.state.agents[seat]?.sessionRef;
+  if (room.contextObservations?.[seat]) room.contextObservations[seat] = { provider: "codex", status: "unavailable",
+    reason: "The session was reset. Compaction observation resumes on the next Codex turn.", at: new Date().toISOString() };
   if (room.state.agents[seat]) room.state.agents[seat].sessionRef = null;
   if (previous || force) contextEvent(room, seat, "reset", reason);
 }
@@ -7423,6 +7441,7 @@ function handleNewConversation(room) {
     }
   }
   const contextResetSeats = seatIds(room);
+  room.contextObservations = {};
   room.generation++;
   room.convergenceWorker = null;
   // Coordinators from the archived generation may still be unwinding. Their

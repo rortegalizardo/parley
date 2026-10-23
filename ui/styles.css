@@ -1170,3 +1170,86 @@ header .pills { min-width:0; }
 #newRoomForm > .form-actions { flex:none; position:relative; z-index:4; background:var(--panel); margin:0 -20px; padding:12px 20px; }
 #newRoomForm .roster-advanced .fld label { margin-bottom:5px; }
 @media(max-width:540px) { #newRoomForm { padding:14px 16px 0; } #newRoomForm > .form-actions { margin:0 -16px; padding:11px 16px; } }
+
+/* Workspace chrome: one top bar and a separate, scrollable agent strip. */
+#main > header { display:flex; flex-wrap:nowrap; gap:10px; padding:10px 20px; min-height:58px; }
+#main > header > * { grid-area:auto; flex-shrink:0; }
+#main > header > #roomTitle { flex:1 1 auto; min-width:0; max-width:none; font-size:16px; }
+#main > header > #modeToggle { margin-left:auto; }
+#main > header > #settingsBtn { display:inline-flex; width:34px; height:34px; padding:7px; margin:0; }
+#main > header > #newRoomHeaderBtn { margin-left:0; }
+#main > header .mbtn { padding:6px 10px; font-size:12px; }
+#main > header .hbtn { white-space:nowrap; }
+#agentToolbar { flex:none; padding:0 20px 10px; border-bottom:1px solid var(--border); background:var(--panel); }
+#agentToolbar[hidden] { display:none; }
+#agentToolbar .pills { display:flex; gap:8px; width:auto; padding:0; margin:0; overflow-x:auto; align-items:stretch; }
+#agentToolbar .pill { min-width:220px; max-width:310px; padding:8px 10px; gap:8px; background:var(--bg2); border-color:var(--border); }
+.agent-widget-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+.agent-widget-copy > b { font-size:12px; }
+.agent-widget-identity { display:block; color:var(--text-faint); font-size:10px; line-height:1.4; white-space:normal; overflow-wrap:anywhere; }
+#agentToolbar .pill .pinfo { max-width:none; font-size:10px; color:var(--text-dim); }
+#agentToolbar .pill .pinfo:empty { display:none; }
+#agentToolbar .pill .ear,#agentToolbar .pill .moon { display:flex; align-items:center; justify-content:center; width:28px; height:30px; padding:4px; flex:none; opacity:.5; filter:none; border-radius:6px; }
+#agentToolbar .pill .ear.on,#agentToolbar .pill .moon.on { opacity:1; background:var(--panel2); color:var(--accent); }
+#agentToolbar .pill button:hover,#agentToolbar .pill button:focus-visible { opacity:1; background:var(--panel2); }
+
+/* Stable dialogs: header and actions remain outside the scrolling content. */
+#overlay .modal { display:flex; flex-direction:column; width:min(820px,calc(100vw - 28px)); height:min(760px,calc(100dvh - 28px)); max-height:calc(100dvh - 28px); padding:0; overflow:hidden; box-sizing:border-box; }
+.settings-fixed-head { flex:none; padding:20px 22px 0; }
+.settings-fixed-head .sub { margin-bottom:12px; font-size:11px; max-height:32px; overflow:auto; }
+.settings-fixed-head .settings-tabs { margin:12px 0; }
+.settings-scroll-body { flex:1; min-height:0; overflow:auto; padding:4px 22px 20px; }
+.settings-fixed-foot.mrow { flex:none; margin:0; padding:14px 22px; gap:10px; border-top:1px solid var(--border); background:var(--panel); }
+.settings-fixed-foot.mrow > div { gap:7px !important; }
+.settings-fixed-foot .btn { padding:7px 10px; font-size:12px; }
+#overlay .modal .note { font-size:12px; font-weight:400; color:var(--text-faint); line-height:1.5; margin-top:5px; }
+#overlay .modal p { font-size:13px; line-height:1.55; }
+#overlay .modal h3 { font-size:15px; margin:0 0 10px; line-height:1.4; }
+#overlay .modal summary { font-size:12px; line-height:1.5; cursor:pointer; }
+#overlay .modal .fld > label { font-size:12px; line-height:1.4; }
+#overlay .modal input,#overlay .modal select,#overlay .modal textarea { box-sizing:border-box; font-size:13px; }
+#contextSettings { margin:0; padding:0; border:0; }
+#contextSettings > h3:not(:first-child) { margin-top:22px; }
+#contextSettings .saved-decisions { max-height:none; overflow:visible; margin:12px 0; }
+#contextSettings .saved-decision { padding:12px; background:var(--panel); }
+#contextSettings .saved-decision p { margin:0 0 8px; max-height:180px; }
+#contextSettings .saved-decision .ract { border:1px solid var(--border2); border-radius:6px; padding:5px 9px; font-size:12px; color:var(--text-dim); margin:8px 6px 0 0; }
+#contextSettings .saved-decision .ract:hover { background:var(--panel2); color:var(--text); }
+#contextSettings .context-event { padding:9px 0; margin:0; border-bottom:1px solid var(--border); }
+#newRoomDialog { width:min(760px,calc(100vw - 28px)); height:min(720px,calc(100dvh - 28px)); max-height:calc(100dvh - 28px); }
+#newRoomForm { height:100%; max-height:none; }
+#newRoomReview.review-preset { display:flex; align-items:flex-start; gap:10px; padding:12px; margin-top:18px; border:1px solid var(--border); border-radius:9px; background:var(--bg2); }
+#newRoomReview.review-preset input { margin:3px 0 0; flex:none; }
+#newRoomReview.review-preset span { display:block; }
+#newRoomReview.review-preset b { display:block; font-size:13px; font-weight:500; }
+#newRoomReview.review-preset small { display:block; margin-top:4px; font-size:11px; line-height:1.5; color:var(--text-faint); }
+
+/* Composer controls share one scale, including grouped stop actions. */
+#composer .box { min-height:48px; padding:6px 7px 6px 10px; gap:8px; align-items:flex-end; }
+#input { font-size:14px; line-height:22px; padding:7px 0; }
+#attachBtn,#sendBtn,#stopBtn { width:36px; height:36px; padding:8px; border-radius:9px; }
+#attachBtn svg,#sendBtn svg,#stopBtn svg,#stopMore svg { width:20px; height:20px; display:block; flex:none; }
+#stopBtn { border-radius:9px 3px 3px 9px; }
+#stopMore { width:32px; height:36px; padding:5px; border-radius:3px 9px 9px 3px; }
+@media(max-width:760px) {
+  #main > header { gap:7px; padding:9px 12px; min-height:54px; }
+  #main > header > #navToggle { padding:5px; width:28px; }
+  #agentToolbar { padding:0 12px 9px; }
+  #agentToolbar .pill { min-width:240px; }
+  .settings-fixed-head { padding:16px 16px 0; }
+  .settings-scroll-body { padding:4px 16px 16px; }
+  .settings-fixed-foot.mrow { padding:12px 16px; }
+}
+@media(max-width:540px) {
+  #main > header { gap:5px; padding:8px; }
+  #main > header > #connDot { display:none; }
+  #main > header > #roomTitle { font-size:14px; }
+  #main > header .mbtn { padding:5px 7px; font-size:11px; }
+  #main > header > #agentToolbarBtn { font-size:11px; padding:6px; }
+  #main > header > #newRoomHeaderBtn { font-size:0; width:30px; height:32px; padding:0; justify-content:center; }
+  #main > header > #newRoomHeaderBtn::before { content:"+"; font-size:22px; font-weight:400; }
+  #main > header > #settingsBtn { width:30px; height:32px; padding:5px; }
+  .settings-fixed-foot.mrow { align-items:stretch; flex-direction:column; }
+  .settings-fixed-foot.mrow > div:last-child { justify-content:flex-end; }
+  .settings-fixed-foot .btn { padding:6px 8px; font-size:11px; }
+}

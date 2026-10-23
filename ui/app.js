@@ -1,6 +1,11 @@
 "use strict";
 // ------------------------------------------------------------ state
 const $ = (id) => document.getElementById(id);
+function controlIcon(name) {
+  const paths = { ear: '<path d="M8 17c0 4 6 4 6 0 0-2 5-3 5-8A7 7 0 0 0 5 9m4 1a3 3 0 0 1 6 0c0 2-3 2-3 5"/>', moon: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>' };
+  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ""}</svg>`;
+}
+
 const INITIAL_ROOM = new URLSearchParams(location.search).get("room") || "default";
 const hopChoiceStorageKey = (room) => `parley.hopChoice:${room}`;
 function storedHopChoice(room) {
@@ -1976,9 +1981,9 @@ function renderSeatsUI(s) {
   $("roomStartCopy").textContent = `${seats.length} agent${seats.length === 1 ? "" : "s"} ready for your first message.`;
   $("pills").innerHTML = seats.map((a) =>
     `<div class="pill" tabindex="0" data-seat="${esc(a)}" id="pill_${esc(a)}" style="--seat-accent:${seatColor(a)}"><span class="st"></span>` +
-    `<b>${esc(seatLabel(a))}</b><span class="pinfo"></span>` +
-    `<button class="ear" data-seat="${esc(a)}">👂</button>` +
-    `<button class="moon" data-seat="${esc(a)}">😴</button></div>`).join("");
+    `<span class="agent-widget-copy"><b>@${esc(a)}</b><small class="agent-widget-identity">${esc(seatIdentity(a).split(" · ").slice(1).join(" · "))}</small><span class="pinfo"></span></span>` +
+    `<button class="ear" aria-label="Toggle listening for ${esc(a)}" data-seat="${esc(a)}">${controlIcon("ear")}</button>` +
+    `<button class="moon" aria-label="Toggle sleep for ${esc(a)}" data-seat="${esc(a)}">${controlIcon("moon")}</button></div>`).join("");
   // Keep the composer compact for large rooms. Individual targets live in the
   // searchable picker, while the selected target remains visible as a single
   // chip (and @ autocomplete still offers every seat).
@@ -2271,10 +2276,11 @@ function applySummary(s) {
       // undelivered, so the count stays until a turn moves the cursor.
       if (asleep) bits.push(ag.pending ? `asleep · ${ag.pending} pending` : "asleep");
       if (ag.held) bits.push(`${ag.held} held`);
-      if (!bits.length && s.cfg.agents[a].model) bits.push(s.cfg.agents[a].model);
+
       txt = bits.join(" · ");
     }
-    pill.querySelector(".pinfo").textContent = txt ? " · " + txt : "";
+    pill.querySelector(".pinfo").textContent = txt;
+    pill.querySelector(".agent-widget-identity").textContent = seatIdentity(a).split(" · ").slice(1).join(" · ");
     pill.setAttribute("aria-label", seatIdentity(a));
     pill.title = `${seatIdentity(a)}\n` + (ag.command.ok
       ? (ag.linked ? `session linked (${ag.sessionRef}…) · seen through turn ${ag.cursor}` : "fresh session")
@@ -2282,7 +2288,9 @@ function applySummary(s) {
     const moon = pill.querySelector(".moon");
     const reason = (ag.sleep && ag.sleep.reason) || "";
     moon.classList.toggle("on", asleep);
-    moon.textContent = asleep ? "☀" : "😴";
+    moon.innerHTML = controlIcon(asleep ? "sun" : "moon");
+    moon.setAttribute("aria-label", `${asleep ? "Wake" : "Sleep"} ${a}`);
+    moon.setAttribute("aria-pressed", String(asleep));
     // The pending count is context, not a token estimate — but this is the one
     // moment the size of the next turn is knowable before it runs, and that
     // turn arrives right after whatever quota event caused the sleep.
@@ -2297,6 +2305,7 @@ function applySummary(s) {
     const ear = pill.querySelector(".ear");
     const lurking = !!s.cfg.agents[a].lurk;
     ear.classList.toggle("on", lurking);
+    ear.setAttribute("aria-pressed", String(lurking));
     ear.title = lurking
       ? `${a} is lurking: it overhears every exchange and may chime in (one extra ${a} call per message). Click to turn off.`
       : `Let ${a} lurk: it will overhear every exchange and may chime in (one extra ${a} call per message). Click to turn on.`;
@@ -3375,6 +3384,7 @@ async function loadRoom(name) {
   }
   state.room = roomName;
   for (const id of ["openWs", "openRoomDir", "dlTranscript", "gitId"]) $(id).hidden = false;
+  $("agentToolbarBtn").hidden = false; $("agentToolbar").hidden = false; $("agentToolbarBtn").setAttribute("aria-expanded", "true");
   $("composerWrap").hidden = false; $("modeToggle").hidden = false; $("settingsBtn").hidden = false; $("convergencePanel").style.display = "";
   refreshDoctor(roomName);
   history.replaceState(null, "", roomName === "default" ? location.pathname : "?room=" + encodeURIComponent(roomName));
@@ -4472,13 +4482,14 @@ document.addEventListener("click", (e) => {
 });
 let selectedSettingsAgent = 0;
 function showSettingsPane(which) {
-  for (const name of ["agents", "room"]) {
+  for (const name of ["agents", "room", "context"]) {
     $(name + "SettingsPane").hidden = name !== which;
     $(name + "SettingsTab").setAttribute("aria-selected", String(name === which));
   }
 }
 $("agentsSettingsTab").onclick = () => showSettingsPane("agents");
 $("roomSettingsTab").onclick = () => showSettingsPane("room");
+$("contextSettingsTab").onclick = () => showSettingsPane("context");
 let settingsRosterDraft = null;
 let settingsRosterVersion = null;
 function rosterDraftFromSummary(s) {
@@ -4736,6 +4747,7 @@ function showNoRoom() {
   $("tagline").textContent = "Your shared workspace";
   $("empty").classList.remove("room-selected"); $("empty").style.display = "";
   for (const id of ["openWs", "openRoomDir", "dlTranscript", "gitId"]) $(id).hidden = true;
+  $("agentToolbarBtn").hidden = true; $("agentToolbar").hidden = true;
   $("composerWrap").hidden = true; $("modeToggle").hidden = true; $("settingsBtn").hidden = true;
   for (const id of ["workBanner", "pairBanner", "setupBanner", "convergencePanel", "busyStrip"]) $(id).style.display = "none";
   history.replaceState(null, "", "?home=1");
@@ -4845,7 +4857,7 @@ input.focus();
 function renderContextSettings(s) {
   const host = $("contextSettings"); if (!host || !s) return;
   const context = s.context || {}, budget = context.budget || {};
-  host.innerHTML = `<h3>Persistent decisions</h3><p class="note">Pinned messages and agreed handoffs remain available after clearing a conversation or resetting an agent.</p><p class="note">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity: shorten decisions before agents can continue." : ""}</p><div class="saved-decisions">${(context.decisions || []).map((decision) => `<article class="saved-decision" data-decision-id="${esc(decision.id)}"><p>${esc(decision.text)}</p><small>${decision.source === "convergence" ? "Agreed handoff" : "Pinned decision"} · ${esc(new Date(decision.updatedAt || decision.createdAt).toLocaleString())}</small><div><button type="button" class="ract" data-decision-action="edit">Edit</button><button type="button" class="ract" data-decision-action="remove">Remove</button></div></article>`).join("") || '<p class="note">No saved decisions. Use 📌 on a message to retain it.</p>'}</div><button type="button" class="btn" id="addDecision">Add decision</button><h3>Agent context</h3><p class="note">Only confirmed resets and compactions are recorded. Provider context usage and unreported compactions are unavailable.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}</p>`).join("")}<details><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(new Date(event.at).toLocaleString())}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details>`;
+  host.innerHTML = `<h3>Persistent decisions</h3><p class="note">Pinned messages and agreed handoffs remain available after clearing a conversation or resetting an agent.</p><p class="note">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity: shorten decisions before agents can continue." : ""}</p><div class="saved-decisions">${(context.decisions || []).map((decision) => `<article class="saved-decision" data-decision-id="${esc(decision.id)}"><p>${esc(decision.text)}</p><small>${decision.source === "convergence" ? "Agreed handoff" : "Pinned decision"} · ${esc(new Date(decision.updatedAt || decision.createdAt).toLocaleString())}</small><div><button type="button" class="ract" data-decision-action="edit">Edit</button><button type="button" class="ract" data-decision-action="remove">Remove</button></div></article>`).join("") || '<p class="note">No saved decisions. Use 📌 on a message to retain it.</p>'}</div><button type="button" class="btn" id="addDecision">Add decision</button><h3>Agent context</h3><p class="note">Only confirmed resets and compactions are recorded. Native events that a provider neither reports nor exposes remain unavailable; no token percentage is estimated.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}${context.observations?.[seat] ? `<br><span class="context-observation">${esc(context.observations[seat].status)} · ${esc(context.observations[seat].reason)}${context.observations[seat].at ? ` · ${esc(new Date(context.observations[seat].at).toLocaleString())}` : ""}</span>` : ""}</p>`).join("")}<details><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(new Date(event.at).toLocaleString())}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details>`;
 }
 async function mutateDecision(body, method = "POST", room = state.room) {
   await api("/api/context/decisions", {room, ...body}, method);
@@ -4894,3 +4906,9 @@ $("decisionForm").addEventListener("submit", async (event) => {
     else toast(error.message, true);
   } finally { if (decisionDraft === draft) $("decisionSave").disabled = false; }
 });
+
+$("agentToolbarBtn").onclick = () => {
+  const hidden = !$("agentToolbar").hidden;
+  $("agentToolbar").hidden = hidden;
+  $("agentToolbarBtn").setAttribute("aria-expanded", String(!hidden));
+};

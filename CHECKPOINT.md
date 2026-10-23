@@ -1,4 +1,18 @@
-## Current checkpoint — context retention and complete Create room repair (2026-10-23)
+## Current checkpoint — Codex compaction and stable workspace controls (2026-10-23)
+
+Implemented by Sol 6.1; primary-agent QA passed on actual **4142**. **4141 and its original library were never accessed or changed.**
+
+- Codex compaction now uses confirmed checkpoints from the exact linked native session, with identity validation, resume baselines, deduplication and stale-session guards. Claude's explicit compaction reporting remains supported. Unavailable observation is shown honestly; no inferred usage percentage.
+- Room settings now separates Agents, Room and Context. Compact top navigation keeps the settings gear at the right; agent widgets expose model/effort and listening/sleep controls. Create and Settings dialogs keep stable dimensions with internal scrolling. Work help and composer icons are proportionate.
+- A real Codex turn on 4142 compacted at 08:06:44 UTC. The subsequent answer retained the saved decision: “CSV; local.” The disposable QA room is archived and recoverable. Original default/Test 4 config, state, transcript and event files remained byte-identical.
+- Desktop and narrow UI checked, no browser errors. Served assets exactly match the checkout (asset version ef2b80c555e6e84735d7). Isolated QA server was stopped. Last observed 4142 PID: 68782; never signal it without new ownership/activity checks.
+- Validation: [record](docs/CODEX-CONTEXT-UI-VERIFICATION.md). Provider behavior: [guide](docs/ROOM-BEHAVIOR.md). Direct main delivery under the user's standing instruction; no new PR.
+
+Next action: use the updated fork on 4142. Continue Sol 6.1 implementation and primary-agent QA for future requests.
+
+---
+
+## Historical checkpoint — context retention and complete Create room repair (2026-10-23)
 
 Delivered on `main`, implemented by Sol 6.1 and verified by the primary agent on actual **4142**. **4141 and its library were never accessed or changed.**
 
