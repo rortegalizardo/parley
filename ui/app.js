@@ -16,6 +16,7 @@ function rememberHopChoice(room, choice) {
 }
 const state = {
   room: INITIAL_ROOM,
+  navigationVersion: 0,
   entries: [],
   receipts: [],
   summary: null,
@@ -23,7 +24,7 @@ const state = {
   chip: "auto",
   chipRevision: 0,   // manual changes fence off older in-flight send responses
   sendVersion: 0,    // only the newest send may synchronize the selected chip
-  hopChoice: storedHopChoice(INITIAL_ROOM), // per-room browser-session shortcut: default | solo | -1..8
+  hopChoice: "default", // per-room browser-session shortcut: default | solo | -1..8
   discussionMode: "converge", // @all default: converge | parallel
   convergenceRounds: 2,
   draftImages: [],   // native image attachments waiting for the next successful send
@@ -101,12 +102,12 @@ function showRuntimeMismatch() {
 }
 if (PAGE_RUNTIME_PROTOCOL !== REQUIRED_RUNTIME_PROTOCOL) showRuntimeMismatch();
 
-async function api(path, body) {
+async function api(path, body, method = "POST") {
   if (runtimeMismatch) throw new Error("Restart Parley to finish applying the update.");
   const res = await fetch(path, body === undefined
     ? { headers: { "X-Parley-Token": TOKEN, "X-Parley-Runtime-Protocol": REQUIRED_RUNTIME_PROTOCOL } }
     : {
-      method: "POST",
+      method,
       headers: {
         "Content-Type": "application/json",
         "X-Parley-Token": TOKEN,
@@ -525,20 +526,31 @@ window.addEventListener("focus", () => { document.title = "Parley"; refreshGitId
 
 // ------------------------------------------------------------ chat rendering
 const chatWrap = $("chatWrap"), chat = $("chat");
+let followingLatest = true, unreadMessages = 0;
 function nearBottom() { return chatWrap.scrollHeight - chatWrap.scrollTop - chatWrap.clientHeight < 120; }
 function scrollBottom(force) {
   // An empty room is an onboarding screen, not a transcript. Scrolling it to
   // the bottom hides the room builder on short windows.
   if (!state.entries.length) { chatWrap.scrollTop = 0; $("jump").style.display = "none"; return; }
-  if (force || nearBottom()) { chatWrap.scrollTop = chatWrap.scrollHeight; $("jump").style.display = "none"; }
-  else $("jump").style.display = "block";
+  if (force || followingLatest) {
+    followingLatest = true; unreadMessages = 0;
+    // Smooth scrolling leaves the viewport in transit while reconnect renders
+    // measure it, which can mistake initial navigation for reading old posts.
+    const behavior = chatWrap.style.scrollBehavior;
+    chatWrap.style.scrollBehavior = "auto";
+    chatWrap.scrollTop = chatWrap.scrollHeight;
+    chatWrap.style.scrollBehavior = behavior;
+    $("jump").style.display = "none";
+  }
+  else { $("jump").textContent = `↓ Jump to latest${unreadMessages ? ` · ${unreadMessages} new` : ""}`; $("jump").style.display = "block"; }
 }
 // One page per frame. Scroll fires far faster than a render, and a page of
 // collapsed activity adds little height — so without this guard a single flick
 // at the top stacks up several whole re-renders inside one frame.
 let historyPaging = false;
 chatWrap.addEventListener("scroll", () => {
-  if (nearBottom()) $("jump").style.display = "none";
+  followingLatest = nearBottom();
+  if (followingLatest) { unreadMessages = 0; $("jump").style.display = "none"; }
   // Scrolling to the top is the second path into "Show earlier ▸"; the button
   // stays as the discoverable one.
   if (chatWrap.scrollTop < 80 && !historyPaging && state.renderFromN !== null) {
@@ -1040,7 +1052,7 @@ function entryEl(e) {
   const av = e.kind === "user" ? "" : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
     `<button class="ask" title="Ask about this message">↪</button>` +
-    `<button class="cpy" title="Copy message">📋</button></div>` +
+    `<button class="pin-decision" title="Save as persistent decision" aria-label="Save as persistent decision">📌</button><button class="cpy" title="Copy message">📋</button></div>` +
     entryQuoteHTML(e) +
     `<div class="bubble${statusDimmed(e) ? " dimmed" : ""}">${renderMD(e.text)}</div>` +
     statusChipHTML(e) + heardHTML(e) + whyRunHTML(e);
@@ -1492,6 +1504,7 @@ function renderAll({ stickToBottom = true, preserveTransient = true, anchor = fa
   for (const el of frag.children) el.classList.add("norise");
   chat.appendChild(frag);
   $("empty").style.display = state.entries.length ? "none" : "";
+  renderConvergencePanel(state.summary);
   if (!state.entries.length || stickToBottom) scrollBottom(true);
   else {
     if (!applyAnchor(keep)) chatWrap.scrollTop = oldTop;
@@ -1544,7 +1557,8 @@ function addEntry(e) {
   // 10k-element array plus a 10k-key Map per arriving entry in a long room,
   // several times a second during an active work turn.
   if (entryIndexOf(e.n) >= 0) return;
-  const wasAtBottom = nearBottom();
+  const wasAtBottom = followingLatest || nearBottom();
+  if (!wasAtBottom && e.kind !== "activity") unreadMessages++;
   const last = state.entries[state.entries.length - 1];
   const inOrder = !last || e.n > last.n;
   if (inOrder) {
@@ -1584,6 +1598,7 @@ function addEntry(e) {
   // Keep any live bubbles after the durable transcript entry.
   for (const live of Object.values(state.live)) chat.appendChild(live.el);
   if (document.hidden && e.kind !== "activity") { document.title = "● Parley"; notifyForEntry(e); }
+  renderConvergencePanel(state.summary);
   scrollBottom(e.kind === "user" || wasAtBottom);
 }
 
@@ -2025,7 +2040,10 @@ function renderDiscussionMode() {
   if (btn) {
     btn.classList.toggle("converging", state.discussionMode === "converge" && state.chip === "both");
     const label = $("agentsBtnLabel");
-    if (label) label.textContent = state.chip !== "auto" && state.chip !== "both" ? `@${state.chip}` : "Agents";
+    const selected = state.chip !== "auto" && state.chip !== "both";
+    if (label) label.textContent = selected ? `@${state.chip}` : "Agents";
+    $("agentsBtnCount").hidden = selected;
+    $("agentsBtnCount").textContent = `(${state.summary?.seats?.length || 0})`;
     if ($("agentPickerWrap").classList.contains("open")) {
       const menu = $("agentsMenu");
       menu.style.top = `${Math.max(8, btn.getBoundingClientRect().top - menu.offsetHeight - 8)}px`;
@@ -2059,6 +2077,11 @@ function effectiveSeatPermission(a, cfg, roomMode) {
     const configured = cfg.permissionMode || "auto";
     return configured === "auto" ? (roomMode === "work" ? "acceptEdits" : "default") : configured;
   }
+  if ("approvalMode" in cfg) {
+    const override = configArgValue(cfg.extraArgs || [], "--approval-mode");
+    if (override !== null) return override;
+    return !cfg.approvalMode || cfg.approvalMode === "auto" ? (roomMode === "work" ? "auto_edit" : "default") : cfg.approvalMode;
+  }
   if ("sandbox" in cfg) {
     const configured = cfg.sandbox || "read-only";
     return roomMode === "work" && configured === "read-only" ? "workspace-write" : configured;
@@ -2071,6 +2094,8 @@ function permissionLabel(mode) {
     manual: "manual",
     plan: "plan — read only",
     acceptEdits: "accept edits",
+    auto_edit: "auto edit",
+    yolo: "full access",
     bypassPermissions: "full access",
     "read-only": "read only",
     "workspace-write": "workspace write",
@@ -2079,7 +2104,7 @@ function permissionLabel(mode) {
   return labels[mode] || mode;
 }
 function isFullAccess(mode) {
-  return String(mode).toLowerCase() === "bypasspermissions" || mode === "danger-full-access";
+  return String(mode).toLowerCase() === "bypasspermissions" || mode === "danger-full-access" || mode === "yolo";
 }
 function isConservative(mode) {
   return ["default", "manual", "plan", "read-only"].includes(mode);
@@ -2121,10 +2146,30 @@ function convergenceSnapshot(s) {
   return s && (s.convergence || s.convergenceRun || s.deliberation || null);
 }
 function renderConvergencePanel(s) {
-  const panel = $("convergencePanel");
-  if (!panel) return;
-  const c = convergenceSnapshot(s);
-  if (!c) { panel.hidden = true; panel.innerHTML = ""; return; }
+  const legacy = $("convergencePanel");
+  if (legacy) { legacy.hidden = true; legacy.style.display = "none"; }
+  if (!s) return;
+  const snapshots = [...(s.convergenceRuns || [])];
+  for (const entry of state.entries) {
+    const proof = entry.meta?.convergence;
+    if (proof?.runId && !snapshots.some((run) => run.runId === proof.runId)) snapshots.push({...proof, phase: proof.status, final: entry.text, total: proof.participants?.length, received: proof.participants?.length, historicalProof: true});
+  }
+  const latest = convergenceSnapshot(s);
+  if (latest) { const index = snapshots.findIndex((run) => run.runId === latest.runId); if (index >= 0) snapshots[index] = latest; else snapshots.push(latest); }
+  for (const c of snapshots) renderConvergenceRun(c, s);
+}
+function renderConvergenceRun(c, s) {
+  const id = String(c.runId || c.rootN || "current");
+  let panel = [...chat.querySelectorAll(".convergence-panel")].find((el) => el.dataset.runId === id);
+  const finalEntry = state.entries.find((entry) => entry.meta?.convergence?.runId === c.runId && entry.meta?.convergence?.status === "agreed");
+  const anchor = finalEntry || state.entries.find((entry) => entry.n === c.rootN);
+  if (!anchor) return;
+  const row = rowByN.get(anchor.n) || chat.querySelector(`[data-n="${anchor.n}"]`);
+  if (!row) return;
+  if (!panel) { panel = document.createElement("section"); panel.className = "convergence-panel"; panel.dataset.runId = id; }
+  const wasFollowing = followingLatest;
+  row.after(panel);
+  const recordOpen = panel.querySelector(".convergence-record")?.open || false;
   const phase = String(c.phase || c.status || "").toLowerCase();
   const labels = { gathering: "Gathering", drafting: "Drafting", reviewing: "Reviewing", agreed: "Agreement", complete: "Agreement", unresolved: "Unresolved", incomplete: "Incomplete", stopped: "Stopped" };
   const phaseLabel = labels[phase] || (c.phase || c.status || "Convergence");
@@ -2140,6 +2185,7 @@ function renderConvergencePanel(s) {
   // participant plus one synthesis pass: N + R * (N + 1).
   const plannedCalls = c.plannedCalls || (c.calls && c.calls.planned) || (total + Number(maxRounds) * (total + 1));
   const usedCalls = c.calls?.used ?? c.usedCalls ?? 0;
+  const callLabel = c.historicalProof ? "Call count not recorded" : `${usedCalls}/${plannedCalls} agent calls`;
   const detailsOpen = panel.querySelector(".convergence-contributions")?.open || false;
   const roundReviews = (c.rounds || []).flatMap((round) => Object.entries(round.reviews || {}).map(([agent, x]) => ({ agent, text: x.reason || x.rationale || x.text, stage: `review round ${round.version || "?"}`, decision: x.decision || x.status, version: x.version || round.version, hash: x.draftHash || x.hash || round.hash, reservation: x.reservation })));
   const contributions = Array.isArray(c.contributions) ? c.contributions : [
@@ -2160,9 +2206,17 @@ function renderConvergencePanel(s) {
   const extendCalls = total + 1;
   const actionReason = c.actions?.reason ? `<p class="convergence-reason">${esc(c.actions.reason)}</p>` : "";
   const actions = terminal ? actionReason : `<div class="convergence-actions">${actionReason}${["incomplete", "unresolved", "stopped"].includes(phase) && canResume ? `<button type="button" data-convergence-action="resume">Resume</button>` : ""}${["incomplete", "unresolved", "stopped"].includes(phase) && canExtend ? `<button type="button" data-convergence-action="extend">Extend review <small>(+1 round · +${extendCalls} calls)</small></button>` : ""}${!["incomplete", "unresolved", "stopped"].includes(phase) ? `<button type="button" data-convergence-action="stop">Stop</button>` : ""}</div>`;
-  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(usedCalls)}/${esc(plannedCalls)} agent calls</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div><div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(total)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${actions}`;
+  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(callLabel)}</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div><div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(total)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${actions}`;
   const details = panel.querySelector(".convergence-contributions");
   if (details && detailsOpen) details.open = true;
+  panel.querySelectorAll("[data-convergence-action]").forEach((button) => { button.dataset.runId = id; });
+  if (["agreed", "complete", "unresolved", "incomplete", "stopped"].includes(phase)) {
+    const content = document.createElement("details"); content.className = "convergence-record";
+    const summary = document.createElement("summary"); summary.textContent = `Shared handoff · ${phaseLabel} · ${callLabel} — details`;
+    content.append(summary); const body = document.createElement("div"); body.innerHTML = panel.innerHTML; content.append(body);
+    content.open = recordOpen; panel.replaceChildren(content);
+  }
+  if (wasFollowing) scrollBottom(true);
 }
 function applySummary(s) {
   s.busy = s.busy || [];
@@ -2181,6 +2235,7 @@ function applySummary(s) {
   renderAgentOptions(s);
   renderDiscussionMode();
   renderConvergencePanel(s);
+  renderContextSettings(s);
   syncChipUI();
   $("roomTitle").textContent = s.name;
   for (const a of s.seats) {
@@ -2979,7 +3034,7 @@ function openHopMenu() {
 function renderHopControl() {
   const explicitTarget = guessTextTarget(input.value);
   const convergenceComposer = (explicitTarget === "both" || (!explicitTarget && !state.summary?.pair && state.chip === "both")) && (state.summary?.seats?.length || 0) > 1 && state.discussionMode === "converge";
-  $("hopWrap").hidden = convergenceComposer;
+  $("hopWrap").hidden = true;
   if (convergenceComposer) {
     $("hopProgress").hidden = true;
     return;
@@ -3285,16 +3340,21 @@ async function refreshDoctor(roomName) {
 }
 
 async function loadRoom(name) {
+  const navigationVersion = ++state.navigationVersion;
+  state.resyncVersion++;
   retireSettingsPick(); // a folder dialog open for the old room must not land here
   let data;
   try {
     data = await api("/api/room?name=" + encodeURIComponent(name));
   } catch (e) {
+    if (state.navigationVersion !== navigationVersion) return;
     const rooms = await api("/api/rooms");
+    if (state.navigationVersion !== navigationVersion) return;
     const fallback = (rooms.rooms || []).find((room) => (room.name || room) !== name);
     if (fallback) return loadRoom(fallback.name || fallback);
     showNoRoom(); await refreshRooms(); return;
   }
+  if (state.navigationVersion !== navigationVersion) return;
   if (state.es) {
     const old = state.es;
     state.es = null;
@@ -3308,7 +3368,7 @@ async function loadRoom(name) {
   const roomName = data.room.name || name;
   if (roomName !== state.room) {
     closeHopMenu();
-    state.hopChoice = storedHopChoice(roomName);
+    state.hopChoice = "default";
     state.discussionMode = "converge";
     state.convergenceRounds = 2;
     loadDiscussionPrefs(roomName);
@@ -3339,6 +3399,10 @@ async function loadRoom(name) {
   state.providers = data.room.providers || state.providers;
   renderAll({ preserveTransient: false });
   applySummary(data.room);
+  scrollBottom(true);
+  requestAnimationFrame(() => {
+    if (state.navigationVersion === navigationVersion && state.room === roomName && followingLatest) scrollBottom(true);
+  });
   // Opening a room can itself resume a persisted lurk catch-up. Re-pull once
   // the event stream is attached so an unusually fast catch-up cannot finish
   // in the GET→SSE gap and leave this tab with a stale entry/receipt snapshot.
@@ -3349,13 +3413,15 @@ async function loadRoom(name) {
 // After the event stream was down, pull the room again so anything that
 // happened during the gap appears without a manual refresh.
 async function refreshAfterGap() {
+  const navigationVersion = state.navigationVersion;
   const room = state.room;
+  if (!room) return;
   const eventVersion = state.eventVersion;
   const resyncVersion = ++state.resyncVersion;
   const seqBefore = { ...state.statusSeq };
   try {
     const data = await api("/api/room?name=" + encodeURIComponent(room));
-    if (state.room !== room || state.resyncVersion !== resyncVersion) return;
+    if (state.navigationVersion !== navigationVersion || state.room !== room || state.resyncVersion !== resyncVersion) return;
     // The stream is already live while this fetch is in flight. Merge by turn
     // number (live state wins on duplicates) so its arrivals cannot be lost.
     state.entries = mergeEntries(data.entries, state.entries);
@@ -3457,6 +3523,23 @@ function fillSeatPickers() {
 
 let newRoster = [];
 let newRoomPreset = null;
+let selectedNewAgent = 0;
+function showNewRoomPane(which) {
+  for (const section of ["agents", "room"]) {
+    const prefix = section === "agents" ? "newAgents" : "newRoom";
+    $(prefix + "Pane").hidden = section !== which;
+    $(prefix + "Tab").setAttribute("aria-selected", String(section === which));
+  }
+}
+$("newAgentsTab").onclick = () => showNewRoomPane("agents");
+$("newRoomTab").onclick = () => showNewRoomPane("room");
+function renderNewAgentNav() {
+  $("newAgentNav").innerHTML = newRoster.map((agent, index) => `<button type="button" data-new-agent="${index}" aria-pressed="${index === selectedNewAgent}"><b>@${esc(agent.id || `agent${index + 1}`)}</b><small>${esc(state.providers[agent.provider]?.label || agent.provider)}</small></button>`).join("");
+}
+$("newAgentNav").onclick = (event) => {
+  const button = event.target.closest("[data-new-agent]"); if (!button) return;
+  selectedNewAgent = Number(button.dataset.newAgent); renderRoster();
+};
 function updateRoomPresetState() {
   const pair = newRoomPreset === "pair" && newRoster.length === 2;
   const team = newRoomPreset === "team" && newRoster.length === 4;
@@ -3468,16 +3551,18 @@ function renderRoster() {
   const list = $("rosterList"); if (!list) return;
   const ids = Object.keys(state.providers || {});
   updateRoomPresetState();
-  $("rosterCount").textContent = `Your agents · ${newRoster.length}`;
+  selectedNewAgent = Math.min(selectedNewAgent, Math.max(0, newRoster.length - 1));
+  $("rosterCount").textContent = `Your agents · ${newRoster.length} of 4`;
+  renderNewAgentNav();
   $("addSeatBtn").disabled = newRoster.length >= 4;
 
   list.innerHTML = newRoster.map((agent, i) => {
     const options = ids.map((p) => `<option value="${esc(p)}" ${p === agent.provider ? "selected" : ""}>${esc(state.providers[p].label || p)}</option>`).join("");
     const catalog = state.providers[agent.provider] || {};
     const effort = (catalog.fields || []).includes("effort");
-    if (!effort) agent.effort = "";
+
     const suggestions = (values) => (values || []).map((v) => `<option value="${esc(typeof v === "string" ? v : v.value)}">${esc(typeof v === "string" ? v : v.label || v.value)}</option>`).join("");
-    return `<article class="roster-row" data-roster-index="${i}" aria-label="Agent ${i + 1}">
+    return `<article class="roster-row" data-roster-index="${i}" aria-label="Agent ${i + 1}" ${i !== selectedNewAgent ? "hidden" : ""}>
       <div class="roster-main">
         <label class="roster-field">Name / @mention<input class="roster-name" ${i < 2 ? `id="seat${i + 1}Name"` : ""} value="${esc(agent.id || "agent" + (i + 1))}" maxlength="20" placeholder="e.g. privacy" aria-label="Agent ${i + 1} name" spellcheck="false"></label>
         <label class="roster-field">Provider<select class="roster-provider" ${i < 2 ? `id="seat${i + 1}"` : ""} aria-label="Agent ${i + 1} provider">${options}</select></label>
@@ -3495,7 +3580,7 @@ function renderRoster() {
   list.querySelectorAll(".roster-row").forEach((row) => {
     const i = Number(row.dataset.rosterIndex);
     row.querySelector(".roster-provider").onchange = (e) => { newRoster[i].provider = e.target.value; renderRoster(); };
-    row.querySelector(".roster-name").oninput = (e) => { newRoster[i].id = e.target.value.toLowerCase(); };
+    row.querySelector(".roster-name").oninput = (e) => { newRoster[i].id = e.target.value.toLowerCase(); renderNewAgentNav(); };
     for (const name of ["model", "effort"]) {
       const field = row.querySelector(`[data-f="${name}"]`);
       if (!field) continue;
@@ -3505,7 +3590,7 @@ function renderRoster() {
     const fast = row.querySelector(".roster-fast");
     if (fast) fast.onchange = (event) => { newRoster[i].serviceTier = event.target.value; };
     row.querySelector(".roster-instructions").oninput = (e) => { newRoster[i].instructions = e.target.value; };
-    row.querySelector(".roster-remove").onclick = () => { if (newRoster.length <= 1) return toast("A room needs at least one agent.", true); newRoomPreset = null; newRoster.splice(i, 1); renderRoster(); };
+    row.querySelector(".roster-remove").onclick = () => { if (newRoster.length <= 1) return toast("A room needs at least one agent.", true); newRoomPreset = null; newRoster.splice(i, 1); selectedNewAgent = Math.min(i, newRoster.length - 1); renderRoster(); };
   });
 }
 $("addSeatBtn").onclick = () => {
@@ -3515,7 +3600,7 @@ $("addSeatBtn").onclick = () => {
   while (newRoster.some((agent) => agent.id === `agent${next}`)) next++;
   newRoomPreset = null;
   newRoster.push({ id: `agent${next}`, provider: providers[newRoster.length % Math.max(1, providers.length)] || "claude" });
-  renderRoster();
+  selectedNewAgent = newRoster.length - 1; renderRoster();
 };
 // Mirrors the server's rule so the message names the problem instead of
 // bouncing back a 400. The server still validates; this is only the wording.
@@ -4017,15 +4102,15 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest("#agentPickerWrap")) closeAgentsMenu();
 });
 window.addEventListener("resize", closeAgentsMenu);
-async function convergenceAction(action) {
+async function convergenceAction(action, selectedRunId) {
   try {
-    const runId = convergenceSnapshot(state.summary)?.runId;
+    const runId = selectedRunId || convergenceSnapshot(state.summary)?.runId;
     await api("/api/convergence", { room: state.room, action, runId, rounds: action === "extend" ? 1 : state.convergenceRounds });
   } catch (e) { toast(e.message, true); }
 }
-$("convergencePanel")?.addEventListener("click", (e) => {
+chat.addEventListener("click", (e) => {
   const action = e.target.closest("[data-convergence-action]");
-  if (action) convergenceAction(action.dataset.convergenceAction);
+  if (action) convergenceAction(action.dataset.convergenceAction, action.dataset.runId);
 });
 $("starters").addEventListener("click", (e) => {
   const s = e.target.closest(".starter");
@@ -4095,7 +4180,7 @@ function mentionKeydown(e) {
 
 // ------------------------------------------------------------ rooms sidebar
 function applyRoomTemplate(kind) {
-  newRoomPreset = kind;
+  selectedNewAgent = 0; newRoomPreset = kind;
   const providers = Object.keys(state.providers || {});
   const claude = providers.includes("claude") ? "claude" : providers[0] || "claude";
   const codex = providers.includes("codex") ? "codex" : providers[1] || providers[0] || "codex";
@@ -4113,10 +4198,11 @@ function openNewRoom(kind = "pair") {
   clearNewRoomProject(); // a fresh form never inherits the last one's folder
   $("newRoomInput").value = "";
   $("newRoomReviewChk").checked = false;
+  $("newRoomNote").value = ""; showNewRoomPane(kind === "team" ? "agents" : "room");
   applyRoomTemplate(kind);
   setNavOpen(false);
   $("newRoomDialog").showModal();
-  $("newRoomInput").focus();
+  if (kind === "team") $("newAgentsTab").focus(); else $("newRoomInput").focus();
 }
 $("addRoomBtn").onclick = () => openNewRoom();
 $("newRoomHeaderBtn").onclick = () => openNewRoom();
@@ -4134,7 +4220,6 @@ function closeNewRoom() {
 $("newRoomCancel").onclick = closeNewRoom;
 $("newRoomCancelBottom").onclick = closeNewRoom;
 $("newRoomDialog").addEventListener("cancel", (e) => { e.preventDefault(); closeNewRoom(); });
-let newRoomProjectDir = null;
 // The OS dialog isn't modal to this page, so the form can be submitted while it
 // is still open. Each pick is stamped, and anything that ends the form's life
 // moves the stamp on: a result that arrives after that belongs to a form the
@@ -4142,42 +4227,35 @@ let newRoomProjectDir = null;
 let newRoomPick = 0;
 function clearNewRoomProject() {
   newRoomPick++;
-  newRoomProjectDir = null;
-  $("newRoomProjVal").textContent = "";
-  $("newRoomProj").style.color = "var(--text-faint)";
+  $("newRoomProjectPath").value = "";
 }
 $("newRoomProj").onclick = async () => {
   const pick = ++newRoomPick;
-  const r = await browseFolder(null, $("newRoomProj"));
-  if (pick !== newRoomPick || !r) return; // superseded while the dialog was open
-  newRoomProjectDir = r;
-  $("newRoomProjVal").textContent = "— " + r.split(/[\\/]/).pop();
-  $("newRoomProj").style.color = "var(--text-dim)";
+  const pathBefore = $("newRoomProjectPath").value;
+  const r = await browseFolder(pathBefore.trim() || null, $("newRoomProj"));
+  if (pick !== newRoomPick || !r || $("newRoomProjectPath").value !== pathBefore) return; // superseded while the dialog was open
+  $("newRoomProjectPath").value = r;
 };
 $("newRoomForm").onsubmit = async (e) => {
   e.preventDefault();
   const name = $("newRoomInput").value.trim();
-  if (!name) return;
+  if (!name) { showNewRoomPane("room"); $("newRoomInput").focus(); toast("Enter a room name.", true); return; }
   const seats = newRoster.map((a, i) => ({ id: (a.id || `agent${i + 1}`).trim().toLowerCase(), provider: a.provider, ...(a.model ? { model: a.model.trim() } : {}), ...(a.effort ? { effort: a.effort.trim() } : {}), ...(a.instructions ? { instructions: a.instructions.trim() } : {}), ...(a.provider === "codex" ? {serviceTier: a.serviceTier || "default"} : {}) }));
   if (!seats.length) return toast("Add at least one agent.", true);
   if (seats.length > 4) return toast("Rooms support up to four agents.", true);
   const names = new Set();
   for (const seat of seats) { if (names.has(seat.id)) return toast("Give each agent a different name.", true); names.add(seat.id); const issue = seatNameIssue(seat.id); if (issue) return toast(issue, true); }
-  const body = { name };
+  const body = { name, roomNote: $("newRoomNote").value.trim(), mode: $("newRoomReviewChk").checked ? "work" : "talk" };
   body.seats = seats;
-  if (newRoomProjectDir) body.projectDir = newRoomProjectDir;
+  const projectDir = $("newRoomProjectPath").value.trim();
+  if (projectDir) body.projectDir = projectDir;
   // Retire this form's pick: a dialog still open belongs to the room being
   // created now, not to whatever is typed next. The chosen folder itself is
   // only cleared on success — a rejected name leaves the form up, and the user
   // shouldn't have to pick their project again to fix a typo.
   newRoomPick++;
-  const asReview = $("newRoomReviewChk").checked;
   try {
     await api("/api/rooms", body);
-    if (asReview) {
-      try { await api("/api/config", { room: name, config: { mode: "work" } }); }
-      catch (err) { toast(`Room created, but Work mode wasn't applied: ${err.message}`, true); }
-    }
     $("newRoomInput").value = "";
     const s1n = $("seat1Name"), s2n = $("seat2Name");
     if (s1n) s1n.value = "";
@@ -4193,10 +4271,7 @@ $("newRoomForm").onsubmit = async (e) => {
 // The dialog is modal on the desktop but not in this page, so the button that
 // opened it is held down until it closes — otherwise a second click stacks
 // another dialog behind the first.
-// The "Choosing…" swap touches a dedicated label span, never the button's own
-// contents. One of these buttons also holds a live element (#newRoomProjVal)
-// that other code writes to while the dialog is open — rewriting the button's
-// text destroys it, and the next write to it throws.
+// The “Choosing…” label leaves the button contents intact while the picker runs.
 async function browseFolder(start, btn) {
   const label = btn && btn.querySelector("[data-picker-label]");
   const original = label && label.textContent;
@@ -4283,14 +4358,14 @@ function seatFieldHTML(a, field, p) {
   if (field === "effort") return `<div class="fld"><label>Reasoning effort</label>` +
     combo("effort", p.efforts, "blank = default") + `</div>`;
   if (field === "permissionMode") return `<div class="fld"><label>Permission mode</label><select ${d(a, "permissionMode")}>` +
-    `<option value="auto">Room default</option>` +
+    `<option value="auto">Follow ${state.summary?.cfg?.mode === "work" ? "Work" : "Talk"} default — ${state.summary?.cfg?.mode === "work" ? "accept edits" : "CLI default"}</option>` +
     `<option value="plan">Plan — read only</option>` +
     `<option value="acceptEdits">Accept edits</option>` +
     `<option value="bypassPermissions">full access</option></select>` +
     `<div class="note">Room default uses Claude's default in Talk and accepts edits in Work. Plan reads and proposes only. Accept edits allows ordinary project edits; protected paths and commands may still prompt. Full access bypasses ordinary Claude checks. An effective mode change starts a fresh session; the transcript keeps the room history.</div>` +
     `<div class="note danger">With Claude Code 2.1.126+, Full access includes protected paths such as .git and can reach outside this project. Explicit policy and OS limits may still apply. Claude recommends an isolated container or VM; using it directly on a trusted host grants host-level access.</div></div>`;
   if (field === "approvalMode") return `<div class="fld"><label>Approval mode</label><select ${d(a, "approvalMode")}>` +
-    `<option value="auto">Room default</option>` +
+    `<option value="auto">Follow ${state.summary?.cfg?.mode === "work" ? "Work" : "Talk"} default — ${state.summary?.cfg?.mode === "work" ? "auto edit" : "CLI default"}</option>` +
     `<option value="plan">Plan — read only</option>` +
     `<option value="auto_edit">Auto edit</option>` +
     `<option value="yolo">full access</option></select>` +
@@ -4534,10 +4609,11 @@ function openSettings() {
     '<option value="automatic">Automatic turns — every automatic start counts</option>';
   $("s_accounting").value = previousAccounting ? "exchanges" : "automatic";
   $("hopSettingsNote").textContent = `-1 = Until settled (${hopSafetyLimit() === null ? "server safety maximum unavailable" : `server safety maximum ${hopSafetyLimit()}`}). ` +
-    "Automatic turns: zero means only initial requested responses. Changes apply to messages you send after saving. Discussions already started keep their original rules, including later agent replies. Sticky composer overrides take precedence." +
-    (previousAccounting ? " This room still uses previous accounting. Select Automatic turns and review the allowance to switch; saving other settings alone will not switch it." : "");
+    "0 = no automatic follow-up replies. Initial requested replies do not count. Saved changes affect new messages; active discussions keep their original limits." +
+    (previousAccounting ? " This room still uses previous accounting. Select Automatic turns and review the maximum to switch; saving other settings alone will not switch it." : "");
   $("s_pairrounds").value = s.cfg.pairRounds || 0;
   compactFieldNotes($("roomSettingsPane"));
+  renderContextSettings(s);
   showSettingsPane("agents");
   $("overlay").classList.add("open");
 }
@@ -4651,6 +4727,7 @@ $("mSave").onclick = async () => {
   } catch (e) { toast(e.message, true); }
 };
 function showNoRoom() {
+  state.navigationVersion++; state.resyncVersion++; state.eventVersion++;
   if (state.es) { state.es.close(); state.es = null; }
   clearDraftAttachments(); clearAttachmentUrls();
   state.room = null; state.summary = null; state.entries = []; state.live = {}; state.queue = [];
@@ -4661,7 +4738,9 @@ function showNoRoom() {
   for (const id of ["openWs", "openRoomDir", "dlTranscript", "gitId"]) $(id).hidden = true;
   $("composerWrap").hidden = true; $("modeToggle").hidden = true; $("settingsBtn").hidden = true;
   for (const id of ["workBanner", "pairBanner", "setupBanner", "convergencePanel", "busyStrip"]) $(id).style.display = "none";
-  history.replaceState(null, "", location.pathname);
+  history.replaceState(null, "", "?home=1");
+  $("jump").style.display = "none"; chatWrap.scrollTop = 0; state.chip = "auto"; state.renderedRosterKey = null;
+  document.querySelectorAll(".room-item.active").forEach((row) => row.classList.remove("active"));
 }
 let pendingConfirmation = null;
 function confirmRoomAction(title, body, acceptLabel) {
@@ -4757,5 +4836,61 @@ $("mArchive").onclick = () => archiveRoom(state.room);
 $("mNewConv").onclick = newConversation;
 
 // ------------------------------------------------------------ boot
-loadRoom(state.room).catch((e) => toast(e.message, true));
+if (new URLSearchParams(location.search).get("home") === "1") { showNoRoom(); refreshRooms().catch((e) => toast(e.message, true)); }
+else loadRoom(state.room).catch((e) => toast(e.message, true));
+$("homeLink").onclick = (event) => { event.preventDefault(); closeSettings(); clearLive(); showNoRoom(); refreshRooms().catch((e) => toast(e.message, true)); setNavOpen(false); };
 input.focus();
+
+// Durable context is server owned and survives conversation resets.
+function renderContextSettings(s) {
+  const host = $("contextSettings"); if (!host || !s) return;
+  const context = s.context || {}, budget = context.budget || {};
+  host.innerHTML = `<h3>Persistent decisions</h3><p class="note">Pinned messages and agreed handoffs remain available after clearing a conversation or resetting an agent.</p><p class="note">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity: shorten decisions before agents can continue." : ""}</p><div class="saved-decisions">${(context.decisions || []).map((decision) => `<article class="saved-decision" data-decision-id="${esc(decision.id)}"><p>${esc(decision.text)}</p><small>${decision.source === "convergence" ? "Agreed handoff" : "Pinned decision"} · ${esc(new Date(decision.updatedAt || decision.createdAt).toLocaleString())}</small><div><button type="button" class="ract" data-decision-action="edit">Edit</button><button type="button" class="ract" data-decision-action="remove">Remove</button></div></article>`).join("") || '<p class="note">No saved decisions. Use 📌 on a message to retain it.</p>'}</div><button type="button" class="btn" id="addDecision">Add decision</button><h3>Agent context</h3><p class="note">Only confirmed resets and compactions are recorded. Provider context usage and unreported compactions are unavailable.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}</p>`).join("")}<details><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(new Date(event.at).toLocaleString())}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details>`;
+}
+async function mutateDecision(body, method = "POST", room = state.room) {
+  await api("/api/context/decisions", {room, ...body}, method);
+  if (state.room === room) { const data = await api("/api/room?name=" + encodeURIComponent(room)); if (state.room === room) applySummary(data.room); }
+}
+document.addEventListener("click", async (event) => {
+  try {
+    const pin = event.target.closest(".pin-decision");
+    if (pin) { await mutateDecision({entryN: Number(pin.closest("[data-n]").dataset.n)}); toast("Decision saved."); return; }
+    if (event.target.closest("#addDecision")) { openDecisionEditor(); return; }
+    const action = event.target.closest("[data-decision-action]"); if (!action) return;
+    const id = action.closest("[data-decision-id]").dataset.decisionId;
+    if (action.dataset.decisionAction === "remove") await mutateDecision({id}, "DELETE");
+    else { const decision = state.summary.context.decisions.find((item) => String(item.id) === id); if (decision) openDecisionEditor(decision); }
+  } catch (error) { toast(error.message, true); }
+});
+
+let decisionDraft = null;
+function openDecisionEditor(decision = null) {
+  if (!state.room || $("decisionDialog").open) return;
+  decisionDraft = {room: state.room, id: decision?.id || null, opener: document.activeElement};
+  $("decisionTitle").textContent = decision ? "Edit persistent decision" : "Add persistent decision";
+  $("decisionRoom").textContent = `Room: ${decisionDraft.room}. Saved decisions remain available after conversation resets.`;
+  $("decisionText").value = decision?.text || "";
+  $("decisionError").hidden = true; $("decisionSave").disabled = false;
+  $("decisionDialog").showModal(); $("decisionText").focus();
+}
+$("decisionCancel").onclick = () => $("decisionDialog").close();
+$("decisionDialog").addEventListener("keydown", (event) => event.stopPropagation());
+$("decisionDialog").addEventListener("close", () => {
+  const opener = decisionDraft?.opener; decisionDraft = null;
+  if (opener && document.contains(opener)) opener.focus();
+});
+$("decisionForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const draft = decisionDraft, text = $("decisionText").value.trim();
+  if (!draft || $("decisionSave").disabled) return;
+  if (!text) { $("decisionError").textContent = "Enter a decision before saving."; $("decisionError").hidden = false; return; }
+  $("decisionSave").disabled = true; $("decisionError").hidden = true;
+  try {
+    await mutateDecision({...(draft.id ? {id: draft.id} : {}), text}, draft.id ? "PATCH" : "POST", draft.room);
+    if (decisionDraft === draft) $("decisionDialog").close();
+    toast(`Decision saved in ${draft.room}.`);
+  } catch (error) {
+    if (decisionDraft === draft) { $("decisionError").textContent = error.message; $("decisionError").hidden = false; }
+    else toast(error.message, true);
+  } finally { if (decisionDraft === draft) $("decisionSave").disabled = false; }
+});

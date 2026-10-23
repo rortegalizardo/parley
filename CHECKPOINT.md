@@ -1,4 +1,19 @@
-# Parley fork checkpoint — 2026-10-23
+## Current checkpoint — context retention and complete Create room repair (2026-10-23)
+
+Delivered on `main`, implemented by Sol 6.1 and verified by the primary agent on actual **4142**. **4141 and its library were never accessed or changed.**
+
+- Independent saved decisions survive native resets, `/clear`, restart and archive/restore. Pin any message; add/edit/remove in Room settings. New agreed handoffs retain reservations automatically; the latest pre-existing agreed handoff is imported once. Every provider attempt receives the complete current ledger, with explicit overflow handling instead of silent truncation.
+- Confirmed session resets and Claude-reported compactions appear in the transcript and context history. Codex/Gemini internal compaction is explicitly unavailable; no fabricated context percentage.
+- Home logo exits rooms; one New room control per viewport. Handoffs remain beside their original exchange, collapsed after completion. New messages follow, reading older posts is preserved, and Jump to latest shows unread count. Individual recipients have no misleading roster count; automatic follow-up limits live in Room settings with clearer permission explanations.
+- Create room now has Agents/Room tabs, a single agent editor with up to four seats, room instructions at creation, a folder field/Browse control, and an always-visible footer. Room settings persist atomically before any provider launch. Drafts survive tab/preset navigation; missing names reveal/focus Room.
+- Actual 4142 verified at desktop 1280×720 and narrow 630×576. Served JS/CSS exactly match the checkout. Original default/Test 4 config, state, transcript and event files remained byte-identical. Disposable QA rooms were archived, not deleted. Fake providers used; no paid model calls.
+- Last observed 4142 PID: **67612**. This is an observation, not authority to signal later without fresh ownership/activity checks.
+
+[Verification record](docs/CONTEXT-UX-VERIFICATION.md) · [Session/context behavior](docs/ROOM-BEHAVIOR.md). Local screenshots are linked in the verification record. No new PR; publish directly to the fork main branch under the user's standing instruction.
+
+---
+
+Parley fork checkpoint — 2026-10-23
 
 ## Current checkpoint — room UX repairs live
 
