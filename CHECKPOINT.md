@@ -1,4 +1,18 @@
-## Current checkpoint — foreground errors and convergence recovery (2026-10-26)
+## Current checkpoint — readable handoffs and reliable Parallel selection (2026-10-26)
+
+Sol 6.1 implemented the fixes and ran focused API checks; its browser access was unavailable, so the primary agent completed browser QA on the isolated fixture and actual **4142**.
+
+- Agreed handoffs now use normal safe chat Markdown and left alignment; approval records remain attached.
+- Every non-control message snapshots the selected discussion mode before attachment processing. Auto can inherit the previous all-agent destination without losing an explicit Parallel choice.
+- Actual 4142 verified Converge → Parallel with plain Auto, typed @all and the all-agent chip → Converge again. Parallel persisted after reload. Only explicitly converged messages produced handoffs; previous agreements remained historical.
+- Existing user-room files remained byte-identical through refresh and QA. Fake providers only; the disposable QA room was archived. Port 4141 was not accessed or changed. Served asset version `ff467a409fe527635961`; last observed 4142 PID 43653 (recheck ownership/activity before any later signal).
+- [Verification](docs/CONVERGENCE-RECOVERY-VERIFICATION.md). No new PR; direct main delivery.
+
+Next action: continue on 4142; reload older tabs to load the updated UI.
+
+---
+
+## Historical checkpoint — foreground errors and convergence recovery (2026-10-26)
 
 Implemented by Sol 6.1; primary-agent QA passed on actual **4142**. **4141 was not accessed, restarted or modified during this repair.**
 

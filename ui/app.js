@@ -1002,8 +1002,9 @@ function entryEl(e) {
   if (e.kind === "system") {
     div.className = "sysmsg" + (e.meta && e.meta.error ? " err" : "");
     const convergence = e.meta && e.meta.convergence;
+    if (convergence?.status === "agreed") div.classList.add("agreed-handoff");
     div.innerHTML = convergence && convergence.status === "agreed"
-      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Agreed handoff</div><div class="agreed-handoff-body">${esc(e.text)}</div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
+      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Agreed handoff</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
       : esc(e.text);
     const recovery = e.meta && e.meta.error && recoveryForEntry(e);
     if (recovery) {
@@ -3907,6 +3908,8 @@ async function send() {
   const sentResync = state.resyncVersion;
   const chipRevision = state.chipRevision;
   const sentHopChoice = state.hopChoice;
+  const sentDiscussionMode = state.discussionMode;
+  const sentConvergenceRounds = state.convergenceRounds;
   const sendVersion = ++state.sendVersion;
   const relayControlOnly = pairControlOnly(text, !!(imageDrafts.length || fileDrafts.length));
   if (text.startsWith("/")) {
@@ -3935,10 +3938,11 @@ async function send() {
       data: await fileBase64(draft.file),
     })));
     const body = { room: sentRoom, text, target: sentTarget, images, files };
-    const messageTarget = guessTextTarget(text) || sentTarget;
-    if (!relayControlOnly && messageTarget === "both") {
-      body.discussionMode = state.discussionMode;
-      if (state.discussionMode === "converge") body.convergenceRounds = state.convergenceRounds;
+    // Auto can inherit the previous @all destination on the server. Carry the
+    // selected policy for every message so that routing cannot drop Parallel.
+    if (!relayControlOnly) {
+      body.discussionMode = sentDiscussionMode;
+      if (sentDiscussionMode === "converge") body.convergenceRounds = sentConvergenceRounds;
     }
     // Pair controls append no user turn, so they do not transmit the sticky
     // relay shortcut. Every accepted user message snapshots the current choice.

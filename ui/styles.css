@@ -568,7 +568,10 @@
   .convergence-actions button:hover { border-color: var(--user); color: var(--text); }
   .convergence-actions button small { color: var(--text-faint); font-size: 9px; }
   .agreed-handoff-heading { margin-bottom: 6px; color: var(--user); font-weight: 700; }
-  .agreed-handoff-body { white-space: pre-wrap; }
+  .sysmsg.agreed-handoff { align-self:flex-start; text-align:left; max-width:85%; padding:14px 16px; color:var(--text); border-left:2px solid var(--user); }
+  .agreed-handoff-body.bubble { white-space:normal; text-align:left; background:none; border:0; padding:0; box-shadow:none; font-size:14px; line-height:1.6; }
+  .agreed-handoff-body > :first-child { margin-top:0; }
+  .agreed-handoff-body > :last-child { margin-bottom:0; }
   .agreed-handoff-proof { margin-top: 8px; color: var(--text-faint); font-size: 10.5px; }
   .agreed-handoff-proof summary { cursor: pointer; color: var(--user); }
   .agreed-handoff-proof p { margin: 5px 0 0; }

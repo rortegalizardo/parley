@@ -29,3 +29,15 @@ These screenshots stay local and are not uploaded into the fork:
 - [Actual revised handoff approval record](/Users/ortega/.codex/visualizations/2026/10/22/01a162db-d623-7650-af95-27d4e26e8a8b/recovered-handoff-4142.png)
 
 Incomplete remains a truthful state for failed or invalid provider responses. Unresolved remains truthful when review limits end with objections; the application does not invent consensus.
+
+## Follow-up: readable agreed handoffs and Parallel routing (2026-10-26)
+
+The agreed system-message branch still escaped Markdown and inherited centered system-message styling. It now uses the normal safe chat renderer and left-aligned bubble typography. Approval metadata is retained. The isolated browser fixture verified real headings, bold text, lists, code, links, reservation text and escaped script literals (zero script nodes). Actual existing handoffs on 4142 rendered left-aligned with paragraphs and lists.
+
+The browser previously sent discussionMode only when its local recipient resolved to all agents. Auto could inherit the prior all-agent destination on the server, omitting Parallel and falling back to convergence. Every ordinary message now carries the mode captured at send time, before asynchronous attachments. Server defaults and historical message policies are unchanged.
+
+Sol 6.1 ran the focused `test/discussion-mode.mjs` API scenarios. Its browser tools were unavailable/unapproved, so primary-agent CUA verification covered actual 4142: initial convergence, plain Auto inheriting all with Parallel, reload preserving the selection, typed @all, the all-agent chip, and switching back to Converge. Persisted roots 1 and 15 were converged; roots 3, 7 and 11 were parallel with separate replies. Exactly two handoffs existed. All QA calls used fake providers in a disposable room, later archived.
+
+The actual served assets matched the checkout (`ff467a409fe527635961`), user-room file hashes stayed unchanged, and final browser error logs were empty. Port 4141 was untouched. Syntax and whitespace checks passed.
+
+[Readable existing handoff on 4142](/Users/ortega/.codex/visualizations/2026/10/22/01a162db-d623-7650-af95-27d4e26e8a8b/readable-handoff-4142.png)
