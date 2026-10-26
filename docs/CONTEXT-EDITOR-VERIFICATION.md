@@ -8,13 +8,36 @@ Agent standing instructions have Edit and Preview modes in Settings and Create r
 
 The Context tab shows the current shared brief, its version and character budget, editor phase, participating agents and verdicts, changes, and full version/source history. Long review notes and source reasoning are collapsed; exact questions and surviving message/review provenance stay attached to sources. The modal keeps a fixed header/footer and scrolls internally. The complete active brief has its own bounded scrolling area, keeping update status and history within reach without truncating its text. A failed update leaves the prior approved brief visible; existing rooms expose Update context and Retry.
 
-A temporary Claude Sonnet editor proposes a cohesive brief. The default run permits two review rounds, bounded to `2 × (1 + reviewer count)` calls. Every room agent must explicitly approve the same exact draft hash before activation. An objection leads to revision within the bounded run. Exhausting the rounds retains the previous approved context and records the rejected attempt.
+A temporary Claude Sonnet editor proposes a cohesive brief. The default run permits two review rounds plus up to three automatic size repairs, bounded to `2 × (1 + reviewer count) + 3` calls. Size repairs are counted separately from review rounds. Every room agent must explicitly approve the same exact draft hash before activation. An objection leads to revision within the bounded run. Exhausting the rounds retains the previous approved context and records the rejected attempt.
 
 Retry includes the prior unapproved draft and review feedback, including earlier reviewed rounds when a later attempt has incomplete reviews. It requires fresh approvals. A sleeping reviewer fails the update before any model call; the agent must be woken before retrying. Stop cancels the live child process. Source/settings/roster changes invalidate an in-flight update rather than permitting stale activation.
 
 Incremental editing supplies the previous approved brief with additions/edits and explicit user source changes. Complete sources remain in each run's snapshot, with original questions, provenance, reasoning, and reservations where available. Change entries account for kept, combined, replaced, and explicitly removed sources; replacement claims require replacement source references. Earlier briefs and source edit/delete history remain available. Legacy sources without an exact surviving initiating-question link are labeled unavailable rather than assigned an invented question.
 
-A pending additive source does not replace approved context. Editing or deleting a source underlying the active brief marks it stale and requires a successful regeneration before ordinary agent turns can continue. Oversized input/output or room context budgets fail explicitly; no source is silently truncated or activated.
+A pending additive source does not replace approved context. Editing or deleting a source underlying the active brief marks it stale and requires a successful regeneration before ordinary agent turns can continue. Oversized editor output or rendered context automatically requests a shorter draft within the three-repair budget. Input/transport limit failures and exhausted repairs fail explicitly; no source is silently truncated or activated.
+
+## Automatic brief shortening — isolated verification (2026-10-26)
+
+Deployment status: **actual 4142 refresh and live QA passed** after the user's work became idle. Refreshed process PID: **57614**; recheck process ownership/activity before any later signal. Direct main delivery; no PR.
+
+Oversized proposals now trigger at most three automatic repairs per run before room review. Repairs preserve canonical source inputs and reviewer feedback, with complete source coverage checked again before review. History records size reasons, hashes, lengths and repair outcomes. Proposals within the 60,000-character JSON parsing bound remain available in history; larger responses retain metadata and trigger a fresh shorter draft from intact sources. If an oversized proposal cannot fit alongside canonical input within the 180,000-character prompt ceiling, only that unsafe proposal is replaced with explicit metadata. Activation still requires every room agent's approval of the exact fitting candidate hash.
+
+12,000 characters is a soft upper bound, never a fill target. The editor must produce the shortest faithful brief proportional to the material without padding shorter content.
+
+Primary-agent isolated API fixture: `/private/tmp/parley-auto-shortening-validation.mjs`.
+
+Actual 4142 verification used the disposable **QA Automatic Shortening** room with fake provider CLIs for fault injection; no paid model calls were needed. The first fake Sonnet draft exceeded the text ceiling. Parley automatically repaired it, then both room agents (writer via the Claude adapter and reviewer via the Codex adapter) approved the exact repaired hash. The 86-character brief activated after two editor calls (one repair) and two review calls, without a Retry click or manual intervention. The oversized original remained in history. The QA room was archived. Existing context ledgers stayed byte-identical across refresh, and original room config/state/transcript/events remained unchanged.
+
+| Check | Result |
+| --- | --- |
+| Text exceeds 22,000 characters | Passed; two editor calls, then two room reviews and activation. |
+| Full rendered context exceeds 24,000 characters | Passed; two editor calls, then two room reviews and activation. |
+| Response exceeds 60,000-character parsing bound | Passed; bounded metadata/source re-draft, two editor calls, two room reviews and activation. |
+| Small valid brief | Passed; 86-character brief stayed unchanged, one editor call. |
+| Valid brief above soft guidance | Passed; 14,026-character brief needed no repair, one editor call. |
+| Persistent oversize | Passed; four editor calls total (initial plus three repairs), zero reviewer calls; previous approved brief remained deeply equal. |
+
+Implementation fixture `/tmp/parley-compression-check.mjs` also passed source-coverage rejection, reviewer-objection revision after compression, and the safe proposal-metadata fallback alongside a 130,000-character canonical input. Syntax checks and `git diff --check` passed. No broad unit suite was added or run.
 
 ## Focused isolated API verification
 

@@ -28,7 +28,7 @@ import { claudeLoggedIn } from "./lib/claude-auth.mjs";
 import { createBridgeBackend } from "./lib/bridge-backend.mjs";
 import { createConvergenceRun, draftHash, classifyReview, composeDraft, allApproved, reparseStoredReviews } from "./lib/convergence.mjs";
 import { observeCodexContext } from "./lib/codex-context-observer.mjs";
-import { updateContext, editorView, sourceHash, contextHash } from "./lib/context-editor.mjs";
+import { updateContext, editorView, sourceHash, contextHash, EDITOR_OUTPUT_MAX } from "./lib/context-editor.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Keep the browser and backend on the same build. Previously the server read
@@ -2298,6 +2298,7 @@ async function isolatedContextCall(room, reviewer, prompt, current) {
     if (result.stdout.length >= 20_000_000) throw new Error("Context provider output exceeded the transport budget; output was not accepted.");
     if (provider === "codex") {
       if (!fs.existsSync(output)) throw new Error("Context reviewer returned no final message.");
+      if (fs.statSync(output).size > EDITOR_OUTPUT_MAX * 4) throw new Error("Context reviewer final message exceeded the output transport budget; output was not accepted.");
       return fs.readFileSync(output, "utf8");
     }
     const envelope = JSON.parse(result.stdout.trim());

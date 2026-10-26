@@ -1,4 +1,21 @@
-## Current checkpoint — reviewed shared context and Markdown editors (2026-10-26)
+## Current checkpoint — automatic brief shortening verified (2026-10-26)
+
+Sol 6.1 implemented bounded automatic compression for oversized shared-context drafts. Primary-agent isolated API and **actual 4142 live QA passed** after the user's work became idle. Direct main delivery; no PR.
+
+- Size failures trigger up to three repairs per run, separate from the two normal review rounds. Canonical sources, source dispositions and exact-hash unanimous review remain required; exhausted repairs retain the previous approved brief.
+- 12,000 characters is a soft upper bound, never a fill target: use the shortest faithful brief without padding. Oversized response/proposal handling retains bounded history or explicit length/hash metadata and never truncates canonical sources.
+- Isolated API checks passed text overflow, rendered framing overflow and oversized response recovery; an 86-character brief stayed unchanged, and a valid 14,026-character brief needed no repair. Persistent oversize stopped after four editor calls with zero reviews and the previous brief deeply equal. [Verification](docs/CONTEXT-EDITOR-VERIFICATION.md).
+
+- Actual 4142 fake-provider fault injection passed in the disposable QA Automatic Shortening room: initial oversized Sonnet draft → one automatic repair → Claude-adapter writer and Codex-adapter reviewer exact-hash approvals → active 86-character brief. Two editor calls and two reviews; no Retry click or manual intervention. Oversized history was retained, then the QA room was archived. No paid model calls were needed for fault injection.
+- Existing context ledgers remained byte-identical after refresh; original config/state/transcript/events stayed unchanged. Refreshed 4142 PID: **57614**; recheck ownership/activity before any later signal.
+
+Direct main delivery; no new PR.
+
+Next action: continue using 4142; oversized briefs now repair automatically.
+
+---
+
+## Historical checkpoint — reviewed shared context and Markdown editors (2026-10-26)
 
 Sol 6.1 implemented the shared context editor and Markdown fixes; primary-agent focused API and browser QA passed on actual **4142**. The real **Factory M1–M2** shared brief is active after all three agents approved the exact text hash.
 
