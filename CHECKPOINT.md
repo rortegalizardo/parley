@@ -1,4 +1,20 @@
-## Current checkpoint — visible discussion mode (2026-10-26)
+## Current checkpoint — reviewed shared context and Markdown editors (2026-10-26)
+
+Sol 6.1 implemented the shared context editor and Markdown fixes; primary-agent focused API and browser QA passed on actual **4142**. The real **Factory M1–M2** shared brief is active after all three agents approved the exact text hash.
+
+- Standing agent instructions now have Edit/Preview and expanded editing in Settings and Create room. Previews and saved context use safe chat Markdown; the original source remains editable. Settings keeps fixed geometry and internal scrolling.
+- A temporary Claude Sonnet context editor combines saved sources into a cohesive brief. Every room agent must approve the exact text hash before activation. Updates use two bounded review rounds; Retry retains rejected draft/review feedback without inheriting approvals. Sleeping reviewers prevent model calls and must be woken first.
+- Existing approved context remains active through a rejected update. Incremental editing uses the previous approved brief plus changed sources; complete source snapshots, questions/provenance, reasoning, change dispositions, reviews, and earlier versions remain in history. Explicit source edits/deletions that invalidate active claims require a successful update before further agent turns.
+- Isolated API QA verified accepted update, rejected update with the previous brief deeply equal, retry to version 2, three history runs, automatic convergence → editor → unanimous activation with the source question, and Stop terminating its child in 58 ms. An independent ordinary-turn fixture received the approved brief without full archived sources or the new pending-source marker; an additive pending source did not block the turn. No unit-test suite was run.
+- Actual 4142 verified safe Markdown and exact source preservation in both instruction editors, fixed 760 × 692 expanded Create room geometry without overflow (Settings is 820 pixels wide), context update/rejection/retry to version 2, history, and persistence after reload. The disposable QA room was archived. The original core room config/state/transcript/events remained byte-identical after refresh; saved context was backed up before migration. **4141 was untouched.**
+- Real Factory M1–M2 activated brief version 1 at **12,161 / 24,000 characters** after exact-hash approval by Claude, Codex, and moderator. Three attempts consumed 20 calls: two rejected eight-call attempts, then four calls to approval in the third attempt’s first round. Both original decision IDs/text remain intact; complete attempts, source questions/provenance, and reviews are retained. Only its context ledger changed; core config/state/transcript/events remained byte-identical. Restart between attempts preserved context bytes; an independent isolated server restart also preserved the approved brief and full history.
+- Served CSS/JavaScript match the checkout, browser error logs are empty, and the real brief scrolls internally (302-pixel viewport / 3,221-pixel content) with zero horizontal overflow. Last observed actual 4142 PID: **49606**; recheck process ownership/activity before any later signal. [Verification](docs/CONTEXT-EDITOR-VERIFICATION.md) records the passing primary-agent QA. Direct main delivery; no new PR.
+
+Next action: use reviewed context on 4142; reload older tabs for the updated controls.
+
+---
+
+## Historical checkpoint — visible discussion mode (2026-10-26)
 
 Sol 6.1 moved the existing Converge/Parallel control into the always-visible composer. Primary-agent QA passed on actual **4142**.
 
