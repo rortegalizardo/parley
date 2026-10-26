@@ -255,6 +255,10 @@ if (process.env.FAKE_CONVERGENCE) {
   if (/CONVERGENCE REVIEW/.test(current)) {
     const mode = process.env.FAKE_CONVERGENCE;
     reply = mode === "malformed" ? "not-json" : mode === "pass" ? "[pass]" : JSON.stringify({ runId, version: Number(version), draftHash: hash, decision: mode === "block" ? "object" : mode === "reservation" ? "approve_with_reservation" : "approve", rationale: mode === "block" ? "conflict" : "all good", reservation: mode === "reservation" ? "document the remaining uncertainty" : undefined, objection: mode === "block" ? "conflict" : undefined });
+    if (mode === "structured_once" && codexMode && Number(version) === 1) reply = JSON.stringify({
+      runId, version: Number(version), draftHash: hash, decision: "object", rationale: "Observed delivery failures must inform bounded repairs.",
+      objection: { disputedClause: "Audit findings only", requiredChange: "Allow repairs supported by the audit or observed delivery failures." },
+    });
   } else if (/convergence drafter/i.test(current)) reply = `Synthesis from ${codexMode ? "codex" : "claude"}`;
   else reply = `Independent position from ${codexMode ? "codex" : "claude"}`;
 }

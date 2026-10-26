@@ -1,4 +1,19 @@
-## Current checkpoint — Codex compaction and stable workspace controls (2026-10-23)
+## Current checkpoint — foreground errors and convergence recovery (2026-10-26)
+
+Implemented by Sol 6.1; primary-agent QA passed on actual **4142**. **4141 was not accessed, restarted or modified during this repair.**
+
+- Toasts now render in the foremost modal's accessible layer, including restoration through nested settings dialogs. Duplicate-room errors were visually verified in the live UI without creating a room.
+- Valid structured objections now remain blocking votes and automatically trigger revision. The review prompt specifies the supported shape. Exact run, version and draft identity checks remain enforced.
+- Previously rejected saved reviews can be recovered without repeating provider calls. Read-only display never resumes a run; explicit Resume reuses validated reviews. Incomplete cards show the cause and recovery action before a collapsible Markdown draft.
+- The user's actual stalled three-agent run was continued under their explicit instruction. It reached agreement on revised draft 2 with three approvals (two nonblocking reservations), using four new calls. Previous attempts had consumed nine calls; final total was 13 of the existing 15-call allowance.
+- Only idle 4142 was gracefully refreshed; original room files remained byte-identical through refresh. Served assets match the checkout, version `86a0454aff848d9c26d5`. Last observed live PID: 40230; fresh ownership/activity checks are mandatory before any later signal.
+- Focused isolated recovery and fresh-run checks passed; temporary QA servers stopped. [Verification](docs/CONVERGENCE-RECOVERY-VERIFICATION.md). Direct main delivery, no new PR.
+
+Next action: continue in the live room on 4142; the agreed handoff is already posted.
+
+---
+
+## Historical checkpoint — Codex compaction and stable workspace controls (2026-10-23)
 
 Implemented by Sol 6.1; primary-agent QA passed on actual **4142**. **4141 and its original library were never accessed or changed.**
 

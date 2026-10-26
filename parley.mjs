@@ -26,7 +26,7 @@ import { relayAllowanceNote } from "./lib/budget-prompts.mjs";
 import { snapshotClientAssets } from "./lib/client-assets.mjs";
 import { claudeLoggedIn } from "./lib/claude-auth.mjs";
 import { createBridgeBackend } from "./lib/bridge-backend.mjs";
-import { createConvergenceRun, draftHash, classifyReview, composeDraft, allApproved } from "./lib/convergence.mjs";
+import { createConvergenceRun, draftHash, classifyReview, composeDraft, allApproved, reparseStoredReviews } from "./lib/convergence.mjs";
 import { observeCodexContext } from "./lib/codex-context-observer.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -5156,13 +5156,34 @@ function convergenceResumeCalls(run) {
   if (round.complete) return missing + n + 1;
   return missing + run.participants.filter((p) => !round.reviews[p.id] || round.reviews[p.id].status === "unresolved").length;
 }
+function convergenceFailures(run, stage = null) {
+  const positionFailures = stage === "review" ? [] : run.participants.filter((p) => run.positions[p.id]?.status !== "complete")
+    .map((p) => ({ agent: p.id, stage: "position", reason: run.positions[p.id]?.reason || "No independent position returned." }));
+  if (positionFailures.length || stage === "position") return positionFailures;
+  const round = run.rounds?.at(-1);
+  if (!round?.text) return [];
+  return run.participants.filter((p) => !round.reviews[p.id] || round.reviews[p.id].status === "unresolved")
+    .map((p) => ({ agent: p.id, stage: "review", reason: round.reviews[p.id]?.error || round.reviews[p.id]?.reason || "No review returned." }));
+}
+function convergenceFailureReason(failures) {
+  return failures.map((f) => `@${f.agent}: ${f.stage} incomplete — ${f.reason}`).join(" ") +
+    " Resume retries only missing or invalid contributions; completed approvals are retained.";
+}
 function convergenceSummary(room) {
-  const c = room.state.convergence;
-  if (!c) return null;
+  const saved = room.state.convergence;
+  if (!saved) return null;
+  const c = reparseStoredReviews(saved);
   const terminal = ["incomplete", "unresolved", "stopped"].includes(c.phase);
   const refusal = terminal ? convergenceCanResume(room, c) : null;
   const remaining = c.calls.planned - c.calls.used;
-  return { ...c, status: c.final?.status || c.phase, total: c.participants.length,
+  const failures = convergenceFailures(c);
+  const originalReason = c.final?.reason || "";
+  const genericFailure = /^(A required review failed|Every participant must supply)/.test(originalReason);
+  const recoveryReason = c.phase === "incomplete" && c.recovery && !failures.length ? c.recovery.reason : null;
+  const final = c.final && { ...c.final,
+    ...(failures.length && c.phase === "incomplete" && genericFailure ? { reason: convergenceFailureReason(failures), failures } : {}),
+    ...(recoveryReason ? { reason: genericFailure || !originalReason ? recoveryReason : `${originalReason} ${recoveryReason}`, failures: [] } : {}) };
+  return { ...c, final, status: c.final?.status || c.phase, total: c.participants.length,
     received: Object.values(c.positions).filter((p) => p.status === "complete").length,
     approvals: Object.values(c.reviews).filter((r) => ["approve", "approve_with_reservation"].includes(r.status) && r.version === c.draftVersion && r.draftHash === c.draftHash).length,
     contributions: c.positions, outcome: c.final?.status || null,
@@ -5219,10 +5240,10 @@ async function runConvergence(room, userTurn) {
   const current = () => gen === room.generation && room.state.convergence === run && room.convergenceWorker === token;
   const live = () => current() && ["gathering", "drafting", "reviewing", "revising"].includes(run.phase);
   const publish = () => { if (current()) convergencePublish(room); };
-  const finish = (status, reason = null) => {
+  const finish = (status, reason = null, failures = []) => {
     if (!live()) return;
     run.phase = status;
-    run.final = { status, version: run.draftVersion, hash: run.draftHash, text: run.draftText, reason,
+    run.final = { status, version: run.draftVersion, hash: run.draftHash, text: run.draftText, reason, ...(failures.length ? { failures } : {}),
       reservations: Object.entries(run.reviews).filter(([, r]) => r.reservation).map(([agent, r]) => ({ agent, text: r.reservation })) };
     publish();
     // Only the exact approved draft is a handoff. Other outcomes retain the
@@ -5261,6 +5282,7 @@ async function runConvergence(room, userTurn) {
   try {
     run.rounds ||= [];
     run.final = null;
+    delete run.recovery;
     run.phase = "gathering";
     publish();
     const missing = participants.filter((a) => run.positions[a]?.status !== "complete");
@@ -5273,7 +5295,8 @@ async function runConvergence(room, userTurn) {
       publish();
     }));
     if (!live()) return;
-    if (participants.some((a) => run.positions[a]?.status !== "complete")) return finish("incomplete", "Every participant must supply an independent position. Resume retries only missing contributions.");
+    const positionFailures = convergenceFailures(run, "position");
+    if (positionFailures.length) return finish("incomplete", convergenceFailureReason(positionFailures), positionFailures);
 
     for (;;) {
       if (!live()) return;
@@ -5313,7 +5336,7 @@ async function runConvergence(room, userTurn) {
       if (!enough(pending.length)) return;
       publish();
       await Promise.all(pending.map(async (agent) => {
-        const result = await invoke(agent, "review", `CONVERGENCE REVIEW. Review the exact candidate below against the task and your standing identity. Return ONLY valid JSON with runId, version, draftHash, decision, rationale, and an objection or reservation when applicable. runId must be ${run.runId}; version must be ${round.version}; draftHash must be ${round.hash}. decision must be exactly approve, approve_with_reservation, or object. An objection must name a disputed clause and a concrete required change. A reservation must be explicitly nonblocking. Silence is not approval.\nDRAFT:\n${round.text}`);
+        const result = await invoke(agent, "review", `CONVERGENCE REVIEW. Review the exact candidate below against the task and your standing identity. Return ONLY valid JSON with runId, version, draftHash, decision, rationale, and an objection or reservation when applicable. runId must be ${run.runId}; version must be ${round.version}; draftHash must be ${round.hash}. decision must be exactly approve, approve_with_reservation, or object. For decision "object", objection must be an object with nonempty string fields disputedClause and requiredChange, for example {"disputedClause":"exact disputed draft clause","requiredChange":"concrete change needed"}; legacy nonempty objection text is also accepted. Include your reasoning in rationale. For approve_with_reservation, reservation must be a nonempty string describing an explicitly nonblocking concern. Silence is not approval.\nDRAFT:\n${round.text}`);
         if (!live()) return;
         const vote = classifyReview(result?.text || "", { runId: run.runId, version: round.version, draftHash: round.hash });
         round.reviews[agent] = { ...vote, version: round.version, draftHash: round.hash, text: result?.text || "", ...(result?.error ? { error: result.error } : {}) };
@@ -5321,7 +5344,8 @@ async function runConvergence(room, userTurn) {
       }));
       if (!live()) return;
       run.objections = Object.entries(round.reviews).filter(([, r]) => r.status === "block").map(([agent, r]) => ({ agent, version: round.version, text: r.reason }));
-      if (participants.some((a) => !round.reviews[a] || round.reviews[a].status === "unresolved")) return finish("incomplete", "A required review failed, was empty, or did not match this draft. Resume retries only those reviews.");
+      const reviewFailures = convergenceFailures(run, "review");
+      if (reviewFailures.length) return finish("incomplete", convergenceFailureReason(reviewFailures), reviewFailures);
       round.complete = true;
       if (allApproved(round.reviews, run.participants, round.version, round.hash)) return finish("agreed");
       publish();
@@ -7937,7 +7961,7 @@ const server = http.createServer(async (req, res) => {
     if (route === "POST /api/convergence") {
       const body = await readBody(req);
       const room = loadRoom(body.room || "default");
-      const cv = room.state.convergence;
+      let cv = room.state.convergence;
       if (!cv) return json(res, 404, { error: "no convergence run" });
       if (body.runId && body.runId !== cv.runId) return json(res, 409, { error: "This convergence run has been replaced." });
       const action = String(body.action || "").toLowerCase();
@@ -7951,6 +7975,9 @@ const server = http.createServer(async (req, res) => {
       if (refused) return json(res, 409, { error: refused });
       const userTurn = room.entries.find((e) => e.n === cv.rootN && e.kind === "user");
       if (!userTurn) return json(res, 409, { error: "Convergence task is unavailable." });
+      const savedRun = cv;
+      cv = reparseStoredReviews(cv);
+
       if (action === "extend") {
         const extra = convergenceRoundsValue(body.rounds ?? body.convergenceRounds, 1);
         if (!Number.isSafeInteger(cv.maxRounds + extra) || cv.maxRounds + extra > 99) return json(res, 400, { error: "At most 99 review rounds per run; start a new task for further discussion." });
@@ -7959,6 +7986,7 @@ const server = http.createServer(async (req, res) => {
       } else if (cv.phase === "unresolved" || convergenceResumeCalls(cv) > cv.calls.planned - cv.calls.used) {
         return json(res, 409, { error: "Extend the review budget to continue this run." });
       }
+      if (cv !== savedRun) { Object.assign(savedRun, cv); saveState(room); }
       runConvergence(room, userTurn);
       return json(res, 200, { ok: true, convergence: roomSummary(room).convergence });
     }

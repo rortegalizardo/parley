@@ -75,8 +75,29 @@ loadDiscussionPrefs(INITIAL_ROOM);
 function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-function toast(msg, isErr) {
+// Keep notifications inside the foremost modal's accessible subtree. A body
+// z-index cannot paint above native dialog top layers or escape their inertness.
+const modalStack = [];
+function syncToastHost() {
   const t = $("toast");
+  while (modalStack.length && !modalStack[modalStack.length - 1].open) modalStack.pop();
+  const host = modalStack[modalStack.length - 1]
+    || $("overlay")?.classList.contains("open") && $("overlay").querySelector(".modal")
+    || document.body;
+  if (t.parentElement !== host) host.appendChild(t);
+}
+function openModalDialog(dialog) {
+  dialog.showModal();
+  const previous = modalStack.indexOf(dialog);
+  if (previous >= 0) modalStack.splice(previous, 1);
+  modalStack.push(dialog);
+  syncToastHost();
+}
+for (const dialog of document.querySelectorAll("dialog")) dialog.addEventListener("close", syncToastHost);
+function toast(msg, isErr) {
+  syncToastHost();
+  const t = $("toast");
+  t.setAttribute("aria-live", isErr ? "assertive" : "polite");
   t.textContent = msg;
   t.className = isErr ? "err show" : "show";
   clearTimeout(t._h);
@@ -2175,6 +2196,7 @@ function renderConvergenceRun(c, s) {
   const wasFollowing = followingLatest;
   row.after(panel);
   const recordOpen = panel.querySelector(".convergence-record")?.open || false;
+  const draftOpen = panel.querySelector(".convergence-draft")?.open || false;
   const phase = String(c.phase || c.status || "").toLowerCase();
   const labels = { gathering: "Gathering", drafting: "Drafting", reviewing: "Reviewing", agreed: "Agreement", complete: "Agreement", unresolved: "Unresolved", incomplete: "Incomplete", stopped: "Stopped" };
   const phaseLabel = labels[phase] || (c.phase || c.status || "Convergence");
@@ -2198,24 +2220,33 @@ function renderConvergenceRun(c, s) {
     ...(roundReviews.length ? roundReviews : Object.entries(c.reviews || {}).map(([agent, x]) => ({ agent, text: x.reason || x.rationale || x.text, stage: "review", decision: x.decision || x.status, version: x.version, hash: x.draftHash || x.hash, reservation: x.reservation })))
   ].filter((x) => x.text);
   const finalValue = c.final || c.handoff || c.agreement || c.artifact || "";
-  const finalText = typeof finalValue === "string" ? finalValue : finalValue.text || finalValue.content || finalValue.reason || "";
+  const finalText = typeof finalValue === "string" ? finalValue : finalValue.text || finalValue.content || "";
   const outcome = c.outcome || c.result || (finalValue.status === "agreed" ? "Agreed" : finalValue.status) || (phaseLabel === "Agreement" ? "Agreed" : "");
   panel.hidden = false;
   panel.classList.toggle("is-final", ["agreed", "complete", "unresolved", "incomplete", "stopped"].includes(phase));
-  const finalMarkup = finalText && !["agreed", "complete"].includes(phase)
-    ? `<div class="convergence-final"><div class="final-label">${esc(outcome || "Draft")}</div><p>${esc(finalText)}</p>${finalValue.reason ? `<p class="convergence-reason"><b>Why:</b> ${esc(finalValue.reason)}</p>` : ""}</div>`
-    : ["agreed", "complete"].includes(phase) ? `<div class="convergence-final"><div class="final-label">Agreed handoff</div><p>Final handoff posted in the transcript above.</p></div>` : "";
   const terminal = ["agreed", "complete"].includes(phase);
+  const needsAttention = ["incomplete", "unresolved", "stopped"].includes(phase);
+  const failures = Array.isArray(finalValue.failures) ? finalValue.failures : [];
+  const reason = c.recovery?.reason || finalValue.reason || c.actions?.reason || "";
+  const attention = needsAttention ? `<div class="convergence-attention" role="status"><b>${phase === "stopped" ? "Run stopped" : "Handoff not agreed"}</b>${reason ? `<p>${esc(reason)}</p>` : ""}${failures.length ? `<ul>${failures.map((failure) => `<li><b>@${esc(failure.agent)}</b> · ${esc(failure.stage || "review")}: ${esc(failure.reason)}</li>`).join("")}</ul>` : ""}</div>` : "";
+  const finalMarkup = finalText && !terminal
+    ? `<details class="convergence-draft"><summary>View draft${finalValue.version ? ` v${esc(finalValue.version)}` : ""} · not agreed</summary><div class="convergence-draft-body">${renderMD(finalText)}</div></details>`
+    : terminal ? `<div class="convergence-final"><div class="final-label">Agreed handoff</div><p>Final handoff posted in the transcript above.</p></div>` : "";
   const canResume = c.actions?.resume !== false;
   const canExtend = c.actions?.extend !== false;
   const extendCalls = total + 1;
-  const actionReason = c.actions?.reason ? `<p class="convergence-reason">${esc(c.actions.reason)}</p>` : "";
-  const actions = terminal ? actionReason : `<div class="convergence-actions">${actionReason}${["incomplete", "unresolved", "stopped"].includes(phase) && canResume ? `<button type="button" data-convergence-action="resume">Resume</button>` : ""}${["incomplete", "unresolved", "stopped"].includes(phase) && canExtend ? `<button type="button" data-convergence-action="extend">Extend review <small>(+1 round · +${extendCalls} calls)</small></button>` : ""}${!["incomplete", "unresolved", "stopped"].includes(phase) ? `<button type="button" data-convergence-action="stop">Stop</button>` : ""}</div>`;
-  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(callLabel)}</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div><div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(total)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${actions}`;
+  const actionReason = c.actions?.reason && c.actions.reason !== reason ? `<p class="convergence-reason">${esc(c.actions.reason)}</p>` : "";
+  const resumeHelp = c.recovery?.reusedReviews?.length
+    ? `Continue from saved progress. Valid reviews from ${c.recovery.reusedReviews.map((agent) => `@${agent}`).join(", ")} are reused.`
+    : "Continue from this run’s saved progress, using its remaining agent-call allowance.";
+  const actions = terminal ? actionReason : `<div class="convergence-actions">${actionReason}${needsAttention && canResume ? `<div class="convergence-resume"><button type="button" data-convergence-action="resume">Resume this run</button><p>${esc(resumeHelp)}</p></div>` : ""}${needsAttention && canExtend ? `<button type="button" data-convergence-action="extend">Extend review <small>(+1 round · +${extendCalls} calls)</small></button>` : ""}${!needsAttention ? `<button type="button" data-convergence-action="stop">Stop</button>` : ""}</div>`;
+  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(callLabel)}</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div>${attention}${needsAttention ? actions : ""}<div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(total)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${needsAttention ? "" : actions}`;
   const details = panel.querySelector(".convergence-contributions");
   if (details && detailsOpen) details.open = true;
+  const draft = panel.querySelector(".convergence-draft");
+  if (draft && draftOpen) draft.open = true;
   panel.querySelectorAll("[data-convergence-action]").forEach((button) => { button.dataset.runId = id; });
-  if (["agreed", "complete", "unresolved", "incomplete", "stopped"].includes(phase)) {
+  if (terminal || c.history && needsAttention) {
     const content = document.createElement("details"); content.className = "convergence-record";
     const summary = document.createElement("summary"); summary.textContent = `Shared handoff · ${phaseLabel} · ${callLabel} — details`;
     content.append(summary); const body = document.createElement("div"); body.innerHTML = panel.innerHTML; content.append(body);
@@ -4211,7 +4242,7 @@ function openNewRoom(kind = "pair") {
   $("newRoomNote").value = ""; showNewRoomPane(kind === "team" ? "agents" : "room");
   applyRoomTemplate(kind);
   setNavOpen(false);
-  $("newRoomDialog").showModal();
+  openModalDialog($("newRoomDialog"));
   if (kind === "team") $("newAgentsTab").focus(); else $("newRoomInput").focus();
 }
 $("addRoomBtn").onclick = () => openNewRoom();
@@ -4587,6 +4618,7 @@ function retireSettingsPick() { settingsPick++; }
 function closeSettings() {
   retireSettingsPick();
   $("overlay").classList.remove("open");
+  syncToastHost();
   settingsRosterDraft = null;
   settingsRosterVersion = null;
   // Closing a dialog used to leave focus on nothing at all.
@@ -4627,6 +4659,7 @@ function openSettings() {
   renderContextSettings(s);
   showSettingsPane("agents");
   $("overlay").classList.add("open");
+  syncToastHost();
 }
 $("settingsAddSeat").onclick = () => {
   if (!settingsRosterDraft) return;
@@ -4645,7 +4678,7 @@ $("settingsBtn").onclick = openSettings;
 $("settingsBtn2").onclick = () => {
   setNavOpen(false);
   $("s_notify").checked = notifyEnabled();
-  $("generalDialog").showModal();
+  openModalDialog($("generalDialog"));
 };
 $("generalClose").onclick = () => $("generalDialog").close();
 $("generalSave").onclick = async () => {
@@ -4765,7 +4798,7 @@ function confirmRoomAction(title, body, acceptLabel) {
   dialog.returnValue = "cancel";
   return new Promise((resolve) => {
     pendingConfirmation = {resolve, opener};
-    dialog.showModal();
+    openModalDialog(dialog);
   });
 }
 $("confirmDialog").addEventListener("keydown", (event) => event.stopPropagation());
@@ -4883,7 +4916,7 @@ function openDecisionEditor(decision = null) {
   $("decisionRoom").textContent = `Room: ${decisionDraft.room}. Saved decisions remain available after conversation resets.`;
   $("decisionText").value = decision?.text || "";
   $("decisionError").hidden = true; $("decisionSave").disabled = false;
-  $("decisionDialog").showModal(); $("decisionText").focus();
+  openModalDialog($("decisionDialog")); $("decisionText").focus();
 }
 $("decisionCancel").onclick = () => $("decisionDialog").close();
 $("decisionDialog").addEventListener("keydown", (event) => event.stopPropagation());
