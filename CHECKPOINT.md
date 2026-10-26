@@ -1,4 +1,18 @@
-## Current checkpoint — readable handoffs and reliable Parallel selection (2026-10-26)
+## Current checkpoint — visible discussion mode (2026-10-26)
+
+Sol 6.1 moved the existing Converge/Parallel control into the always-visible composer. Primary-agent QA passed on actual **4142**.
+
+- The single control stays visible with Auto or an individual agent selected. “When addressing all” explains its scope; review rounds appear beside Converge. Preference and send-time policy behavior are unchanged.
+- Actual 4142 verified Parallel selection, hidden review rounds, reload persistence, and switching back to Converge with review rounds restored. Desktop controls fit without overflow; exactly two mode buttons exist and neither remains in the agent menu.
+- Served CSS matches the checkout. Original user config, state, transcript and event hashes remained unchanged. **4141 was untouched.** Last observed idle 4142 PID: **44623**; recheck ownership and activity before any later signal.
+- Context semantics were explained only: agreements append without automatic conflict resolution; the 24,000-character overflow retains the agreement and blocks future provider calls. No context-persistence behavior changed.
+- [Verification](docs/CONVERGENCE-RECOVERY-VERIFICATION.md). No new tests or PR; direct main delivery.
+
+Next action: use the visible composer mode on 4142; reload older tabs for the updated controls.
+
+---
+
+## Historical checkpoint — readable handoffs and reliable Parallel selection (2026-10-26)
 
 Sol 6.1 implemented the fixes and ran focused API checks; its browser access was unavailable, so the primary agent completed browser QA on the isolated fixture and actual **4142**.
 

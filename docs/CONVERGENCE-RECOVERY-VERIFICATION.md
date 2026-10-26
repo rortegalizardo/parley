@@ -41,3 +41,16 @@ Sol 6.1 ran the focused `test/discussion-mode.mjs` API scenarios. Its browser to
 The actual served assets matched the checkout (`ff467a409fe527635961`), user-room file hashes stayed unchanged, and final browser error logs were empty. Port 4141 was untouched. Syntax and whitespace checks passed.
 
 [Readable existing handoff on 4142](/Users/ortega/.codex/visualizations/2026/10/22/01a162db-d623-7650-af95-27d4e26e8a8b/readable-handoff-4142.png)
+
+
+## Follow-up: visible composer mode (2026-10-26)
+
+Sol 6.1 moved the single Converge/Parallel control from the agent popup into the composer, labeled “When addressing all.” Auto, agent selection, @all, saved preferences and send-time policy semantics are unchanged. Converge exposes adjacent review rounds; Parallel hides them. Narrow layouts place the control on a wrapping row.
+
+Primary-agent CUA QA on actual 4142 verified the control with the agent menu closed and Auto selected, Parallel's selected state and hidden rounds, preference persistence after reload, and Converge restoring rounds. The 1280-pixel screenshot showed equal composer control client and scroll widths (880 pixels), with exactly two mode buttons and none inside the agent menu. Served CSS matched the checkout. Syntax and whitespace checks passed; no new tests were added.
+
+Original user config, state, transcript and event hashes stayed unchanged. Port 4141 was untouched. Last observed idle 4142 PID was 44623; that observation does not authorize a later signal without fresh ownership and activity checks.
+
+Context retention was explained, without implementation changes: agreed handoffs append, including potentially conflicting agreements. Exceeding 24,000 characters retains the new agreement but blocks future provider calls until the ledger is shortened. No conflict-resolution or context-persistence change was made.
+
+[Visible discussion mode on actual 4142](/Users/ortega/.codex/visualizations/2026/10/22/01a162db-d623-7650-af95-27d4e26e8a8b/visible-discussion-mode-4142.png)

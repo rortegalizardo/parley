@@ -90,15 +90,17 @@
               <div class="agents-menu-title"><b>Choose an agent</b><span id="agentsMenuHint"></span></div>
               <input id="agentsSearch" type="search" placeholder="Search names, providers, roles…" autocomplete="off">
               <div id="agentsOptions" role="listbox" aria-label="Agents"></div>
-              <div class="agents-mode-label">When using @all</div>
-              <div class="agents-modes" role="radiogroup" aria-label="Group response mode">
-                <button type="button" data-discussion-mode="converge" role="radio"><b>Converge</b><span>One agreed handoff</span></button>
-                <button type="button" data-discussion-mode="parallel" role="radio"><b>Parallel</b><span>Separate replies</span></button>
-              </div>
-              <label id="convergenceRoundsWrap" class="convergence-rounds">Review rounds <input id="convergenceRounds" type="number" min="1" step="1" value="2" inputmode="numeric" aria-label="Convergence review rounds"></label>
             </div>
           </span>
           <button class="chip" data-t="both" title="Send to all agents">@all</button>
+          <div id="discussionControls" class="discussion-controls">
+            <span id="discussionModeHint" class="discussion-scope" title="Applies when sending to all agents. Messages to one agent stay individual.">When addressing all</span>
+            <div class="discussion-modes" role="radiogroup" aria-label="Response mode for all agents" aria-describedby="discussionModeHint">
+              <button type="button" data-discussion-mode="converge" role="radio" title="One agreed handoff from all agents">Converge</button>
+              <button type="button" data-discussion-mode="parallel" role="radio" title="Separate replies from each agent">Parallel</button>
+            </div>
+            <label id="convergenceRoundsWrap" class="convergence-rounds">Review rounds <input id="convergenceRounds" type="number" min="1" step="1" value="2" inputmode="numeric" aria-label="Convergence review rounds"></label>
+          </div>
           <span id="hopWrap">
             <button id="hopBtn" type="button" aria-haspopup="menu" aria-expanded="false"
               title="Choose this room's agent-to-agent follow-up policy for the browser session">
