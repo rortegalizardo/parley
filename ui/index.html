@@ -22,12 +22,12 @@
 
     <nav id="roomList"></nav><details id="archivedRooms"><summary>Archived rooms <span id="archivedCount">0</span></summary><div id="archivedRoomList"></div></details>
     <div class="side-foot">
-      <button id="openWs"><span class="ico">📁</span> <span id="openWsLabel">Open workspace</span></button>
+      <button id="openWs"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> <span id="openWsLabel">Open workspace</span></button>
       <div id="gitId" style="display:none"></div>
-      <a id="dlTranscript" href="#"><span class="ico">📄</span> Download transcript</a>
-      <button id="openRoomDir"><span class="ico">🗂️</span> Room folder</button>
-      <button id="settingsBtn2"><span class="ico">⚙️</span> General settings</button>
-      <a href="https://github.com/rortegalizardo/parley#readme" target="_blank" rel="noreferrer noopener"><span class="ico">?</span> Docs</a>
+      <a id="dlTranscript" href="#"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg> Download transcript</a>
+      <button id="openRoomDir"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h6l2 2h8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 10h16"/></svg> Room folder</button>
+      <button id="settingsBtn2"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg> General settings</button>
+      <a href="https://github.com/rortegalizardo/parley#readme" target="_blank" rel="noreferrer noopener"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5V14M12 17h.01"/></svg> Docs</a>
     </div>
   </aside>
 
@@ -79,12 +79,14 @@
     <div id="composerWrap">
       <div id="composer">
         <div id="mention"></div>
+        <div id="busyStrip" aria-live="polite"></div>
+        <div class="composer-card">
         <div class="chips" id="chipsRow">
           <button class="chip active" data-t="auto">Auto</button>
           <span id="seatChips" style="display:contents"></span>
           <span id="agentPickerWrap" class="agent-picker-wrap">
             <button id="agentsBtn" class="chip agent-picker" type="button" aria-haspopup="dialog" aria-expanded="false">
-              <span id="agentsBtnLabel">Agents</span> <b id="agentsBtnCount">0</b><span class="picker-caret">▼</span>
+              <span id="agentsBtnLabel">Agents</span> <b id="agentsBtnCount">0</b><svg class="picker-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
             </button>
             <div id="agentsMenu" role="dialog" aria-label="Choose agents" aria-modal="false">
               <div class="agents-menu-title"><b>Choose an agent</b><span id="agentsMenuHint"></span></div>
@@ -94,12 +96,12 @@
           </span>
           <button class="chip" data-t="both" title="Send to all agents">@all</button>
           <div id="discussionControls" class="discussion-controls">
-            <span id="discussionModeHint" class="discussion-scope" title="Applies when sending to all agents. Messages to one agent stay individual.">When addressing all</span>
+            <span id="discussionModeHint" class="discussion-scope" title="Applies when sending to all agents. Messages to one agent stay individual.">To all</span>
             <div class="discussion-modes" role="radiogroup" aria-label="Response mode for all agents" aria-describedby="discussionModeHint">
               <button type="button" data-discussion-mode="converge" role="radio" title="One agreed handoff from all agents">Converge</button>
               <button type="button" data-discussion-mode="parallel" role="radio" title="Separate replies from each agent">Parallel</button>
             </div>
-            <label id="convergenceRoundsWrap" class="convergence-rounds">Review rounds <input id="convergenceRounds" type="number" min="1" step="1" value="2" inputmode="numeric" aria-label="Convergence review rounds"></label>
+            <label id="convergenceRoundsWrap" class="convergence-rounds">Rounds <input id="convergenceRounds" type="number" min="1" step="1" value="2" inputmode="numeric" aria-label="Convergence review rounds"></label>
           </div>
           <span id="hopWrap">
             <button id="hopBtn" type="button" aria-haspopup="menu" aria-expanded="false"
@@ -135,14 +137,12 @@
             <button id="queueBadge" aria-haspopup="dialog" aria-expanded="false" title="See what's waiting"></button>
             <div id="queuePop" role="dialog" aria-label="Queued work"></div>
           </span>
-          <span id="routeHint"></span>
         </div>
-        <div id="busyStrip" aria-live="polite"></div>
 
         <div id="draftImages" aria-label="Attachments ready to send"></div>
         <div class="box">
           <input id="fileInput" type="file" multiple hidden aria-label="Choose files to attach">
-          <button id="attachBtn" type="button" title="Attach files" aria-label="Attach files"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></svg></button>
+          <button id="attachBtn" type="button" title="Attach files (or drop / paste them)" aria-label="Attach files"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></svg></button>
           <textarea id="input" rows="1" placeholder="Message the table…  type @ to choose an agent"></textarea>
           <div id="stopWrap">
             <button id="stopBtn" title="Stop the running response" aria-label="Stop the running response"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
@@ -152,7 +152,8 @@
           </div>
           <button id="sendBtn" title="Send (Enter)" aria-label="Send message"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
         </div>
-        <div class="hint">Enter to send · Shift+Enter newline · attach or drop files · paste images · <b>/help</b> for commands · replies stream live</div>
+        </div>
+        <div class="composer-foot"><span id="routeHint"></span><div class="hint"><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <b>/help</b> commands</div></div>
       </div>
     </div>
   </div>

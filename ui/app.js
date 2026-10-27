@@ -2,7 +2,7 @@
 // ------------------------------------------------------------ state
 const $ = (id) => document.getElementById(id);
 function controlIcon(name) {
-  const paths = { ear: '<path d="M8 17c0 4 6 4 6 0 0-2 5-3 5-8A7 7 0 0 0 5 9m4 1a3 3 0 0 1 6 0c0 2-3 2-3 5"/>', moon: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>' };
+  const paths = { ear: '<path d="M8 17c0 4 6 4 6 0 0-2 5-3 5-8A7 7 0 0 0 5 9m4 1a3 3 0 0 1 6 0c0 2-3 2-3 5"/>', moon: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/>', ask: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>', pin: '<path d="M7 4h10v17l-5-4-5 4z"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>', check: '<path d="m5 12 5 5 9-10"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>' };
   return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ""}</svg>`;
 }
 
@@ -534,7 +534,7 @@ document.addEventListener("click", (e) => {
   if (cpy) {
     const bub = cpy.closest(".msg").querySelector(".bubble");
     navigator.clipboard.writeText(bub.innerText).then(() => {
-      cpy.textContent = "✓"; setTimeout(() => (cpy.textContent = "📋"), 1200);
+      cpy.innerHTML = controlIcon("check"); setTimeout(() => (cpy.innerHTML = controlIcon("copy")), 1200);
     });
   }
   // Delegated, not a per-node onclick: any arriving activity entry re-renders
@@ -1078,8 +1078,8 @@ function entryEl(e) {
     : esc(seatLabel(e.author)) + lurkTag + provenanceBadges(e.meta);
   const av = e.kind === "user" ? "" : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
-    `<button class="ask" title="Ask about this message">↪</button>` +
-    `<button class="pin-decision" title="Save as persistent decision" aria-label="Save as persistent decision">📌</button><button class="cpy" title="Copy message">📋</button></div>` +
+    `<button class="ask" title="Ask about this message" aria-label="Ask about this message">${controlIcon("ask")}</button>` +
+    `<button class="pin-decision" title="Save as persistent decision" aria-label="Save as persistent decision">${controlIcon("pin")}</button><button class="cpy" title="Copy message" aria-label="Copy message">${controlIcon("copy")}</button></div>` +
     entryQuoteHTML(e) +
     `<div class="bubble${statusDimmed(e) ? " dimmed" : ""}">${renderMD(e.text)}</div>` +
     statusChipHTML(e) + heardHTML(e) + whyRunHTML(e);
@@ -2003,7 +2003,7 @@ function renderSeatsUI(s) {
   $("roomStartCopy").textContent = `${seats.length} agent${seats.length === 1 ? "" : "s"} ready for your first message.`;
   $("pills").innerHTML = seats.map((a) =>
     `<div class="pill" tabindex="0" data-seat="${esc(a)}" id="pill_${esc(a)}" style="--seat-accent:${seatColor(a)}"><span class="st"></span>` +
-    `<span class="agent-widget-copy"><b>@${esc(a)}</b><small class="agent-widget-identity">${esc(seatIdentity(a).split(" · ").slice(1).join(" · "))}</small><span class="pinfo"></span></span>` +
+    `<span class="agent-widget-copy"><b>@${esc(a)}</b><small class="agent-widget-identity">${esc(seatCaption(a))}</small><span class="pinfo"></span></span>` +
     `<button class="ear" aria-label="Toggle listening for ${esc(a)}" data-seat="${esc(a)}">${controlIcon("ear")}</button>` +
     `<button class="moon" aria-label="Toggle sleep for ${esc(a)}" data-seat="${esc(a)}">${controlIcon("moon")}</button></div>`).join("");
   // Keep the composer compact for large rooms. Individual targets live in the
@@ -2039,6 +2039,17 @@ function seatIdentity(a) {
   const providerLabel = state.providers?.[providerId]?.label || providerId;
   return `@${a} · ${providerLabel} · ${cfg.model || "model: provider default"} · ${cfg.effort || "effort: provider default"}${cfg.serviceTier === "fast" ? " · Fast mode" : ""}`;
 }
+// The pill's one-line caption: defaults collapse instead of spelling out
+// "provider default" twice. The full identity stays in the title and label.
+function seatCaption(a) {
+  const meta = seatMeta(a);
+  const cfg = state.summary?.cfg?.agents?.[a] || {};
+  const providerId = meta.provider || cfg.provider || a;
+  const parts = [state.providers?.[providerId]?.label || providerId, cfg.model || "default model"];
+  if (cfg.effort) parts.push(cfg.effort);
+  if (cfg.serviceTier === "fast") parts.push("Fast");
+  return parts.join(" · ");
+}
 function renderAgentOptions(s) {
   const box = $("agentsOptions");
   if (!box) return;
@@ -2052,7 +2063,7 @@ function renderAgentOptions(s) {
     const status = runtime.asleep ? "sleeping" : (s.busy || []).includes(a) ? "working" : "ready";
     return { a, label: seatLabel(a), provider, role, status, identity: seatIdentity(a) };
   }).filter((x) => !q || [x.a, x.label, x.provider, x.role, x.status, x.identity].join(" ").toLowerCase().includes(q));
-  box.innerHTML = rows.length ? rows.map((x) => `<button type="button" role="option" class="agent-option${state.chip === x.a ? " selected" : ""}" aria-selected="${state.chip === x.a}" data-agent-target="${esc(x.a)}"><span class="agent-dot" style="--seat-accent:${seatColor(x.a)}"></span><span class="agent-option-copy"><b>@${esc(x.a)}</b><small>${esc([x.identity, x.role].filter(Boolean).join(" · "))}</small></span><span class="agent-status">${esc(x.status)}</span></button>`).join("") : `<div class="agent-empty">No agents match “${esc(q)}”.</div>`;
+  box.innerHTML = rows.length ? rows.map((x) => `<button type="button" role="option" class="agent-option${state.chip === x.a ? " selected" : ""}" aria-selected="${state.chip === x.a}" data-agent-target="${esc(x.a)}"><span class="agent-dot" style="--seat-accent:${seatColor(x.a)}"></span><span class="agent-option-copy"><b>@${esc(x.a)}</b><small>${esc([seatCaption(x.a), x.role].filter(Boolean).join(" · "))}</small></span><span class="agent-status">${esc(x.status)}</span></button>`).join("") : `<div class="agent-empty">No agents match “${esc(q)}”.</div>`;
 }
 function renderDiscussionMode() {
   document.querySelectorAll("[data-discussion-mode]").forEach((el) => {
@@ -2313,7 +2324,7 @@ function applySummary(s) {
       txt = bits.join(" · ");
     }
     pill.querySelector(".pinfo").textContent = txt;
-    pill.querySelector(".agent-widget-identity").textContent = seatIdentity(a).split(" · ").slice(1).join(" · ");
+    pill.querySelector(".agent-widget-identity").textContent = seatCaption(a);
     pill.setAttribute("aria-label", seatIdentity(a));
     pill.title = `${seatIdentity(a)}\n` + (ag.command.ok
       ? (ag.linked ? `session linked (${ag.sessionRef}…) · seen through turn ${ag.cursor}` : "fresh session")
@@ -3537,7 +3548,7 @@ async function refreshRooms() {
       return (p && p.avatar) || String(a)[0].toUpperCase();
     };
     const seatTag = nonDefault
-      ? `<span style="font-size:10px;opacity:.7">${seats.map(rowAvatar).join("+")}</span>`
+      ? `<span class="room-seats" title="${esc(seats.join(", "))}">${seats.map((a) => `<i>${esc(rowAvatar(a))}</i>`).join("")}</span>`
       : "";
     // A row, not one big button: the rename and delete controls have to be real
     // buttons to be reachable by keyboard, and nesting a button inside a button

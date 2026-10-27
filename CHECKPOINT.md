@@ -1,4 +1,13 @@
-## Current checkpoint — automatic brief shortening verified (2026-10-26)
+## Current checkpoint — UI visual lift (2026-10-27)
+
+The primary agent restyled the UI with no behaviour changes: unified composer card, seat-tinted chat bubbles, hover-only message actions, compact agent pills, SVG sidebar icons, and lifted Settings / Create-room dialogs. Covers dark and light themes, desktop and phone widths. Changes are in `ui/styles.css` (a "Lift" layer and a dialogs layer at the end), `ui/index.html` and `ui/app.js`. `RUNTIME_PROTOCOL` is unchanged.
+
+- Smoke: 42 passed / 4 failed, the same as before. Browser: 17 passed / 25 failed, and the identical 25 also fail on the previous commit, so these failures were already there and are not regressions.
+- 4142 loads the UI once at startup (`UI_SNAPSHOT`), so it needs a restart to show the new UI. Recheck ownership and idle state before restarting it.
+
+Next action: restart 4142 when idle, then reload tabs.
+
+## Previous checkpoint — automatic brief shortening verified (2026-10-26)
 
 Sol 6.1 implemented bounded automatic compression for oversized shared-context drafts. Primary-agent isolated API and **actual 4142 live QA passed** after the user's work became idle. Direct main delivery; no PR.
 

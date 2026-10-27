@@ -1,15 +1,15 @@
   :root {
-    --bg: #0b0e14;
-    --bg2: #0e1219;
-    --panel: #121722;
-    --panel2: #161c29;
+    --bg: #0c0e12;
+    --bg2: #101318;
+    --panel: #15181f;
+    --panel2: #1b1f28;
     --border: rgba(255,255,255,.07);
     --border2: rgba(255,255,255,.12);
-    --text: #dee3ec;
-    --text-dim: #8b93a5;
+    --text: #e4e7ee;
+    --text-dim: #98a0b0;
     /* Was #5c6374, about 3.2:1 on the page background — under AA for the
        11-12px text this token is actually used for. */
-    --text-faint: #79808f;
+    --text-faint: #7d8494;
     --user: #7aa2f7;
     --claude: #e8845c;
     --codex: #2fd6a8;
@@ -38,8 +38,8 @@
      app. Only the tokens change; every rule below is written against them. */
   @media (prefers-color-scheme: light) {
     :root {
-      --bg: #f7f8fa;
-      --bg2: #eef1f5;
+      --bg: #f6f7f9;
+      --bg2: #eef0f4;
       --panel: #ffffff;
       --panel2: #f2f4f8;
       --border: rgba(16,20,28,.10);
@@ -1335,3 +1335,343 @@ header .pills { min-width:0; }
 .context-revision-row { display: flex; align-items: center; gap: 8px; }
 .context-revision-row input { width: 150px; max-width: 45%; }
 .context-revision-row .btn { flex: 0 0 auto; }
+
+/* ===================================================================
+   Lift: one quieter visual system over the layers above. Surfaces step
+   bg → bg2 → panel → panel2; mint is the single action colour; blue
+   stays the "you" identity. Selectors carry an id so they outrank the
+   earlier layers and the injected seat styles without !important.
+   =================================================================== */
+:root {
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.28);
+  --shadow-md: 0 8px 24px rgba(0,0,0,.24);
+  --shadow-lg: 0 18px 48px rgba(0,0,0,.45);
+  --ring: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --shadow-sm: 0 1px 2px rgba(16,20,28,.07);
+    --shadow-md: 0 6px 20px rgba(16,20,28,.08);
+    --shadow-lg: 0 18px 44px rgba(16,20,28,.16);
+  }
+}
+body { background: var(--bg); }
+.btn { border-radius: 9px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.4; padding: 0 5px; border: 1px solid var(--border2); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); color: var(--text-dim); }
+
+/* ---- sidebar ---- */
+#app > #sidebar { background: var(--bg2); }
+#sidebar .new-room-action { padding: 9px 14px; border-radius: 10px; box-shadow: var(--shadow-sm); }
+#sidebar .side-label { padding: 16px 20px 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; }
+#roomList .room-item { border: 1px solid transparent; margin-bottom: 1px; }
+#roomList .room-item .ropen { padding: 8px 4px 8px 12px; font-size: 14px; }
+#roomList .room-item:hover { background: color-mix(in srgb, var(--panel) 70%, transparent); border-color: transparent; }
+#roomList .room-item.active { background: var(--panel); border-color: var(--border); box-shadow: var(--shadow-sm); }
+#roomList .room-item.active .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+.room-seats { display: inline-flex; padding-left: 4px; }
+.room-seats i { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-left: -4px; border-radius: 50%; border: 1.5px solid var(--bg2); background: color-mix(in srgb, var(--text) 14%, var(--bg2)); color: var(--text); font-family: inherit; font-size: 9px; font-style: normal; font-weight: 600; line-height: 1; }
+.room-item.active .room-seats i { border-color: var(--panel); }
+#sidebar .side-foot { padding: 10px; gap: 1px; }
+#sidebar .side-foot button, #sidebar .side-foot a { gap: 10px; padding: 7px 10px; border-radius: 8px; font-size: 13px; }
+#sidebar .side-foot .ico { width: 16px; height: 16px; flex: none; opacity: 1; color: var(--text-faint); }
+#sidebar .side-foot button:hover .ico, #sidebar .side-foot a:hover .ico { color: var(--text-dim); }
+#sidebar #gitId { padding-left: 36px; }
+
+/* ---- header and agent strip ---- */
+#main > header { background: var(--bg2); box-shadow: none; border-bottom: 0; }
+#main > header > #modeToggle { gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+#main > header #modeToggle .mbtn { padding: 4px 11px; border-radius: 7px; font-size: 12px; }
+#main > header #modeToggle .mbtn.active[data-m="talk"] { background: var(--panel2); color: var(--text); box-shadow: var(--shadow-sm); }
+#main > header #modeToggle .mbtn.active[data-m="work"] { box-shadow: inset 0 0 0 1px var(--warn-edge); }
+#main > header .hbtn { border-radius: 8px; }
+#main > #agentToolbar { background: var(--bg2); padding-bottom: 12px; }
+#agentToolbar .pills { gap: 8px; scrollbar-width: none; }
+#agentToolbar .pills::-webkit-scrollbar { display: none; }
+#agentToolbar .pill { min-width: 0; max-width: 280px; padding: 6px 6px 6px 11px; gap: 9px; align-items: center; border-radius: 11px; background: var(--panel); border: 1px solid var(--border); }
+#agentToolbar .pill:hover { border-color: var(--border2); }
+#agentToolbar .pill .agent-widget-copy { gap: 1px; }
+#agentToolbar .pill .agent-widget-copy > b { font-size: 12.5px; }
+#agentToolbar .pill .agent-widget-identity { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; color: var(--text-faint); }
+#agentToolbar .pill .pinfo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+#agentToolbar .pill .ear, #agentToolbar .pill .moon { width: 26px; height: 26px; padding: 4px; border-radius: 7px; opacity: .45; }
+#agentToolbar .pill .ear svg, #agentToolbar .pill .moon svg { width: 16px; height: 16px; }
+#agentToolbar .pill.asleep { border-style: dashed; }
+
+/* ---- chat ---- */
+#main > #chatWrap { background: none; }
+#chatWrap > #chat { gap: 20px; padding-top: 24px; }
+#chat .msg .meta { gap: 7px; margin: 0 4px 6px; font-size: 11.5px; }
+#chat .msg .meta .who { font-size: 13px; }
+#chat .msg .avatar { width: 22px; height: 22px; border-radius: 7px; font-size: 11px; }
+#chat .msg .bubble { padding: 11px 15px; font-size: 14.5px; line-height: 1.6; box-shadow: none; }
+#chat .msg.agent .bubble {
+  background: color-mix(in srgb, var(--seat-color, var(--panel)) 4%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--seat-color, var(--border2)) 16%, var(--border));
+  border-radius: 4px 14px 14px 14px;
+}
+#chat .msg.user .bubble {
+  background: color-mix(in srgb, var(--user) 13%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--user) 26%, transparent);
+  border-radius: 14px 4px 14px 14px;
+}
+#chat .meta .ask, #chat .meta .cpy, #chat .meta .pin-decision {
+  display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; padding: 0;
+  border-radius: 6px; color: var(--text-faint); opacity: 0; transition: opacity .15s, background .15s, color .15s;
+}
+#chat .meta .ask svg, #chat .meta .cpy svg, #chat .meta .pin-decision svg { width: 14px; height: 14px; }
+#chat .msg:hover .meta .ask, #chat .msg:hover .meta .cpy, #chat .msg:hover .meta .pin-decision,
+#chat .meta .ask:focus-visible, #chat .meta .cpy:focus-visible, #chat .meta .pin-decision:focus-visible { opacity: 1; }
+#chat .meta .ask:hover, #chat .meta .cpy:hover, #chat .meta .pin-decision:hover { background: var(--panel2); color: var(--text); }
+@media (hover: none) { #chat .meta .ask, #chat .meta .cpy, #chat .meta .pin-decision { opacity: .6; } }
+#chat .quote-ref { background: transparent; border: 0; padding: 2px 6px; margin-bottom: 6px; font-size: 12px; }
+#chat .quote-ref:hover { background: color-mix(in srgb, var(--panel) 60%, transparent); }
+#chat .sysmsg { padding: 8px 14px; border-radius: 10px; font-size: 12.5px; background: var(--panel); }
+#chat .sysmsg.err {
+  align-self: flex-start; max-width: 78%; text-align: left; padding: 10px 14px;
+  color: var(--danger-fg); background: var(--danger-wash); border: 1px solid var(--danger-edge); border-left-width: 3px;
+  border-radius: 4px 10px 10px 4px;
+}
+#chat .sysmsg.resolved { color: var(--text-dim); background: var(--panel); border-color: var(--border); }
+#chat .why-run { color: var(--text-faint); }
+#chat .why-run summary { width: fit-content; padding: 1px 4px; margin-left: -4px; border-radius: 5px; }
+#chat .why-run summary:hover { color: var(--text-dim); background: color-mix(in srgb, var(--panel) 60%, transparent); }
+#chat .msg.user .why-run summary { margin-left: auto; margin-right: -4px; }
+
+/* ---- composer: one card, targets on top, text below ---- */
+#main > #composerWrap { padding: 12px 24px 14px; background: linear-gradient(180deg, transparent, var(--bg) 18px); }
+#composer #busyStrip { margin-bottom: 8px; }
+.composer-card {
+  background: var(--panel); border: 1px solid var(--border2); border-radius: 16px; box-shadow: var(--shadow-md);
+  transition: border-color .15s, box-shadow .15s;
+}
+.composer-card:has(#input:focus) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); box-shadow: 0 0 0 3px var(--ring), var(--shadow-md); }
+#composer #input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#composer #chipsRow { gap: 4px; margin: 0; padding: 8px 10px 0; }
+#chipsRow .chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  color: var(--text-dim); font-size: 12.5px; font-weight: 500;
+}
+#chipsRow .chip:hover { background: var(--panel2); color: var(--text); border-color: transparent; }
+#chipsRow .chip.active[data-t] {
+  background: color-mix(in srgb, var(--seat-color, var(--accent)) 15%, transparent);
+  border-color: color-mix(in srgb, var(--seat-color, var(--accent)) 32%, transparent);
+  color: var(--text); font-weight: 600;
+}
+#chipsRow .chip.active[data-t="auto"] { --seat-color: var(--text-dim); }
+#chipsRow .chip.active[data-t="both"] { --seat-color: var(--accent); }
+#chipsRow #agentsBtn b { color: var(--text-faint); font-weight: 600; }
+#chipsRow #agentsBtn .picker-caret { width: 12px; height: 12px; margin: 0 -2px 0 0; opacity: .6; }
+#chipsRow #agentsBtn[aria-expanded="true"] { background: var(--panel2); color: var(--text); }
+#chipsRow #discussionControls { margin-left: auto; gap: 6px; padding-left: 0; border-left: 0; }
+#discussionControls .discussion-scope { font-size: 11.5px; }
+#discussionControls .discussion-modes { padding: 2px; gap: 2px; border-radius: 8px; background: var(--bg2); border-color: var(--border); }
+#discussionControls .discussion-modes button { height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; }
+#discussionControls .discussion-modes button.active { background: var(--panel2); border-color: var(--border2); color: var(--text); box-shadow: var(--shadow-sm); }
+#discussionControls .convergence-rounds { gap: 6px; font-size: 11.5px; }
+#composer #convergenceRounds, #agentsMenu #agentsSearch { background: var(--bg2); }
+#composer #convergenceRounds { width: 44px; height: 26px; padding: 0 4px; border-radius: 7px; border-color: var(--border); text-align: center; }
+#composer #draftImages { margin: 10px 12px 0; }
+#composer .box { min-height: 0; padding: 6px 8px 8px 8px; gap: 6px; background: transparent; border: 0; border-radius: 0 0 16px 16px; box-shadow: none; }
+#composer .box:focus-within { box-shadow: none; }
+#composer #input { padding: 7px 4px; font-size: 14.5px; }
+#composer #attachBtn { width: 34px; height: 34px; padding: 7px; border-radius: 9px; color: var(--text-faint); }
+#composer #attachBtn:hover { color: var(--text); background: var(--panel2); }
+#composer #sendBtn { width: 34px; height: 34px; padding: 7px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+#composer #sendBtn:disabled { background: var(--panel2); color: var(--text-faint); }
+#composer #stopBtn, #composer #stopMore { height: 34px; }
+.composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; padding: 7px 8px 0; }
+.composer-foot #routeHint { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
+.composer-foot .hint { flex: none; margin: 0; font-size: 11px; white-space: nowrap; }
+.composer-foot .hint b { color: var(--text-dim); font-weight: 600; }
+@media (max-width: 760px) {
+  #main > #composerWrap { padding: 8px 10px 10px; }
+  #composer #chipsRow { padding: 6px 8px 0; }
+  #chipsRow .chip { padding: 0 9px; }
+  #chipsRow #discussionControls { margin: 2px 0 0; padding: 6px 2px 0; border-top: 1px solid var(--border); }
+  .composer-foot { padding-top: 6px; }
+  .composer-foot .hint { display: none; }
+  .composer-foot #routeHint { width: auto; order: 0; }
+}
+
+/* ---- popovers share one surface ---- */
+#hopMenu, #stopMenu, #wakeMenu, #askMenu, #queuePop, #mention, #agentsMenu {
+  border: 1px solid var(--border2); border-radius: 12px; box-shadow: var(--shadow-lg);
+}
+#agentsMenu .agent-option { border-radius: 8px; }
+#stopWrap #stopMenu { width: 240px; padding: 6px; }
+#stopWrap #stopMenu button { font-size: 13px; line-height: 1.4; }
+#stopWrap #stopMenu button .sm-sub { font-size: 11px; }
+#hopMenu > button:hover, #stopMenu button:hover, #wakeMenu button:hover, #askMenu button:hover { background: var(--panel); }
+
+/* ---- dialogs (lift) ---- */
+/* Shells: one surface, one shadow, one radius for every dialog. */
+#overlay .modal, #newRoomDialog, #generalDialog, #confirmDialog, #decisionDialog {
+  background: var(--panel); border: 1px solid var(--border2); border-radius: 16px; box-shadow: var(--shadow-lg);
+}
+#newRoomDialog::backdrop, #generalDialog::backdrop, #confirmDialog::backdrop, #decisionDialog::backdrop {
+  background: rgba(5,7,10,.55); backdrop-filter: blur(2px);
+}
+#overlay { background: rgba(5,7,10,.55); backdrop-filter: blur(2px); }
+
+/* Titles and subtitles */
+#overlay .modal h2, #newRoomForm .form-title strong, #generalDialog .form-title strong, #confirmDialog h2, #decisionDialog h2 {
+  font-size: 19px; font-weight: 600; letter-spacing: -.02em; line-height: 1.3; color: var(--text);
+}
+#overlay .modal h2 { margin: 0 0 4px; }
+#confirmDialog h2, #decisionDialog h2 { margin: 0 0 10px; }
+#newRoomForm .form-title span, #overlay .modal .sub, #decisionDialog #decisionRoom {
+  color: var(--text-dim); font-size: 13px; line-height: 1.5; margin-top: 4px;
+}
+#overlay .modal .settings-fixed-head .sub { margin: 0 0 12px; font-size: 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+#newRoomForm > .form-title span { font-size: 13px; margin-top: 4px; }
+#confirmDialog p { font-size: 14px; line-height: 1.55; }
+.modal-close, #generalClose { width: 32px; height: 32px; border: 1px solid transparent; border-radius: 8px; color: var(--text-dim); font-size: 20px; }
+.modal-close:hover, #generalClose:hover { background: var(--panel2); color: var(--text); border-color: var(--border); }
+.modal-close:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+#newRoomForm .form-title, #generalDialog .form-title { margin-bottom: 14px; }
+
+/* Settings head, body and footer */
+.settings-fixed-head { padding: 22px 24px 0; }
+.settings-scroll-body { padding: 6px 24px 22px; }
+.settings-fixed-foot.mrow { padding: 14px 24px; border-top: 1px solid var(--border); background: var(--panel); }
+#overlay .modal .settings-fixed-head .settings-tabs { margin: 12px 0 8px; }
+
+/* Tabs: a quiet track, the selected tab raised on it. */
+#overlay .modal .settings-tabs, #newRoomForm .settings-tabs {
+  display: flex; flex-wrap: nowrap; gap: 2px; width: fit-content; max-width: 100%; padding: 3px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg2);
+}
+#overlay .modal .settings-tabs button, #newRoomForm .settings-tabs button {
+  min-width: 0; padding: 0 16px; height: 30px; border: 1px solid transparent; border-radius: 7px; background: transparent;
+  color: var(--text-dim); font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+#overlay .modal .settings-tabs button:hover, #newRoomForm .settings-tabs button:hover { color: var(--text); }
+#overlay .modal .settings-tabs [aria-selected="true"], #newRoomForm .settings-tabs [aria-selected="true"] {
+  background: var(--panel2); border-color: var(--border2); color: var(--text); box-shadow: var(--shadow-sm);
+}
+#overlay .modal .settings-tabs button:focus-visible, #newRoomForm .settings-tabs button:focus-visible,
+#overlay .modal .settings-agent-nav button:focus-visible, #newRoomForm .settings-agent-nav button:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+#newRoomForm .create-room-tabs { margin: 6px 0 14px; }
+
+/* Agent nav: pills, selected one tinted with the action colour. */
+#overlay .modal .settings-agent-nav, #newRoomForm .settings-agent-nav { gap: 6px; margin: 14px 0; }
+#overlay .modal .settings-agent-nav button, #newRoomForm .settings-agent-nav button {
+  padding: 6px 13px; border: 1px solid var(--border); border-radius: 999px; background: transparent;
+  color: var(--text-dim); font-size: 12.5px; font-weight: 500;
+}
+#newRoomForm #newAgentNav button { border-radius: 10px; }
+#overlay .modal .settings-agent-nav button:hover, #newRoomForm .settings-agent-nav button:hover { background: var(--panel2); color: var(--text); border-color: var(--border2); }
+#overlay .modal .settings-agent-nav [aria-pressed="true"], #newRoomForm .settings-agent-nav [aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); color: var(--text);
+}
+#newRoomForm #newAgentNav button b { font-weight: 600; }
+
+/* Cards */
+#overlay .modal .settings-roster-head { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg2); }
+#overlay .modal #seatCards .mgroup, #newRoomForm .roster-row {
+  padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); box-shadow: none;
+}
+#newRoomForm .roster-row { margin-top: 12px; }
+#overlay .modal #seatCards .mgroup h3 { border-bottom-color: var(--border); }
+#overlay .modal .settings-agent-bar { margin: 0 0 16px; }
+#overlay .modal #contextSettings .context-brief-card, #overlay .modal #contextSettings .saved-decision {
+  padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg2);
+}
+#overlay .modal #contextSettings .saved-decision { margin: 10px 0; }
+#overlay .modal #contextSettings > details { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg2); }
+#overlay .modal #contextSettings .saved-decision .ract { border-radius: 8px; padding: 5px 10px; }
+#overlay .modal #contextSettings { border-top: 0; margin-top: 12px; padding-top: 0; }
+#newRoomForm #newRoomReview.review-preset { padding: 12px 14px; border-radius: 12px; background: var(--bg2); }
+#overlay .modal #contextSettings .saved-decision .ract:hover { background: var(--panel2); }
+
+/* Fields: one height, one radius, one focus ring. */
+:is(#overlay .modal, #newRoomForm, #generalDialog, #decisionDialog) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 9px; color: var(--text);
+  transition: border-color .15s, box-shadow .15s;
+}
+:is(#overlay .modal, #newRoomForm, #generalDialog, #decisionDialog) :is(.fld, .roster-field) :is(input:not([type="checkbox"]):not([type="radio"]), select),
+#newRoomForm > #newRoomInput, #newRoomForm #newRoomPane > #newRoomInput, #newRoomForm .project-folder-field input {
+  min-height: 36px; padding: 7px 11px; font-size: 13.5px;
+}
+:is(#overlay .modal, #newRoomForm, #generalDialog) :is(.fld, .roster-field) textarea, #decisionDialog #decisionText { padding: 9px 11px; font-size: 13.5px; }
+#overlay .modal .instructions-preview.bubble, #newRoomForm .instructions-preview.bubble { background: var(--bg2); border-radius: 9px; }
+:is(#overlay .modal, #newRoomForm, #generalDialog, #decisionDialog) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover { border-color: color-mix(in srgb, var(--text-faint) 55%, var(--border2)); }
+:is(#overlay .modal, #newRoomForm, #generalDialog, #decisionDialog) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  outline: 0; border-color: color-mix(in srgb, var(--accent) 60%, var(--border2)); box-shadow: 0 0 0 3px var(--ring);
+}
+#overlay .modal .settings-agent-provider { min-height: 0; padding: 5px 9px; }
+#overlay .modal .settings-agent-name { min-height: 34px; padding: 6px 10px; font-size: 14px; font-weight: 600; }
+#newRoomReviewChk, #s_notify { accent-color: var(--accent); }
+
+/* Labels */
+:is(#overlay .modal, #generalDialog) .fld > label, #newRoomForm .fld > label, #newRoomForm .form-label, #newRoomForm .roster-field,
+#decisionDialog label {
+  font-size: 12.5px; font-weight: 500; color: var(--text-dim); line-height: 1.4;
+}
+#newRoomForm .form-label, #newRoomPane .fld > label, #overlay .modal #roomSettingsPane .fld > label { margin-bottom: 6px; }
+#generalDialog .fld > label:first-child { font-size: 13px; }
+#generalDialog .fld > label[style] { font-size: 12.5px; }
+#overlay .modal .note, #newRoomForm .fld .note { color: var(--text-faint); font-size: 12px; line-height: 1.5; }
+#overlay .modal #seatCards .fld label { margin-bottom: 6px; }
+#overlay .modal .mgroup h3 { font-size: 14px; }
+
+/* Instructions edit/preview switch: segmented, like the tabs. */
+.instructions-modes { gap: 2px; width: fit-content; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); }
+.instructions-modes button { height: 24px; padding: 0 11px; border-radius: 6px; }
+.instructions-modes button[aria-pressed="true"] { background: var(--panel2); border-color: var(--border2); box-shadow: var(--shadow-sm); }
+
+/* Room-template choices */
+#newAgentsPane .room-template { border-bottom: 0; }
+#newAgentsPane .room-template button { border: 1px solid var(--border); border-radius: 10px; background: transparent; }
+#newAgentsPane .room-template button:hover { background: var(--panel2); border-color: var(--border2); }
+#newAgentsPane .room-template button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); color: var(--text);
+}
+#addSeatBtn { border-radius: 8px; }
+#addSeatBtn:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--border2)); }
+
+/* Buttons and footers: primary on the right, everything else ghost. */
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn {
+  height: 34px; padding: 0 14px; border-radius: 9px; font-size: 13px; font-weight: 500; line-height: 1;
+}
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn:not(.primary):not(.danger) {
+  background: transparent; border-color: var(--border); color: var(--text-dim);
+}
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn:not(.primary):not(.danger):hover { background: var(--panel2); color: var(--text); border-color: var(--border2); }
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn.danger,
+#overlay .modal .settings-remove-agent {
+  background: transparent; color: var(--danger-fg); border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn.danger:hover { background: var(--danger-wash); }
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn.primary { color: var(--accent-ink); font-weight: 600; }
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn.primary:hover { filter: none; background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+:is(#overlay .modal, #newRoomForm, #generalDialog, #confirmDialog, #decisionDialog) .btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+#overlay .modal #mCancel, :is(#newRoomForm, #confirmDialog, #decisionDialog) .form-actions .btn:not(.primary):not(.danger):not(.x) { border-color: transparent; }
+#overlay .modal #mSave, #newRoomCreate, #generalSave, #confirmAccept, #decisionSave { min-width: 84px; padding: 0 18px; }
+#overlay .modal .settings-fixed-foot .btn { height: 34px; padding: 0 13px; font-size: 13px; }
+#overlay .modal .settings-roster-head .btn { height: 32px; padding: 0 12px; font-size: 12.5px; }
+#overlay .modal .settings-remove-agent { height: 28px; padding: 0 10px !important; font-size: 12px !important; }
+#newRoomForm #newRoomCreate { height: 36px; padding: 0 20px !important; font-size: 13px !important; }
+.form-actions { gap: 8px; }
+#confirmDialog .form-actions, #decisionDialog .form-actions, #generalDialog .form-actions { margin-top: 20px; padding-top: 16px; }
+#confirmDialog, #decisionDialog, #generalDialog { padding: 22px 24px; }
+#decisionText { background: var(--bg2); }
+#decisionError { margin: 8px 0 0; }
+
+@media (max-width: 600px) {
+  .settings-fixed-head { padding: 16px 16px 0; }
+  .settings-scroll-body { padding: 4px 16px 16px; }
+  .settings-fixed-foot.mrow { padding: 12px 16px; }
+  #overlay .modal .settings-tabs, #newRoomForm .settings-tabs { width: 100%; }
+  #overlay .modal .settings-tabs button, #newRoomForm .settings-tabs button { flex: 1 1 0; padding: 0 8px; }
+  #overlay .modal #seatCards .mgroup, #newRoomForm .roster-row { padding: 14px; }
+  #overlay .modal .settings-fixed-foot .btn { font-size: 12px; padding: 0 10px; }
+  #confirmDialog, #decisionDialog, #generalDialog { padding: 18px 16px; }
+}
+
+/* Hidden tooltips must not widen the scrolling body on narrow screens. */
+:is(#overlay .modal, #newRoomForm, #generalDialog) .info-tip::after { display: none; }
+:is(#overlay .modal, #newRoomForm, #generalDialog) .info-tip:hover::after, :is(#overlay .modal, #newRoomForm, #generalDialog) .info-tip:focus::after { display: block; }
