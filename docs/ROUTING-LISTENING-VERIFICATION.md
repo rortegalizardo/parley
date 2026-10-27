@@ -18,3 +18,11 @@ Reproduce the focused checks with `node test/recipient-routing.mjs`. They also c
 The existing `test/multi-agent.mjs` suite stops at an unrelated stale fixture expecting more than four seats; current room validation allows at most four. That fixture did not validate this change.
 
 Listening remains model judgment. Mechanical tests establish audience boundaries and approval integrity; the real-model checks establish observed role behavior in the scenarios above. A pass advances context without becoming speech or approval.
+
+## Role-agnostic follow-up
+
+The earlier moderator examples exercised one room's custom instructions; Parley has no built-in moderator semantics. Production prompts now derive responsibilities solely from standing instructions, distinguish group listening from direct addressing throughout history/current/peer delivery, and preserve that distinction in read-only discussions and convergence reviews. Updated standing-contract fingerprints deliver this correction to resumed sessions.
+
+Focused `node test/recipient-routing.mjs` passed with an arbitrarily named `watcher` assigned arithmetic review in a Work room. Checks retained exact subset scope, group Ask/Retry boundaries, direct explicit listener addressing, review-only convergence and pass-not-approval integrity. No moderator-specific production prompt or name/provider branch remains.
+
+Live port-4142 verification in a disposable Work room also passed: mixed-case `@dummyA @dummyB` invoked only `dummya` and `dummyb`; an arithmetic-only Sonnet `watcher` passed on `2 + 2 = 4`, then corrected a synthetic `2 + 2 = 5` on its resumed session with only the arithmetic correction. Refresh preserved existing room files and `context.json` bytes. Source syntax and diff checks passed.

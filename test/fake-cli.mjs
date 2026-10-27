@@ -163,7 +163,7 @@ for (const match of prompt.matchAll(fileMarker)) {
 // Quoted `user (to you):` text is framed as a `|` continuation and must not
 // become the fake provider's current directive.
 let cut = -1, currentStart = -1;
-for (const match of prompt.matchAll(/(^|\n)(?:user|claude|codex|[^|\n]+ \(externally delegated request;[^\n]+\)) \(to you\):/g)) {
+for (const match of prompt.matchAll(/(^|\n)(?:user|[a-z][a-z0-9-]*|[^|\n]+ \(externally delegated request;[^\n]+\)) \((?:to you|group message for listening assessment; not a direct request to you|peer contribution for listening assessment; not a direct user request)\):/g)) {
   cut = match.index + (match[1] ? 1 : 0);
   currentStart = match.index + match[0].length;
 }
