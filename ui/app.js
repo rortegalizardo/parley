@@ -107,7 +107,7 @@ function toast(msg, isErr) {
 // This blocks blind/cross-origin requests; it is not a secret from local
 // processes, which can fetch the public page and read the embedded token.
 const TOKEN = (document.querySelector('meta[name="parley-token"]') || {}).content || "";
-const REQUIRED_RUNTIME_PROTOCOL = "15";
+const REQUIRED_RUNTIME_PROTOCOL = "16";
 const PAGE_RUNTIME_PROTOCOL = (document.querySelector('meta[name="parley-runtime-protocol"]') || {}).content || "";
 const withToken = (url) => url + (url.includes("?") ? "&" : "?") +
   "token=" + encodeURIComponent(TOKEN) + "&protocol=" + encodeURIComponent(REQUIRED_RUNTIME_PROTOCOL);
@@ -4771,7 +4771,11 @@ $("mSave").onclick = async () => {
   // Build the request from what is on screen now, then retire the picker: a
   // dialog that resolves while the save is in flight would otherwise fill the
   // field with a folder this request did not carry.
+  const revisionField = $("contextRevisionRounds");
+  const contextRevisionRounds = revisionField ? Number(revisionField.value) : Number(s.cfg.contextRevisionRounds || 0);
+  if ((revisionField && !revisionField.value.trim()) || !Number.isInteger(contextRevisionRounds) || contextRevisionRounds < 0 || contextRevisionRounds > 999) return toast("Choose 0 (no limit) or a whole number from 1 to 999 for context revision rounds.", true);
   const config = {
+    contextRevisionRounds,
     defaultAgent: roster.some((seat) => seat.id === $("s_default").value) ? $("s_default").value : roster[0].id,
     timeoutMs: Math.max(10, Number($("s_timeout").value) || 300) * 1000,
     hopBudget: roomHopBudget,
@@ -4788,6 +4792,7 @@ $("mSave").onclick = async () => {
       return { id: seat.id, provider: seat.provider, model: values.model || null, effort: values.effort || null, instructions: values.instructions || null };
     });
     const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config });
+    $("contextSettings")._contextRevisionDraft = null;
     closeSettings();
     // The panel above already shows the new permission, but a CLI process that
     // has launched cannot be changed. Say what the user is actually watching —
@@ -4956,28 +4961,40 @@ function contextDecisionHTML(decision, editable = true) {
   return `<article class="saved-decision" data-decision-id="${esc(decision.id)}">${contextSourceQuestionHTML(decision)}<h4>Decision</h4><div class="bubble context-markdown">${renderMD(decision.text || "")}</div>${contextSourceReasoningHTML(decision)}<small>${decision.source === "convergence" ? "Agreed handoff" : "Pinned decision"}${decision.contextStatus ? ` · ${esc(decision.contextStatus)}` : ""} · ${esc(contextDate(decision.updatedAt || decision.createdAt))}</small>${editable ? '<div><button type="button" class="ract" data-decision-action="edit">Edit</button><button type="button" class="ract" data-decision-action="remove">Remove</button></div>' : ""}</article>`;
 }
 function contextHistoryHTML(history) {
-  return history.slice().reverse().map((run, index) => `<details class="context-version" data-context-detail="run-${esc(run.id || index)}"><summary>${esc(contextDate(run.updatedAt || run.createdAt || run.startedAt))} · ${esc(run.status || "Previous update")}${run.reason ? ` · ${esc(run.reason)}` : ""}</summary>${run.sourceSnapshot?.length ? `<details data-context-detail="run-sources-${esc(run.id || index)}"><summary>Source material (${run.sourceSnapshot.length})</summary>${run.sourceSnapshot.map((source) => contextDecisionHTML(source, false)).join("")}</details>` : ""}${(run.candidates || []).map((candidate, ci) => `<details data-context-detail="candidate-${esc(run.id || index)}-${ci}"><summary>Version ${esc(candidate.version || ci + 1)}${candidate.hash ? ` · ${esc(candidate.hash.slice(0, 12))}` : ""}</summary><div class="bubble context-markdown">${renderMD(candidate.text || "")}</div><h4>What changed</h4>${contextChangesHTML(candidate.changes)}<h4>Agent reviews</h4>${contextReviewsHTML(candidate.reviews)}${candidate.hash ? `<p class="note context-hash">Reviewed text: ${esc(candidate.hash)}</p>` : ""}</details>`).join("") || (run.text ? `<div class="bubble context-markdown">${renderMD(run.text)}</div>` : '<p class="note">No draft was recorded.</p>')}</details>`).join("") || '<p class="note">No previous updates.</p>';
+  return history.slice().reverse().map((run, index) => `<details class="context-version" data-context-detail="run-${esc(run.id || index)}"><summary>${esc(contextDate(run.updatedAt || run.createdAt || run.startedAt))} · ${esc(run.status === "limit_reached" ? "Revision limit reached" : run.status || "Previous update")}${run.reason ? ` · ${esc(run.reason)}` : ""}</summary>${run.sourceSnapshot?.length ? `<details data-context-detail="run-sources-${esc(run.id || index)}"><summary>Source material (${run.sourceSnapshot.length})</summary>${run.sourceSnapshot.map((source) => contextDecisionHTML(source, false)).join("")}</details>` : ""}${(run.candidates || []).map((candidate, ci) => `<details data-context-detail="candidate-${esc(run.id || index)}-${ci}"><summary>Version ${esc(candidate.version || ci + 1)}${candidate.hash ? ` · ${esc(candidate.hash.slice(0, 12))}` : ""}</summary><div class="bubble context-markdown">${renderMD(candidate.text || "")}</div><h4>What changed</h4>${contextChangesHTML(candidate.changes)}<h4>Agent reviews</h4>${contextReviewsHTML(candidate.reviews)}${candidate.hash ? `<p class="note context-hash">Reviewed text: ${esc(candidate.hash)}</p>` : ""}</details>`).join("") || (run.text ? `<div class="bubble context-markdown">${renderMD(run.text)}</div>` : '<p class="note">No draft was recorded.</p>')}</details>`).join("") || '<p class="note">No previous updates.</p>';
 }
 function renderContextSettings(s) {
   const host = $("contextSettings"); if (!host || !s) return;
+  const contextRoom = s.name || state.room;
+  if (host._contextRevisionRoom !== contextRoom) { host._contextRevisionDraft = null; host._contextRevisionRoom = contextRoom; }
   const context = s.context || {}, budget = context.budget || {}, brief = context.activeBrief, editor = context.editor || {};
-  const signature = JSON.stringify([s.name || state.room, context, s.seats, s.agents, s.seatInfo]);
+  const signature = JSON.stringify([s.name || state.room, context, s.seats, s.agents, s.seatInfo, s.cfg?.contextRevisionRounds]);
   if (host._contextSignature === signature) return;
   host._contextSignature = signature;
   const openDetails = new Set([...host.querySelectorAll("details[open][data-context-detail]")].map((detail) => detail.dataset.contextDetail));
   const running = ["editing", "reviewing", "revising"].includes(editor.status);
-  const failed = ["failed", "rejected", "stale", "interrupted"].includes(editor.status);
-  const phase = !running && editor.status === "active" && brief?.pendingUpdate ? "Context has new sources to include" : {editing: "Writing an updated brief", reviewing: "Agents are reviewing the draft", revising: "Revising after agent feedback", active: "Context is up to date", failed: "Update failed", rejected: "Agents did not agree", stale: "Sources changed during the update", interrupted: "Update was interrupted"}[editor.status] || "Ready to update";
+  const failed = ["failed", "rejected", "limit_reached", "stale", "interrupted", "stopped"].includes(editor.status);
+  const phase = !running && editor.status === "active" && brief?.pendingUpdate ? "Context has new sources to include" : {editing: "Writing an updated brief", reviewing: "Agents are reviewing the draft", revising: "Revising after agent feedback", active: "Context is up to date", failed: "Update failed", rejected: "Revision limit reached", limit_reached: "Revision limit reached", stopped: "Update stopped", stale: "Sources changed during the update", interrupted: "Update was interrupted"}[editor.status] || "Ready to update";
   const latestCandidate = (editor.candidates || []).slice(-1)[0];
   const pending = context.pendingSourceIds?.length || 0;
   const activeMarkup = brief ? `<div class="context-brief-meta">Version ${esc(brief.version || 1)} · ${esc(contextDate(brief.createdAt))}${brief.stale ? " · Needs an update" : " · Active"}<span class="context-brief-budget">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity" : ""}</span></div><div class="bubble context-markdown active-context-brief">${renderMD(brief.text || "")}</div><details data-context-detail="active-proof"><summary>What changed and agent approval</summary><h4>What changed</h4>${contextChangesHTML(brief.changes)}<h4>Agent reviews</h4>${contextReviewsHTML(brief.reviews)}${brief.hash ? `<p class="note context-hash">Reviewed text: ${esc(brief.hash)}</p>` : ""}</details>` : running ? '<p class="context-empty">First brief awaiting review; existing saved decisions remain active.</p>' : '<p class="context-empty">No shared brief yet. Update context to combine saved decisions into a brief for every agent.</p>';
   const currentReviews = latestCandidate?.reviews || editor.reviews;
-  host.innerHTML = `<section class="context-brief-card"><div class="context-section-head"><div><h3>Shared context</h3><p class="note">The current brief carries the room’s decisions into future agent turns.</p></div><button type="button" class="btn" id="updateContext" ${running ? "disabled" : ""}>${running ? "Updating…" : failed ? "Retry update" : "Update context"}</button></div>${activeMarkup}</section>
-    <section class="context-update-status ${failed ? "context-update-failed" : ""}" aria-label="Context update status"><div role="status"><b>${esc(phase)}</b><p class="note">Editor: Claude Sonnet${editor.round ? ` · Review round ${esc(editor.round)}` : ""}${editor.calls ? ` · ${esc(editor.calls.used || 0)} / ${esc(editor.calls.planned || 0)} calls` : ""}${pending ? ` · ${esc(pending)} saved source${pending === 1 ? "" : "s"} waiting` : ""}</p>${editor.reason ? `<p>${esc(editor.reason)}</p>` : ""}${failed && brief ? '<p class="note">The previous brief is still shown above.</p>' : ""}${brief?.stale ? '<p class="note">Saved sources changed. Update context before agents can use the brief again.</p>' : ""}</div>${running || failed ? `<h4>Agent review</h4>${contextReviewsHTML(currentReviews, editor.reviewerIds || s.seats || [])}` : ""}${latestCandidate ? `<details data-context-detail="current-draft"><summary>Inspect current draft</summary><div class="bubble context-markdown">${renderMD(latestCandidate.text || "")}</div><h4>What changed</h4>${contextChangesHTML(latestCandidate.changes)}</details>` : ""}</section>
+  const roundLimit = Number(s.cfg?.contextRevisionRounds || 0);
+  const revisionDraft = host._contextRevisionDraft?.room === (s.name || state.room) ? host._contextRevisionDraft.value : String(roundLimit);
+  const revisionFocused = document.activeElement?.id === "contextRevisionRounds";
+  const revisionControls = `<div class="fld context-revision-settings"><label for="contextRevisionRounds">Context revision rounds</label><div class="context-revision-row"><input id="contextRevisionRounds" type="number" min="0" max="999" step="1" value="${esc(revisionDraft)}"><button type="button" class="btn" id="saveContextRevisionLimit">Save limit</button></div><p class="note">0 = Unlimited · applies to the next update. Update/Continue saves this value too.</p><details data-context-detail="revision-help"><summary>How continuation works</summary><p class="note">Continue revises the latest unapproved draft using its feedback, then starts another batch with the chosen limit. Every agent reviews the new draft again. A running update keeps its current limit; three size repairs per batch remain a separate bound. Stop retains the approved brief, latest draft and all history.</p></details></div>`;
+  const continuation = failed && latestCandidate;
+  const callsLabel = editor.calls ? editor.unlimited || editor.calls.unlimited
+    ? `${editor.calls.used || 0} calls · no limit on review rounds`
+    : `${editor.calls.used || 0} / ${editor.calls.planned || 0} calls (includes up to 3 size repairs)` : "";
+  const roundLabel = editor.round ? ` · Review round ${editor.round}${editor.maxRounds ? ` of ${editor.maxRounds} in this batch` : editor.unlimited ? " · no limit" : ""}` : "";
+  host.innerHTML = `<section class="context-brief-card"><div class="context-section-head"><div><h3>Shared context</h3><p class="note">The current brief carries the room’s decisions into future agent turns.</p></div><button type="button" class="btn" id="updateContext" ${running ? "disabled" : ""}>${running ? "Updating…" : continuation ? "Continue update" : failed ? "Retry update" : "Update context"}</button>${running ? '<button type="button" class="btn" id="stopContextUpdate">Stop update</button>' : ""}</div>${revisionControls}${activeMarkup}</section>
+    <section class="context-update-status ${failed ? "context-update-failed" : ""}" aria-label="Context update status"><div role="status"><b>${esc(phase)}</b><p class="note">Editor: Claude Sonnet${esc(roundLabel)}${callsLabel ? ` · ${esc(callsLabel)}` : ""}${pending ? ` · ${esc(pending)} saved source${pending === 1 ? "" : "s"} waiting` : ""}</p>${editor.reason ? `<p>${esc(editor.reason)}</p>` : ""}${failed && brief ? '<p class="note">The previous brief is still shown above.</p>' : ""}${brief?.stale ? '<p class="note">Saved sources changed. Update context before agents can use the brief again.</p>' : ""}</div>${running || failed ? `<h4>Agent review</h4>${contextReviewsHTML(currentReviews, editor.reviewerIds || s.seats || [])}` : ""}${latestCandidate ? `<details data-context-detail="current-draft"><summary>Inspect current draft</summary><div class="bubble context-markdown">${renderMD(latestCandidate.text || "")}</div><h4>What changed</h4>${contextChangesHTML(latestCandidate.changes)}</details>` : ""}</section>
     <details class="context-history" data-context-detail="history"><summary>Full version history (${(context.history || []).length})</summary>${contextHistoryHTML(context.history || [])}</details>
     <details class="context-sources" data-context-detail="sources"><summary>Saved decisions and source history (${(context.decisions || []).length})</summary><p class="note">Pinned messages and agreed handoffs are kept as sources. Earlier decisions remain available here after a new brief replaces them.</p><p class="note">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity: shorten decisions before agents can continue." : ""}</p><div class="saved-decisions">${(context.decisions || []).map((decision) => contextDecisionHTML(decision)).join("") || '<p class="note">No saved decisions. Use 📌 on a message to retain it.</p>'}</div><button type="button" class="btn" id="addDecision">Add decision</button>${(context.sourceHistory || []).length ? `<details data-context-detail="source-history"><summary>Earlier source versions (${context.sourceHistory.length})</summary>${contextSourceHistoryHTML(context.sourceHistory)}</details>` : ""}</details>
     <details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}${context.observations?.[seat] ? `<br><span class="context-observation">${esc(context.observations[seat].status)} · ${esc(context.observations[seat].reason)}${context.observations[seat].at ? ` · ${esc(contextDate(context.observations[seat].at))}` : ""}</span>` : ""}</p>`).join("")}<details data-context-detail="events"><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(contextDate(event.at))}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details></details>`;
   host.querySelectorAll("details[data-context-detail]").forEach((detail) => { detail.open = openDetails.has(detail.dataset.contextDetail); });
+  if (revisionFocused) $("contextRevisionRounds")?.focus({ preventScroll: true });
 }
 async function mutateDecision(body, method = "POST", room = state.room) {
   await api("/api/context/decisions", {room, ...body}, method);
@@ -4987,10 +5004,29 @@ document.addEventListener("click", async (event) => {
   try {
     const pin = event.target.closest(".pin-decision");
     if (pin) { await mutateDecision({entryN: Number(pin.closest("[data-n]").dataset.n)}); toast("Decision saved."); return; }
+    if (event.target.closest("#saveContextRevisionLimit")) {
+      const field = $("contextRevisionRounds");
+      const value = Number(field.value);
+      if (!field.value.trim() || !Number.isInteger(value) || value < 0 || value > 999) throw new Error("Choose 0 (no limit) or a whole number from 1 to 999.");
+      await api("/api/config", { room: state.room, config: { contextRevisionRounds: value } });
+      $("contextSettings")._contextRevisionDraft = null;
+      const data = await api("/api/room?name=" + encodeURIComponent(state.room)); applySummary(data.room);
+      toast("Context revision limit saved for the next update or continuation.");
+      return;
+    }
+    if (event.target.closest("#stopContextUpdate")) {
+      const button = event.target.closest("#stopContextUpdate"); button.disabled = true; button.textContent = "Stopping…";
+      await api("/api/context/stop", { room: state.room });
+      return;
+    }
     if (event.target.closest("#updateContext")) {
       const button = event.target.closest("#updateContext"), room = state.room;
       button.disabled = true; button.textContent = "Starting…";
       try {
+        const field = $("contextRevisionRounds"), value = Number(field.value);
+        if (!field.value.trim() || !Number.isInteger(value) || value < 0 || value > 999) throw new Error("Choose 0 (no limit) or a whole number from 1 to 999.");
+        if (value !== Number(state.summary.cfg.contextRevisionRounds || 0)) await api("/api/config", { room, config: { contextRevisionRounds: value } });
+        $("contextSettings")._contextRevisionDraft = null;
         const result = await api("/api/context/regenerate", {room});
         if (state.room === room && result.context) applySummary({...state.summary, context: result.context});
         else if (state.room === room) { const data = await api("/api/room?name=" + encodeURIComponent(room)); if (state.room === room) applySummary(data.room); }
@@ -5042,3 +5078,9 @@ $("agentToolbarBtn").onclick = () => {
   $("agentToolbar").hidden = hidden;
   $("agentToolbarBtn").setAttribute("aria-expanded", String(!hidden));
 };
+
+document.addEventListener("input", (event) => {
+  if (event.target.id === "contextRevisionRounds") {
+    $("contextSettings")._contextRevisionDraft = { room: state.room, value: event.target.value };
+  }
+});

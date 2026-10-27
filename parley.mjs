@@ -28,7 +28,7 @@ import { claudeLoggedIn } from "./lib/claude-auth.mjs";
 import { createBridgeBackend } from "./lib/bridge-backend.mjs";
 import { createConvergenceRun, draftHash, classifyReview, composeDraft, allApproved, reparseStoredReviews } from "./lib/convergence.mjs";
 import { observeCodexContext } from "./lib/codex-context-observer.mjs";
-import { updateContext, editorView, sourceHash, contextHash, EDITOR_OUTPUT_MAX } from "./lib/context-editor.mjs";
+import { updateContext, editorView, sourceHash, contextHash, EDITOR_OUTPUT_MAX, requireContextRevisionRounds } from "./lib/context-editor.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Keep the browser and backend on the same build. Previously the server read
@@ -70,7 +70,8 @@ const UI_HTML = UI_SNAPSHOT.html;
 // 11: recovery actions name their original root and Pair cancellation recovers
 //     a whole cycle. Old pages offer unbound/per-seat actions for those entries.
 // 15: explicit subset routing and role-bounded listening.
-const RUNTIME_PROTOCOL = "15";
+// 16: unlimited/configurable context revisions, explicit call budgets and scoped Stop.
+const RUNTIME_PROTOCOL = "16";
 const IS_WIN = process.platform === "win32";
 
 const IMAGE_TYPES = new Map([
@@ -538,6 +539,7 @@ function defaultConfig(seats = DEFAULT_SEATS) {
     // before this keeps whatever it already had.
     hopBudget: 4,
     accounting: "automatic",
+    contextRevisionRounds: 0, // review rounds per context update/continuation (0 = no limit)
     pairRounds: 0,    // review rounds per message in pair mode (0 = until the reviewer approves)
     projectDir: null, // absolute path of a real project to work in (null = room's own sandbox workspace)
     roomNote: null,   // standing instruction prepended to every prompt (set via Settings or /note)
@@ -2241,15 +2243,17 @@ function startContextEditor(room, automatic = false) {
     if (automatic) { room.contextEditorAgain = true; return; }
     throw Object.assign(new Error("A context update is already running."), { status: 409 });
   }
+  const maxRounds = requireContextRevisionRounds(room.cfg.contextRevisionRounds);
   const token = { stopped: false };
   room.contextEditorWorker = token;
   room.exchanges++;
   const generation = room.generation, stopEpoch = room.stopEpoch;
-  const settingsHash = contextHash(room.cfg);
+  const editorSettingsHash = () => { const { contextRevisionRounds, ...settings } = room.cfg; return contextHash(settings); };
+  const settingsHash = editorSettingsHash();
   const reviewers = seatIds(room).map(id => ({ id, provider: providerIdOf(room, id), config: structuredClone(room.cfg.agents[id]), asleep: isAsleep(room, id) }));
-  const current = () => room.contextEditorWorker === token && !token.stopped && room.generation === generation && room.stopEpoch === stopEpoch && contextHash(room.cfg) === settingsHash && reviewers.every(reviewer => isAsleep(room, reviewer.id) === reviewer.asleep);
+  const current = () => room.contextEditorWorker === token && !token.stopped && room.generation === generation && room.stopEpoch === stopEpoch && editorSettingsHash() === settingsHash && reviewers.every(reviewer => isAsleep(room, reviewer.id) === reviewer.asleep);
   const ledger = contextLedger(room);
-  void updateContext({ ledger, reviewers, current, enrichSources: sources => enrichContextSources(room, sources), validateBrief: text => decisionContextText([{ id: crypto.randomUUID(), source: "reviewed context v999999", text }]).length <= CONTEXT_MAX_CHARS, publish: () => publishContext(room), invoke: (reviewer, prompt) => isolatedContextCall(room, reviewer, prompt, current) })
+  void updateContext({ ledger, reviewers, current, maxRounds, stopped: () => token.stopped, enrichSources: sources => enrichContextSources(room, sources), validateBrief: text => decisionContextText([{ id: crypto.randomUUID(), source: "reviewed context v999999", text }]).length <= CONTEXT_MAX_CHARS, publish: () => publishContext(room), invoke: (reviewer, prompt) => isolatedContextCall(room, reviewer, prompt, current) })
     .catch(error => { ledger.editor = { ...(ledger.editor || {}), status: "failed", reason: error.message, updatedAt: new Date().toISOString() }; publishContext(room); })
     .finally(() => { if (room.contextEditorWorker === token) room.contextEditorWorker = null; room.exchanges = Math.max(0, room.exchanges - 1); broadcast(room, { type: "room", room: roomSummary(room) }); if (room.contextEditorAgain) { room.contextEditorAgain = false; startContextEditor(room, true); } });
 }
@@ -7993,6 +7997,17 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (route === "POST /api/context/stop") {
+      const body = await readBody(req);
+      const room = loadRoom(body.room || "default");
+      room.contextEditorAgain = false;
+      const worker = room.contextEditorWorker;
+      if (worker) worker.stopped = true;
+      const child = room.procs.get("__contextEditor");
+      if (child) { child.rtStopped = true; killTree(child); }
+      return json(res, 200, { ok: true, stopped: !!worker });
+    }
+
     if (route === "POST /api/context/regenerate") {
       const body = await readBody(req);
       const room = loadRoom(body.room || "default");
@@ -8331,6 +8346,9 @@ const server = http.createServer(async (req, res) => {
       delete configPatch.maxHops;
       if (Object.prototype.hasOwnProperty.call(configPatch, "hopBudget")) {
         configPatch.hopBudget = requireRoomHopBudget(configPatch.hopBudget);
+      }
+      if (Object.hasOwn(configPatch, "contextRevisionRounds")) {
+        configPatch.contextRevisionRounds = requireContextRevisionRounds(configPatch.contextRevisionRounds);
       }
       let next = pruneSeats(deepMerge(defaultConfig((rosterSpecs || seatIds(room).map((id) => ({ id, provider: providerIdOf(room, id) })))), deepMerge(room.cfg, configPatch)));
       if (rosterSpecs) {
