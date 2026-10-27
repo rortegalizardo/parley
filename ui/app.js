@@ -107,7 +107,7 @@ function toast(msg, isErr) {
 // This blocks blind/cross-origin requests; it is not a secret from local
 // processes, which can fetch the public page and read the embedded token.
 const TOKEN = (document.querySelector('meta[name="parley-token"]') || {}).content || "";
-const REQUIRED_RUNTIME_PROTOCOL = "14";
+const REQUIRED_RUNTIME_PROTOCOL = "15";
 const PAGE_RUNTIME_PROTOCOL = (document.querySelector('meta[name="parley-runtime-protocol"]') || {}).content || "";
 const withToken = (url) => url + (url.includes("?") ? "&" : "?") +
   "token=" + encodeURIComponent(TOKEN) + "&protocol=" + encodeURIComponent(REQUIRED_RUNTIME_PROTOCOL);
@@ -785,7 +785,7 @@ function deliveryStatus(e) {
   const named = pair && typeof pair === "object" ? [...new Set([pair.worker, pair.reviewer].filter(Boolean))]
     : [...new Set([...(aud.addressed || []), ...(aud.asleep || [])])];
   const seats = named.length ? named
-    : ((state.summary && state.summary.seats) || []).filter((a) => e.target === "both" || e.target === a);
+    : ((state.summary && state.summary.seats) || []).filter((a) => routeSeats(e.target).includes(a));
   return seats.map((seat) => ({
     seat,
     kind: withheldFrom(seat, e.n) ? "cancelled"
@@ -1074,7 +1074,7 @@ function entryEl(e) {
       : ' <span style="opacity:.6" title="Asked again about an earlier message">· ↪ ask again</span>')
     : "";
   const label = e.kind === "user"
-    ? `${e.meta?.harness ? esc(e.meta.harness.label) + ' <span class="badge">external · ' + esc(e.meta.harness.intent === "context" ? "context only" : "delegated") + "</span>" : "You"} <span style="opacity:.65">→ @${esc(e.target === "both" ? "all" : e.target)}${e.meta && e.meta.discussion ? " · 💬 discussion" : ""}${userPair}</span>${askTag}`
+    ? `${e.meta?.harness ? esc(e.meta.harness.label) + ' <span class="badge">external · ' + esc(e.meta.harness.intent === "context" ? "context only" : "delegated") + "</span>" : "You"} <span style="opacity:.65">→ ${esc(routeLabel(e.target))}${e.meta && e.meta.discussion ? " · 💬 discussion" : ""}${userPair}</span>${askTag}`
     : esc(seatLabel(e.author)) + lurkTag + provenanceBadges(e.meta);
   const av = e.kind === "user" ? "" : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
@@ -2068,7 +2068,7 @@ function renderDiscussionMode() {
     btn.classList.toggle("converging", state.discussionMode === "converge" && state.chip === "both");
     const label = $("agentsBtnLabel");
     const selected = state.chip !== "auto" && state.chip !== "both";
-    if (label) label.textContent = selected ? `@${state.chip}` : "Agents";
+    if (label) label.textContent = selected ? routeLabel(state.chip) : "Agents";
     $("agentsBtnCount").hidden = selected;
     $("agentsBtnCount").textContent = `(${state.summary?.seats?.length || 0})`;
     if ($("agentPickerWrap").classList.contains("open")) {
@@ -2207,6 +2207,7 @@ function renderConvergenceRun(c, s) {
   const approvals = c.approvals || c.approvedBy || [];
   const approvedCount = Array.isArray(approvals) ? approvals.length : count(approvals);
   const total = c.total || c.participantCount || seats.length;
+  const positionTotal = c.positionTotal ?? ((c.participants || []).filter((p) => !p.reviewOnly).length || total);
   const round = c.round || c.reviewRound || 0;
   const maxRounds = c.maxRounds || c.convergenceRounds || state.convergenceRounds;
   // One position per participant, then each review round invokes every
@@ -2241,7 +2242,7 @@ function renderConvergenceRun(c, s) {
     ? `Continue from saved progress. Valid reviews from ${c.recovery.reusedReviews.map((agent) => `@${agent}`).join(", ")} are reused.`
     : "Continue from this run’s saved progress, using its remaining agent-call allowance.";
   const actions = terminal ? actionReason : `<div class="convergence-actions">${actionReason}${needsAttention && canResume ? `<div class="convergence-resume"><button type="button" data-convergence-action="resume">Resume this run</button><p>${esc(resumeHelp)}</p></div>` : ""}${needsAttention && canExtend ? `<button type="button" data-convergence-action="extend">Extend review <small>(+1 round · +${extendCalls} calls)</small></button>` : ""}${!needsAttention ? `<button type="button" data-convergence-action="stop">Stop</button>` : ""}</div>`;
-  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(callLabel)}</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div>${attention}${needsAttention ? actions : ""}<div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(total)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${needsAttention ? "" : actions}`;
+  panel.innerHTML = `<div class="convergence-head"><div><b>Shared handoff</b><span>${esc(phaseLabel)}${round ? ` · review ${esc(round)}/${esc(maxRounds)}` : ""} · ${esc(callLabel)}</span></div><span class="convergence-status ${esc(phase)}">${esc(outcome || "in progress")}</span></div>${attention}${needsAttention ? actions : ""}<div class="convergence-steps" aria-label="Convergence phases"><span class="${received ? "done" : ""}">Gathering <b>${esc(received)}/${esc(positionTotal)}</b></span><span class="${["drafting","reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Drafting</span><span class="${["reviewing","agreed","complete","unresolved"].includes(phase) ? "done" : ""}">Reviewing <b>${esc(approvedCount)}/${esc(total)}</b></span><span class="${["agreed","complete"].includes(phase) ? "done" : ""}">Agreement</span></div>${contributions.length ? `<details class="convergence-contributions"><summary>Inspect contributions (${contributions.length})</summary>${contributions.map((x, i) => `<article><b>${esc(x.agent || x.seat || x.name || `Agent ${i + 1}`)}${x.stage ? ` · ${esc(x.stage)}` : ""}</b>${x.decision ? `<small class="review-meta">${esc(x.decision)}${x.version ? ` · v${esc(x.version)}` : ""}${x.hash ? ` · ${esc(x.hash)}` : ""}</small>` : ""}<p>${esc(x.text || x.content || x.summary || "No contribution text")}</p>${x.reservation ? `<p class="review-reservation"><b>Reservation:</b> ${esc(x.reservation)}</p>` : ""}</article>`).join("")}</details>` : ""}${finalMarkup}${needsAttention ? "" : actions}`;
   const details = panel.querySelector(".convergence-contributions");
   if (details && detailsOpen) details.open = true;
   const draft = panel.querySelector(".convergence-draft");
@@ -2339,8 +2340,8 @@ function applySummary(s) {
     ear.classList.toggle("on", lurking);
     ear.setAttribute("aria-pressed", String(lurking));
     ear.title = lurking
-      ? `${a} is lurking: it overhears every exchange and may chime in (one extra ${a} call per message). Click to turn off.`
-      : `Let ${a} lurk: it will overhear every exchange and may chime in (one extra ${a} call per message). Click to turn on.`;
+      ? `${a} is listening: defaults to passing; flags material issues within its standing role. @all respects listening; explicit subsets exclude other seats. Assessments use model calls. Click to turn off.`
+      : `Let ${a} listen: defaults to passing; flags material issues within its standing role. @all respects listening; explicit subsets exclude other seats. Assessments use model calls. Click to turn on.`;
   }
   const mode = s.cfg.mode || "talk";
   document.querySelectorAll(".mbtn").forEach((b) => b.classList.toggle("active", b.dataset.m === mode));
@@ -2640,7 +2641,7 @@ $("pills").addEventListener("click", async (e) => {
   const cur = !!state.summary.cfg.agents[a].lurk;
   try {
     await api("/api/config", { room: state.room, config: { agents: { [a]: { lurk: !cur } } } });
-    toast(!cur ? `👂 ${a} is now lurking — it hears every exchange and may chime in` : `${a} stopped lurking`);
+    toast(!cur ? `👂 ${a} is listening — passes unless a material issue needs correction within its standing role; explicit subsets exclude other seats` : `${a} stopped lurking`);
   } catch (err) { toast(err.message, true); }
 });
 document.querySelectorAll(".mbtn").forEach((b) => {
@@ -2912,20 +2913,25 @@ $("queuePop").addEventListener("click", async (e) => {
       : "That was already out of the queue.");
   } catch (err) { toast(err.message, true); }
 });
-function guessTextTarget(raw) {
+function routeSeats(target, seats = state.summary?.seats || []) {
+  return target === "both" ? seats : [...new Set(String(target || "").split(","))];
+}
+function routeLabel(target) { return target === "both" ? "@all" : routeSeats(target).map((id) => `@${id}`).join(" + "); }
+function isMultiTarget(target) { return target === "both" || String(target).includes(","); }
+function guessTextRoute(raw) {
   const text = String(raw || "").trim();
   if (!text || !state.summary) return null;
   const seats = state.summary.seats;
-  // Mirror server textTarget exactly. User text routing is intentionally
-  // separate from the masked agent-mention grammar used for automatic calls.
+  // Mirror the server: leading routing tags win over mentions in the body.
   const alt = seats.map((s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  const tags = new Set([...text.matchAll(new RegExp(`@(${alt}|both|all)(?![a-z0-9-])`, "gi"))].map((m) => m[1].toLowerCase()));
-  if (tags.has("both") || tags.has("all") || seats.every((s) => tags.has(s))) return "both";
-  const lead = new RegExp(`^[*_~]*@(${alt})(?![a-z0-9-])[*_~]*[\\s:,]*`, "i").exec(text);
-  if (lead) return lead[1].toLowerCase();
-  for (const s of seats) if (tags.has(s)) return s;
-  return null;
+  const prefix = new RegExp(`^(?:[*_~]*@(?:${alt}|both|all)(?![a-z0-9-])[*_~]*[\\s:,]*)+`, "i");
+  const lead = text.match(prefix);
+  const tags = new Set([...(lead ? lead[0] : text).matchAll(new RegExp(`@(${alt}|both|all)(?![a-z0-9-])`, "gi"))].map((m) => m[1].toLowerCase()));
+  if (!tags.size) return null;
+  const addressed = seats.filter((id) => tags.has(id));
+  return { target: tags.has("both") || tags.has("all") || (seats.length > 1 && addressed.length === seats.length) ? "both" : addressed.join(","), group: tags.has("both") || tags.has("all") };
 }
+function guessTextTarget(raw) { return guessTextRoute(raw)?.target || null; }
 function seatAsleep(a) {
   const s = state.summary;
   return !!(s && s.agents && s.agents[a] && s.agents[a].asleep);
@@ -2978,21 +2984,22 @@ function draftRoute() {
   if (raw.startsWith("/")) return { command: true };
   if (s.pair && !explicit) return { pair: true, ...s.pair };
   let target = explicit || (state.chip !== "auto" ? state.chip : (s.lastAddressed || s.cfg.defaultAgent));
-  if (target !== "both" && !s.cfg.agents[target]) target = s.seats[0];
-  const targets = target === "both" ? s.seats : [target];
-  const enabledListeners = s.seats.filter((a) => !targets.includes(a) && !seatAsleep(a) && s.cfg.agents[a].lurk);
+  if (routeSeats(target, s.seats).some((id) => !s.cfg.agents[id])) target = s.seats[0];
+  const group = target === "both" && (explicit ? guessTextRoute(raw)?.group : state.chip === "both" || s.lastAddressedGroup !== false);
+  const targets = routeSeats(target, s.seats).filter((id) => !group || !s.cfg.agents[id].lurk);
+  const enabledListeners = String(target).includes(",") ? [] : s.seats.filter((a) => !targets.includes(a) && !seatAsleep(a) && s.cfg.agents[a].lurk);
   const listeners = enabledListeners.filter((a) => s.agents[a].liveLurkEligible === true);
   const listenerEligibilityKnown = enabledListeners.every((a) => typeof s.agents[a].liveLurkEligible === "boolean");
   return { target, targets, listeners, listenerEligibilityKnown };
 }
 function freshTurnEstimate(choice, route = draftRoute()) {
   if (!route || route.command || route.pair) return null;
-  if (choice === "solo") return route.target === "both" ? null : 1;
+  if (choice === "solo") return isMultiTarget(route.target) ? null : 1;
   if (route.target !== "both" && route.listenerEligibilityKnown === false) return null;
   const budget = choice === "default" ? roomHopBudget() : normalizedHopBudget(choice);
   const limit = effectiveHopLimit(budget);
   if (limit === null) return null;
-  if (automaticAccounting()) return (route.target === "both" ? 2 : 1) + limit;
+  if (automaticAccounting()) return route.targets.length + limit;
   return (route.target === "both" ? 5 : route.listeners.length ? 4 : 1) + 2 * limit;
 }
 function renderHopProjections() {
@@ -3049,13 +3056,13 @@ function soloTargetProblem(raw, hasAttachments = false) {
     return "Solo cannot start or run a pair cycle — choose Room or a continuation budget.";
   }
   const explicit = guessTextTarget(text);
-  if (explicit === "both") return "Solo needs one target — tag only one seat, not @all or multiple agents.";
+  if (isMultiTarget(explicit)) return "Solo needs one target — tag only one seat, not @all or multiple agents.";
   if (state.summary.pair && !explicit && !text.startsWith("/")) {
     return "Solo needs one explicit @seat while pair mode is on.";
   }
   const target = explicit
     || (state.chip !== "auto" ? state.chip : (state.summary.lastAddressed || state.summary.cfg.defaultAgent));
-  return target === "both" ? "Solo needs one target — choose a single seat." : "";
+  return isMultiTarget(target) ? "Solo needs one target — choose a single seat." : "";
 }
 function closeHopMenu() {
   const wrap = $("hopWrap");
@@ -3179,11 +3186,14 @@ function updateRouteHint() {
   const soloPairCommand = !!soloProblem && /^\/pair\b/i.test(raw.trim()) &&
     !/^\/pair\s+(?:end|stop|off)\b/i.test(raw.trim());
   $("routeHint").classList.toggle("warn", !!soloProblem);
-  if (explicit === "both" || (!pair && !explicit && state.chip === "both")) {
+  const effectiveTarget = explicit || (state.chip !== "auto" ? state.chip : (state.summary.lastAddressed || state.summary.cfg.defaultAgent));
+  const group = explicit ? guessTextRoute(raw)?.group : state.chip === "both" || state.summary.lastAddressedGroup !== false;
+  if (effectiveTarget === "both" && (!pair || explicit)) {
     const n = state.summary.seats.length;
     if (n === 1) { $("routeHint").textContent = `→ ${seatLabel(state.summary.seats[0])} · single-agent response`; return; }
-    const mode = state.discussionMode === "parallel" ? "parallel replies" : `one agreed handoff · ${state.convergenceRounds} review round${state.convergenceRounds === 1 ? "" : "s"}`;
-    $("routeHint").textContent = `→ all ${n} agents · ${mode}`;
+    const listening = group ? state.summary.seats.filter((id) => state.summary.cfg.agents[id].lurk) : [];
+    const mode = state.discussionMode === "parallel" ? (listening.length ? "active seats reply; listening seats assess within role" : "parallel replies") : `one agreed handoff · ${state.convergenceRounds} review round${state.convergenceRounds === 1 ? "" : "s"}`;
+    $("routeHint").textContent = `→ all ${n} agents · ${mode}${listening.length && state.discussionMode !== "parallel" ? ` · ${listening.map(seatLabel).join(" + ")} review only within role` : ""}`;
     return;
   }
   if (pair && !explicit && !raw.trim().startsWith("/")) {
@@ -3196,29 +3206,30 @@ function updateRouteHint() {
   const t = explicit
     || (state.chip !== "auto" ? state.chip : (state.summary.lastAddressed || state.summary.cfg.defaultAgent));
   const selectedBudget = state.hopChoice === "default" ? roomHopBudget() : normalizedHopBudget(state.hopChoice);
-  const liveListeners = state.summary.seats.filter((a) => a !== t && t !== "both" && !seatAsleep(a) && state.summary.cfg.agents[a].lurk);
-  const otherCount = t === "both" ? 0 : state.summary.seats.filter((a) => a !== t).length;
+  const liveListeners = String(t).includes(",") ? [] : state.summary.seats.filter((a) => a !== t && t !== "both" && !seatAsleep(a) && state.summary.cfg.agents[a].lurk);
+  const otherCount = String(t).includes(",") ? 0 : t === "both" ? 0 : state.summary.seats.filter((a) => a !== t).length;
   const behavior = state.hopChoice === "solo" ? "Solo"
+    : String(t).includes(",") ? "only these recipients · parallel replies"
     : t === "both" ? ((state.summary.cfg.mode || "talk") === "work" ? "discussion (no edits)" : "discussion")
       : liveListeners.length ? `${liveListeners.map(seatLabel).join(" + ")} may listen and respond`
         : otherCount === 0 ? "no other agents"
           : effectiveHopLimit(selectedBudget) === 0 ? "no extra peer response"
             : `${otherCount} other agent${otherCount === 1 ? "" : "s"} may respond if called`;
   const disc = ` · ${behavior}` + (state.hopChoice === "solo" ? "" : ` · ${selectedBudget === -1 ? hopBudgetDetail(selectedBudget) : `${effectiveHopLimit(selectedBudget)} ${accountingLabel().toLowerCase()}`}`);
-  const targets = t === "both" ? state.summary.seats : [t];
-  $("routeHint").textContent = "→ " + (t === "both" ? state.summary.seats.map(seatLabel).join(" + ") : seatLabel(t)) +
+  const targets = routeSeats(t);
+  $("routeHint").textContent = "→ " + (isMultiTarget(t) ? targets.map(seatLabel).join(" + ") : seatLabel(t)) +
     disc + (soloProblem
       ? (soloPairCommand ? " · ⚠ Solo can't run pair mode" : " · ⚠ Solo needs one seat")
       : sleepHint(targets));
 }
 function selectChip(target) {
-  if (state.hopChoice === "solo" && String(target) === "both") return false;
+  if (state.hopChoice === "solo" && isMultiTarget(target)) return false;
   const chips = [...document.querySelectorAll(".chip")];
   const chip = chips.find((candidate) => candidate.dataset.t === String(target));
   // Large rosters keep individual targets in the picker instead of rendering
   // a chip for every seat. Selection still updates routing and the visible
   // picker label when the target has no standalone chip.
-  if (!chip && !((state.summary?.seats || []).includes(String(target)))) return false;
+  if (!chip && !routeSeats(target).every((id) => (state.summary?.seats || []).includes(id))) return false;
   state.chip = String(target);
   chips.forEach((x) => x.classList.toggle("active", x === chip));
   renderAgentOptions(state.summary || { seats: [] });
@@ -3423,7 +3434,7 @@ async function loadRoom(name) {
   // Keep an explicit destination if it exists in the destination room. Only a
   // genuinely stale seat id falls back to automatic routing.
   const validChips = new Set(["auto", "both", ...(data.room.seats || [])]);
-  if (!validChips.has(state.chip)) state.chip = "auto";
+  if (!validChips.has(state.chip) && !routeSeats(state.chip).every((id) => (data.room.seats || []).includes(id))) state.chip = "auto";
   clearLive();
   closeQueuePop();
   state.entries = data.entries;
@@ -3878,8 +3889,9 @@ async function handleSlash(text) {
   }
   if (cmd === "/help") {
     localSystemNote(
-      "<b>Routing:</b> individual @agent tags route to one seat; @all reaches every agent · untagged goes to whoever you last addressed<br>" +
-      "<b>Agent calls:</b> @name always hands off · a plain direct call ('Agent, …') hands off when that agent is lurking or your message addressed all agents<br>" +
+      "<b>Routing:</b> leading @agent tags route to exactly those seats; @all reaches every agent · untagged goes to whoever you last addressed<br>" +
+      "<b>Agent calls:</b> @name requests a follow-up within the root's recipient scope and continuation limits; it cannot pull another seat into an explicit subset. Listening peers keep their standing role and default to passing.<br>" +
+      "<b>Listening:</b> @all respects listening: active seats answer; listeners assess within role, or review only in convergence. Name a listener explicitly to request a direct response.<br>" +
       "<b>/pair start @agent [task]</b> — pair mode: that agent works, the other reviews every message you send<br>" +
       "<b>/pair end</b> — leave pair mode (also the End button in the banner)<br>" +
       "<b>/note [text]</b> — standing room note every agent sees every turn (empty clears)<br>" +
@@ -3959,7 +3971,7 @@ async function send() {
       // providers omit it, so preserve the same visible selection from the
       // message's @mention as a compatibility fallback.
       const routed = r.explicit && r.target ? r.target : guessTextTarget(text);
-      if (routed) selectChip(routed);
+      if (routed) selectChip(routed === "both" && guessTextRoute(text)?.group === false ? "auto" : routed);
     }
     if (r.queued) toast(`⏳ Queued (#${r.position}) — sends when the target lane is free.`);
     // Partly delivered: the free seat is already answering, the busy one is next.
@@ -4584,9 +4596,9 @@ function renderSeatCards(s) {
       `<option value="quiet">Quiet</option>` +
       `<option value="balanced">Balanced</option>` +
       `<option value="vocal">Vocal</option></select>` +
-      `<div class="note">Quiet: only uncorrected errors. Balanced: errors, disagreements, and critical caveats. Vocal: anything with real signal.</div></div>`;
+      `<div class="note">Listening defaults to passing. Standing instructions and the assigned role always apply. Quiet: clear material errors or alignment violations. Balanced: also critical role-relevant caveats. Vocal: flag material role-relevant issues earlier; no generic answers.</div></div>`;
     f += `<div class="fld"><label>When listening: custom criteria</label>` +
-      `<input data-seat="${esc(a)}" data-f="lurkPrompt" placeholder="e.g. Interject whenever you disagree." spellcheck="false"><div class="note">Optional criteria override the participation preset. The agent can still return [pass] when it has nothing to add.</div></div>`;
+      `<input data-seat="${esc(a)}" data-f="lurkPrompt" placeholder="e.g. Flag material deviations from the agreed scope." spellcheck="false"><div class="note">Optional criteria replace the preset within the standing role. They cannot expand that role. Without a concrete material unresolved issue and a role-appropriate correction, the agent returns [pass].</div></div>`;
     f += "</details>";
     const sess = ag.linked
       ? `Session linked (${ag.sessionRef}…), seen through turn ${ag.cursor}.`

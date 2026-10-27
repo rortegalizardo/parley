@@ -89,8 +89,9 @@ The fork's rooms, transcripts and settings live in `~/.parley-fork` (override wi
 |---|---|
 | `@claude <text>` | Claude only |
 | `@codex <text>` | Codex only |
-| `@all <text>` | Every agent in the current roster, **in parallel** — replies stream in as they land (`@both` remains an alias) |
-| `<text>` | Whoever you last addressed |
+| `@claude @codex <text>` | Exactly these recipients; a subset gets parallel replies and only these seats may follow up. Leading routing tags are removed from the task. |
+| `@all <text>` | Every agent in the current roster; converges to one agreed handoff by default. Choose Parallel replies for independent responses (`@both` remains an alias). Listening seats assess within role in Parallel; in convergence they review rather than gather/draft. |
+| `<text>` | Whoever you last addressed, including a subset |
 
 Each agent has its own **lane**: tag them back-to-back and they genuinely work at the same time. Everything you send is accepted and posted the instant you send it — only *delivery* waits on a busy agent (⏳ badge, delivered in order). The badge opens the queue — one card per *dispatch*, the batch of deliveries one send created — and its ✕ withdraws whatever that dispatch still has waiting.
 

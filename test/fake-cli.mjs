@@ -205,7 +205,7 @@ const sawWhatReply = () => {
   return "SAWJSON " + JSON.stringify({ briefing: inert(briefingText), prompt: inert(prompt) });
 };
 
-const isLurk = has("you are lurking", prompt) || has("not addressed in this exchange", prompt);
+const isLurk = has("you are lurking", prompt) || has("not addressed in this exchange", prompt) || has("You were not addressed", prompt) || has("You are listening again, not addressed", prompt);
 const isClosure = has("causal closure delivery", prompt) || has("causal answer delivery", prompt);
 const isReview = has("you are the reviewer", prompt);
 const isFix = has("review feedback above", prompt);

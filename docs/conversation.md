@@ -1,5 +1,10 @@
 # How the room behaves
 
+Leading `@claude @codex` addresses exactly those seats, with parallel replies for a subset. Other seats cannot listen or be pulled in by follow-up tags on that root. Auto inherits the subset. Leading routing tags are removed from the task; later mentions are content. API target strings may be comma-separated (`claude,codex`); the bridge accepts `@claude,@codex`. Multi-seat work-room turns remain read-only discussions.
+
+`@all`/`@both` preserve listening roles. With Parallel replies, active seats answer and enabled listeners assess the exchange within their standing roles. In convergence, active seats gather positions and draft; listening seats only review the exact candidate within their assigned role. Every reviewer must return an explicit valid approval or objection; `[pass]` is incomplete, never agreement. Explicitly naming a listening seat requests a direct response within its standing instructions. If every group recipient is listening, sending is refused with guidance to name a seat or turn off listening for a speaker.
+
+
 Routing, delivery, the context protocol, lurk mode, agent-to-agent continuations and pair sessions. This is the detailed reference; the [README](../README.md) has the short version.
 
 ## Talking to the table
@@ -95,7 +100,7 @@ A message whose delivery you cancelled, or whose response you stopped, keeps its
 
 ## Lurk mode 👂
 
-Opt-in per agent, per room (the 👂 on each agent's pill; config key `agents.<name>.lurk`). A lurking agent overhears every exchange it wasn't addressed in: after the addressed agent replies, the lurker is invoked with the delta and may chime in (marked "👂 chimed in") or silently pass (a brief "listened — nothing to add" whisper). Normally that costs one extra call to the lurking agent per message — that's the trade for real-time awareness and unprompted interjections.
+Opt-in per agent, per room (the 👂 on each agent's pill; config key `agents.<name>.lurk`). A lurking agent overhears eligible exchanges it wasn't addressed in (explicit multi-seat subsets exclude other seats, including listeners): after the addressed agent replies, the lurker is invoked with the delta and may chime in (marked "👂 chimed in") or silently pass (a brief "listened — nothing to add" whisper). Normally that costs one extra call to the lurking agent per message — that's the trade for real-time awareness and unprompted interjections.
 
 If the listener is occupied — either running a turn or already owing user-addressed work in its lane — the lurk is delayed, not discarded. Parley persists one coalesced obligation per seat outside the user queue, extends it across further missed exchanges, and waits until every accepted user exchange and queued delivery has settled. User work therefore always wins. The listener then gets one full-delta catch-up, with the missed exchanges in their real chronological order, rather than one stale call per message. Roots that actually selected the seat to lurk are marked actionable; later Solo and otherwise-unselected messages remain visible as context for deciding whether an issue became stale, but cannot themselves trigger an interjection. Any ordinary successful invocation that has already advanced its cursor past the obligation supersedes the catch-up automatically.
 
@@ -103,17 +108,11 @@ The obligation survives a restart and is attempted once. A successful spoken res
 
 A seat with **Full access** that also lurks uses coalesced catch-ups — several overheard exchanges can share one delayed reaction. Claude's protected listener turns use Plan sessions: switching between full-access work and Plan starts fresh with room history, but consecutive protected turns resume the same Plan session. A room notice explains this when the combination is enabled. Separately, stopping a seat's response also stops the other seat's lurk on that exchange: there is no answer left to react to, and the extra call would land exactly when quota is the concern.
 
-Whether a lurker speaks is its own model's judgment — there is no mechanical trigger — so Settings gives each agent a dial (`lurkStyle`):
+Listening defaults to `[pass]`. The agent's standing instructions and assigned role govern participation on every invocation, including native-session reminders. Speaking requires both a concrete material unresolved issue and a correction or alignment intervention within that role. Listening does not invite another generic answer, summary, alternative design, or gap-filling response. A moderator flags process, scope, decision and role/instruction violations; it does not become another architect unless its standing instructions assign that responsibility.
 
-- **`quiet`** — interjects only for outright problems: an uncorrected error, something about to break.
-- **`balanced`** (default) — adds real disagreements, critical caveats and needs the exchange left unmet.
-- **`vocal`** — adds better approaches and useful additions; only small talk stays silent.
+Settings supplies role-bounded criteria (`lurkStyle`): Quiet flags clear material errors or alignment violations; Balanced also covers critical role-relevant caveats; Vocal flags material role-relevant issues earlier. Custom `lurkPrompt` criteria replace the preset but remain subordinate to standing instructions and role bounds. Without an eligible intervention, the exact response is `[pass]`, which advances the cursor without adding a transcript message. This is model judgment, not a mechanical guarantee; listening still invokes the model and useful role-specific corrections remain possible.
 
-A free-text `lurkPrompt` overrides the preset's intervention criteria. Parley's silence protocol remains structural: when those criteria do not call for an interjection, the lurker must still return exactly `[pass]`, so custom wording cannot turn a silent pass into transcript output.
-
-Lurkers deliberately respect your explicit constraints — if you demand "just yes or no," they won't pile on; they intervene when something consequential is left standing, like a risky plan mentioned in passing that the addressed agent didn't touch.
-
-**Lurk-as-reviewer** is the flagship combination: a work room where one agent codes and the other lurks. The lurker sees every action, may read workspace files to verify, and interjects only when it has something real — a bug, a risk, a better approach. Continuous unprompted code review.
+A work-room code reviewer can still flag a material bug in the implementation. A moderator listening to a healthy architecture discussion should pass; if an architect violates the agreed scope, the moderator can briefly identify that violation and the needed alignment.
 
 ## Sleeping a seat 😴
 

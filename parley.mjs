@@ -69,7 +69,8 @@ const UI_HTML = UI_SNAPSHOT.html;
 //    lane order is not arrival order.
 // 11: recovery actions name their original root and Pair cancellation recovers
 //     a whole cycle. Old pages offer unbound/per-seat actions for those entries.
-const RUNTIME_PROTOCOL = "14";
+// 15: explicit subset routing and role-bounded listening.
+const RUNTIME_PROTOCOL = "15";
 const IS_WIN = process.platform === "win32";
 
 const IMAGE_TYPES = new Map([
@@ -1220,7 +1221,7 @@ function historyTail(room, agent, maxChars = 6000, maxEntries = 40) {
     if (withdrawnFrom(room, agent, e)) {
       fullLine = withdrawalLine(room, agent, e);
     } else if (e.kind === "user") {
-      const to = e.target === "both" ? "both" : e.target === agent ? "you" : e.target;
+      const to = targetLabel(e.target, agent);
       const relayed = relayMessage(`${sourceLabel(e)} (to ${to})`, e.text, attached);
       const note = withdrawalNote(room, agent, e).trim();
       fullLine = note ? `${note}\n${relayed}` : relayed;
@@ -2388,7 +2389,7 @@ function sourceLabel(e) {
 }
 
 function transcriptHeader(e) {
-  const author = e.kind === "user" ? `${sourceLabel(e)} → @${e.target}` : e.author;
+  const author = e.kind === "user" ? `${sourceLabel(e)} → ${targetLabel(e.target)}` : e.author;
   return `### ${e.n} | ${author} | ${e.ts}`;
 }
 
@@ -2818,7 +2819,7 @@ function roomSummary(room) {
     dir: room.dir,
     workspace: workDir(room),
     git: gitIdentity(workDir(room)),
-    lastAddressed: room.state.lastAddressed,
+    lastAddressed: room.state.lastAddressed, lastAddressedGroup: room.state.lastAddressedGroup,
     seats,
     rosterVersion: rosterVersion(room),
     providers: providerCatalog(),
@@ -3056,7 +3057,7 @@ function withdrawnFrom(room, agent, e) {
   return e.kind === "user" && cancelledFor(room, e.n).includes(agent);
 }
 function withdrawalLine(room, agent, e) {
-  const to = e.target === "both" ? "both" : e.target === agent ? "you" : e.target;
+  const to = targetLabel(e.target, agent);
   return `(the user sent a message to ${to} here and cancelled it before it was delivered — ` +
     `its contents were withheld from you)`;
 }
@@ -3176,7 +3177,7 @@ function buildDelta(room, agent, excludeTurn, entries = deltaEntries(room, agent
       explained.add(e.n);
       continue; // no body and no attachments: this seat never received either
     } else if (e.kind === "user") {
-      const to = e.target === "both" ? "both" : e.target === agent ? "you" : e.target;
+      const to = targetLabel(e.target, agent);
       // A delayed lurk receives the complete delta so it can see whether an
       // earlier concern was superseded, but only roots that actually selected
       // this seat as a lurker are invitations to interject. Mark that boundary
@@ -3222,7 +3223,7 @@ const blockFp = (text) => crypto.createHash("sha256").update(text, "utf8").diges
 // directly by the other agent") and the exact [pass] contract, because a
 // degraded sentinel costs whole extra invocations — far more than the savings.
 const BLOCK_REMINDERS = {
-  lurk: "(You are lurking again — not addressed in this exchange. The same interjection criteria from your earlier briefing apply. If they do not call for an interjection, reply with exactly: [pass]. Do not add any other text.)",
+  lurk: "(You are listening again, not addressed. Default to [pass]. Standing instructions and your assigned role still bound intervention, including with Vocal/custom criteria. Speak only for a concrete material unresolved issue and a correction/alignment intervention within that role; never generically answer the task or fill gaps. A moderator enforces process/role alignment, not substantive expert opinions. Apply the earlier criteria only inside these bounds. Otherwise reply exactly [pass], with no other text.)",
   hop: "(You were addressed directly by the other agent — the same peer-contribution ground rules from your earlier briefing apply. Answer the concrete point briefly; if you truly have nothing to add, reply with exactly: [pass])",
   discussion: "(This message went to both agents — a table discussion, same ground rules as before: form your own view, do not modify files or run mutating commands this turn, and tag the other agent explicitly only if you want them to answer.)",
   sibling: "(The other agent's reply from the same @both exchange arrived after your snapshot — same rules as before: respond only if it materially changes the result or asks something of you; otherwise reply exactly [pass].)",
@@ -3499,7 +3500,8 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
       const base = buildPrompt(room, delta, userTurn, providerInputs,
         opts.heldCount || 0, askBlock, noteBlock(room, agent, dlv), opts.heldReason || "sleep");
       const allowance = opts.convergence ? "" : rootAllowanceNote(room, userTurn, { root: true });
-      return dlv.prefix + noted(ts.discussion
+      const recipientNote = !opts.convergence && multiTarget(userTurn.target) ? `\n\n(Parley routing: this task addresses ${targetLabel(userTurn.target)}. You are an addressed participant: answer the task within your standing role; the other recipients are not a request to hand off or pass.)` : "";
+      return dlv.prefix + recipientNote + noted(ts.discussion
         ? `${base}\n\n${discussionBlock(room, agent, dlv)}` : base) +
         (allowance ? `\n\n(${allowance})` : "");
     };
@@ -3641,27 +3643,18 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
   }
 }
 
-// Lurk mode: an agent with cfg.lurk enabled overhears every exchange it wasn't
-// addressed in. After the addressed agent replies, the lurker is invoked with
-// the room delta and may chime in — or reply "[pass]" to stay silent (the
-// transcript gets nothing, only its cursor advances).
-// Intervention threshold is prompt-space, not mechanics: the lurker's own model
-// judges whether to speak. These styles set the criteria and explicitly fight
-// the politeness bias that makes assistant models default to silence.
+// Listening is a role-bounded assessment, not an invitation to answer the task.
 const LURK_STYLES = {
-  quiet: "Interject ONLY for outright problems: a factual or technical error that went uncorrected, or something likely to break or cause harm if the user acts on it. Everything else — even useful nuance — stays silent.",
-  balanced: "Interject when speaking would genuinely change the outcome: an uncorrected factual or technical error, a recommendation you substantially disagree with, a critical caveat the user would want before acting, or an obvious need the exchange left unmet (e.g. they just learned their approach fails but not what to use instead — give the fix). Do NOT interject just to agree, rephrase, or add minor color.",
-  vocal: "Ask yourself: would a sharp senior colleague overhearing this speak up? Then interject whenever you have real signal: an error, a disagreement, an important caveat, a materially different approach, a concrete addition the user would value — and especially when the exchange leaves the user hanging (e.g. they learned their approach doesn't work but not what to do instead: jump in with the fix). Only pure acknowledgements and small talk deserve silence.",
+  quiet: "Only flag a clear, material uncorrected error or alignment violation within your standing role.",
+  balanced: "Flag a material uncorrected error, critical caveat, or alignment violation within your standing role when it would change the outcome.",
+  vocal: "Within your standing role, flag material errors, caveats, disagreements or alignment violations earlier, while they can still change the outcome. Do not contribute generic opinions or solve the task.",
 };
-// This is a control protocol, not a style preference. A custom instruction may
-// replace the intervention criteria, but it must never erase the exact token
-// runListenerTurn parses to distinguish silence from a spoken interjection.
-const LURK_PASS_PROTOCOL = "Parley control protocol (always applies, including with custom criteria): if the criteria above do not call for an interjection, reply with exactly: [pass]. Do not add an acknowledgement, explanation, or any other text.";
+const LURK_ROLE_GATE = "You were not addressed. Default to [pass]. Your standing instructions and assigned role govern whether you may intervene; listening never expands that role. Before speaking, require BOTH a concrete material unresolved issue in this exchange AND a correction or alignment intervention that belongs to your assigned role. A moderator checks process, scope, decisions and role/instruction alignment; it does not add substantive architecture/product opinions or answer for the addressed experts unless its standing instructions explicitly assign that responsibility. If no role was assigned, restrict intervention to clear material factual/technical errors. Do not answer the user's question, fill perceived gaps, propose alternatives, agree, summarize, or offer generic advice just because you can. Speak briefly only to identify the specific issue and its role-appropriate correction; otherwise pass. These role bounds also apply to Vocal and custom criteria.";
+const LURK_PASS_PROTOCOL = "Parley control protocol (always applies, including with custom criteria): if the role gate and criteria do not BOTH call for an interjection, reply with exactly: [pass]. Do not add an acknowledgement, explanation, or any other text.";
 function lurkInstruction(cfgAgent) {
   const custom = cfgAgent.lurkPrompt && String(cfgAgent.lurkPrompt).trim();
   const criteria = custom || LURK_STYLES[cfgAgent.lurkStyle] || LURK_STYLES.balanced;
-  return "(You were not addressed in this exchange — you are lurking because the user explicitly enabled it. Offer unprompted judgment when it materially helps. Silence is not agreement. " +
-    `Interjection criteria: ${criteria}\n\n${LURK_PASS_PROTOCOL})`;
+  return `(${LURK_ROLE_GATE}\nInterjection criteria (subject to your standing instructions and role): ${criteria}\n\n${LURK_PASS_PROTOCOL})`;
 }
 const LURK_PASS = /^[\s\W]*pass[\s\W]*$/i;
 
@@ -4057,7 +4050,7 @@ function makeScope(room, rootN, target, initial) {
   const scope = {
     on: !!initial || rootDiscussion(room, rootN),
     now() {
-      if (!scope.on && target === "both" && room.cfg.mode === "work") {
+      if (!scope.on && multiTarget(target) && room.cfg.mode === "work") {
         scope.on = true;
         const lu = room.state.lastUser;
         if (lu && lu.n === rootN && !lu.discussion) { lu.discussion = true; saveState(room); }
@@ -4147,7 +4140,8 @@ async function runHopTurn(room, agent, triggerEntry, rootN, scope = NO_SCOPE, op
         : legKey
         ? staticBlock(room, agent, dlv, legKey, LEG_INSTRUCTIONS[legKey])
         : opts.instruction;
-      const body = `${noteBlock(room, agent, dlv)}${head}${trigger}${rootAttachmentContext}\n\n${instruction}` +
+      const listenerGate = room.cfg.agents[agent].lurk && !(rootEntry?.meta?.audience?.addressed || []).includes(agent) && !opts.meta?.pair ? `\n\n${lurkInstruction(room.cfg.agents[agent])}` : "";
+      const body = `${noteBlock(room, agent, dlv)}${head}${trigger}${rootAttachmentContext}\n\n${instruction}${listenerGate}` +
         (budgetNote ? `\n\n(Continuation allowance: ${budgetNote})` : "");
       return dlv.prefix + body + (ts.discussion ? `\n${discussionBlock(room, agent, dlv)}` : "");
     };
@@ -4287,19 +4281,30 @@ async function runHopTurn(room, agent, triggerEntry, rootN, scope = NO_SCOPE, op
   }
 }
 
-// Only explicit @tags route from message text. Multiple distinct seat tags mean
-// both seats; a single leading tag is stripped from the prompt for convenience.
-// Any text-derived target beats the chip; the chip beats last-addressed.
+// Keep targets as strings for stored transcripts and bridge clients. A comma
+// separates an explicit subset; only @all/@both (or the complete roster) means all.
+function targetSeats(room, target) {
+  return target === "both" || target === "all" ? seatIds(room) : [...new Set(String(target || "").split(","))];
+}
+function multiTarget(target) { return target === "both" || String(target).includes(","); }
+function restrictedAudience(entry) { return Array.isArray(entry?.meta?.recipientScope) ? entry.meta.recipientScope : null; }
+function targetLabel(target, agent = null) {
+  return target === "both" ? "all agents" : String(target).split(",").map((id) => id === agent ? "you" : `@${id}`).join(" + ");
+}
 function textTarget(room, text) {
   text = String(text || "");
   const seats = seatIds(room);
   const alt = seatAlt(room);
-  const tags = new Set([...text.matchAll(new RegExp(`@(${alt}|both|all)(?![a-z0-9-])`, "gi"))].map((m) => m[1].toLowerCase()));
-  if (tags.has("both") || tags.has("all") || (seats.length > 1 && seats.every((s) => tags.has(s)))) return { target: "both", text };
-  const lead = new RegExp(`^[*_~]*@(${alt})(?![a-z0-9-])[*_~]*[\\s:,]*`, "i").exec(text);
-  if (lead) return { target: lead[1].toLowerCase(), text: text.slice(lead[0].length).trim() };
-  for (const s of seats) if (tags.has(s)) return { target: s, text };
-  return null;
+  const prefix = new RegExp(`^(?:[*_~]*@(?:${alt}|both|all)(?![a-z0-9-])[*_~]*[\\s:,]*)+`, "i");
+  const lead = text.match(prefix);
+  const tags = new Set([...(lead ? lead[0] : text).matchAll(new RegExp(`@(${alt}|both|all)(?![a-z0-9-])`, "gi"))].map((m) => m[1].toLowerCase()));
+  if (!tags.size) return null;
+  const addressed = seats.filter((id) => tags.has(id));
+  const target = tags.has("both") || tags.has("all") || (seats.length > 1 && addressed.length === seats.length)
+    ? "both" : addressed.join(",");
+  // Consume all leading routing tags; mentions in the task remain task content.
+
+  return { target, text: text.replace(prefix, "").trim(), group: tags.has("both") || tags.has("all") };
 }
 
 function resolveTarget(room, text, targetSel) {
@@ -4308,8 +4313,11 @@ function resolveTarget(room, text, targetSel) {
   let target = targetSel && targetSel !== "auto" ? targetSel : null;
   if (target === "all") target = "both";
   if (!target) target = room.state.lastAddressed || room.cfg.defaultAgent;
-  if (target !== "both" && !room.cfg.agents[target]) target = seatIds(room)[0];
-  return { target, text };
+  if (targetSeats(room, target).some((id) => !room.cfg.agents[id])) {
+    if (targetSel && targetSel !== "auto") throw Object.assign(new Error(`unknown target: ${target}`), { status: 400 });
+    target = seatIds(room)[0];
+  }
+  return { target, text, group: target === "both" && (targetSel === "both" || targetSel === "all" || room.state.lastAddressedGroup !== false) };
 }
 
 // ---- pair sessions: /pair [rounds] <task> ----
@@ -4807,16 +4815,16 @@ function planMessage(room, raw, targetSel) {
   }
   const starting = !!pairCmd && pairCmd.action === "start";
   const body = pairCmd ? pairCmd.task : raw;
-  const { target, text } = resolveTarget(room, body, targetSel);
+  const { target, text, group } = resolveTarget(room, body, targetSel);
   const explicit = !!textTarget(room, body);
   const pair = starting
     ? { worker: target, reviewer: otherSeat(room, target) }
     : room.state.pair;
-  const asPairTurn = !!pair && target !== "both" &&
+  const asPairTurn = !!pair && !multiTarget(target) &&
     (starting || !explicit);
   const seats = asPairTurn ? [pair.worker, pair.reviewer].filter(Boolean)
-    : target === "both" ? seatIds(room) : [target];
-  return { pairCmd, starting, target, text, explicit, pair, asPairTurn, seats };
+    : targetSeats(room, target);
+  return { pairCmd, starting, target, text, group, explicit, pair, asPairTurn, seats };
 }
 
 function relayUsed(room, rootN) {
@@ -4957,8 +4965,8 @@ function startRecoveredDelivery(room, userTurn, targets, scope, turnOptions = nu
   const queueGroupId = `d${room.dispatchSeq++}`;
   const relayPolicy = relayPolicyForEntry(room, userTurn);
   const noteRecoveryLurkers = (reason, invoked = new Set(targets)) => {
-    if (relayPolicy.solo || userTurn.target === "both") return;
-    for (const agent of seatIds(room)) {
+    if (relayPolicy.solo || restrictedAudience(userTurn)) return;
+    for (const agent of userTurn.meta?.audience?.lurking || []) {
       if (!invoked.has(agent) && room.cfg.agents[agent].lurk) {
         noteLurkOutcome(room, agent, userTurn.n, reason);
       }
@@ -5010,7 +5018,7 @@ function startRecoveredDelivery(room, userTurn, targets, scope, turnOptions = nu
         // root, whichever coordinator reaches this serialized boundary second
         // reconciles both durable direct replies. Cursor checks inside the
         // coordinator suppress any direction the first one already delivered.
-        const initialReplies = userTurn.target === "both"
+        const initialReplies = multiTarget(userTurn.target)
           ? directRootReplies(room, userTurn) : replies;
         const eligibleAuthors = new Set(initialReplies.map((entry) => entry.author));
         const coordinator = createCausalCoordinator(room, {
@@ -5031,9 +5039,9 @@ function startRecoveredDelivery(room, userTurn, targets, scope, turnOptions = nu
           noteRecoveryLurkers("stopped", coordinator.invoked);
           return;
         }
-        const listeners = relayPolicy.solo || userTurn.target === "both"
+        const listeners = relayPolicy.solo || restrictedAudience(userTurn)
           ? []
-          : seatIds(room).filter((agent) => !coordinator.invoked.has(agent) &&
+          : (userTurn.meta?.audience?.lurking || (userTurn.target === "both" ? [] : seatIds(room))).filter((agent) => !coordinator.invoked.has(agent) &&
             room.cfg.agents[agent].lurk);
         const lurkers = [];
         for (const agent of listeners) {
@@ -5158,7 +5166,7 @@ function launchUserDispatch(room, userTurn, {
     // this coordinator was still awaiting its original provider. Reconcile
     // exact direct-root entries at the serialized boundary; never infer a
     // successful half from a high cursor or unrelated later traffic.
-    const initialReplies = userTurn.target === "both"
+    const initialReplies = multiTarget(userTurn.target)
       ? directRootReplies(room, userTurn) : localInitialReplies;
     const successfulInitialAuthors = new Set(initialReplies.map((entry) => entry.author));
     const coordinator = createCausalCoordinator(room, {
@@ -5241,7 +5249,7 @@ function launchUserDispatch(room, userTurn, {
 
 function convergenceResumeCalls(run) {
   const n = run.participants.length;
-  const missing = run.participants.filter((p) => run.positions[p.id]?.status !== "complete").length;
+  const missing = run.participants.filter((p) => !p.reviewOnly && run.positions[p.id]?.status !== "complete").length;
   const round = run.rounds?.at(-1);
   if (!round?.text) return missing + n + 1;
   if (allApproved(round.reviews, run.participants, round.version, round.hash)) return missing;
@@ -5249,7 +5257,7 @@ function convergenceResumeCalls(run) {
   return missing + run.participants.filter((p) => !round.reviews[p.id] || round.reviews[p.id].status === "unresolved").length;
 }
 function convergenceFailures(run, stage = null) {
-  const positionFailures = stage === "review" ? [] : run.participants.filter((p) => run.positions[p.id]?.status !== "complete")
+  const positionFailures = stage === "review" ? [] : run.participants.filter((p) => !p.reviewOnly && run.positions[p.id]?.status !== "complete")
     .map((p) => ({ agent: p.id, stage: "position", reason: run.positions[p.id]?.reason || "No independent position returned." }));
   if (positionFailures.length || stage === "position") return positionFailures;
   const round = run.rounds?.at(-1);
@@ -5278,6 +5286,7 @@ function convergenceSummary(room) {
   return { ...c, final, status: c.final?.status || c.phase, total: c.participants.length,
     received: Object.values(c.positions).filter((p) => p.status === "complete").length,
     approvals: Object.values(c.reviews).filter((r) => ["approve", "approve_with_reservation"].includes(r.status) && r.version === c.draftVersion && r.draftHash === c.draftHash).length,
+    positionTotal: c.participants.filter((p) => !p.reviewOnly).length,
     contributions: c.positions, outcome: c.final?.status || null,
     actions: { resume: terminal && !refusal && c.phase !== "unresolved" && convergenceResumeCalls(c) <= remaining,
       extend: terminal && !refusal && c.maxRounds < 99, stop: !terminal && c.phase !== "agreed", reason: refusal },
@@ -5358,7 +5367,7 @@ async function runConvergence(room, userTurn) {
   const invoke = async (agent, stage, instruction) => {
     if (!live()) return null;
     const result = await runAgentTurn(room, agent, userTurn, scope, {
-      instruction: `${userTurn.meta?.harness ? sourceLabel(userTurn) : "User"} task: ${run.task}\n\n${instruction}`, convergence: true, convergenceBuffer: true,
+      instruction: `${userTurn.meta?.harness ? sourceLabel(userTurn) : "User"} task: ${run.task}\n\n${run.participants.find((p) => p.id === agent)?.reviewOnly ? "You are a listening participant in a group convergence review, not an independent expert contributor. Your standing instructions and role strictly bound this review. Review only material violations of your assigned constraints, scope, process or alignment. Do not add substantive opinions, alternatives or generic answers outside your role. For a moderator, approval means no blocking process/role-alignment violation; it does not claim substantive architectural expertise. Use the required explicit JSON approval/objection protocol, never [pass]; silence/pass is incomplete and cannot count as approval.\n\n" : ""}${instruction}`, convergence: true, convergenceBuffer: true,
       allowEmpty: true, valid: live,
       // This callback runs at every adapter boundary, including a native
       // session recovery retry; it never borrows the ordinary auto-hop budget.
@@ -5378,7 +5387,9 @@ async function runConvergence(room, userTurn) {
     delete run.recovery;
     run.phase = "gathering";
     publish();
-    const missing = participants.filter((a) => run.positions[a]?.status !== "complete");
+    const speakers = run.participants.filter((p) => !p.reviewOnly).map((p) => p.id);
+    if (!speakers.length) return finish("incomplete", "No active speaker: name a listening seat explicitly or turn off listening for a speaker.");
+    const missing = speakers.filter((a) => run.positions[a]?.status !== "complete");
     if (!enough(missing.length)) return;
     await Promise.all(missing.map(async (agent) => {
       const result = await invoke(agent, "position", "CONVERGENCE POSITION (independent stage). Give your recommendation, reasons and concerns. Do not address other agents. Silence or [pass] cannot count as a position.");
@@ -5413,7 +5424,7 @@ async function runConvergence(room, userTurn) {
         publish();
         const previous = run.rounds[run.rounds.length - 2];
         const revision = previous ? `\nPREVIOUS DRAFT:\n${previous.text}\nREVIEWS TO ADDRESS (each objector must later approve):\n${JSON.stringify(previous.reviews)}` : "";
-        const result = await invoke(participants[0], "draft", `You are the convergence drafter. Synthesize the independent positions into one actionable answer to the user's task. Address every blocking objection in a revised candidate. You cannot declare another agent's approval. Return only the candidate answer text.\nPOSITIONS:\n${composeDraft(run.positions)}${revision}`);
+        const result = await invoke(speakers[0], "draft", `You are the convergence drafter. Synthesize the independent positions into one actionable answer to the user's task. Address every blocking objection in a revised candidate. You cannot declare another agent's approval. Return only the candidate answer text.\nPOSITIONS:\n${composeDraft(run.positions)}${revision}`);
         if (!live()) return;
         if (!result?.text?.trim() || LURK_PASS.test(result.text)) return finish("incomplete", result?.error || "Drafter returned no candidate.");
         round.text = result.text;
@@ -5465,7 +5476,7 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   // One pass decides everything: who it's for, whether it's a pair turn, and
   // which seats it needs. The queue asks the same function, so the two can't
   // drift apart (that disagreement is exactly what made asides queue wrongly).
-  const plan = harness ? { pairCmd: null, starting: false, target: targetSel, text: raw0, explicit: true, pair: null, asPairTurn: false, seats: targetSel === "both" ? seatIds(room) : [targetSel] } : planMessage(room, raw0, targetSel);
+  const plan = harness ? { pairCmd: null, starting: false, group: targetSel === "both", target: targetSel, text: raw0, explicit: true, pair: null, asPairTurn: false, seats: targetSeats(room, targetSel) } : planMessage(room, raw0, targetSel);
   const { pairCmd, starting: startingPair, target, text } = plan;
   const hasHopOverride = Object.prototype.hasOwnProperty.call(rawRelay, "hopBudget");
   const hopOverride = hasHopOverride ? requireMessageHopBudget(rawRelay.hopBudget) : null;
@@ -5474,7 +5485,7 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   // Solo is incompatible with a pair *cycle*, not with the controls that merely
   // arm or end pair mode. Those controls append no user turn and have no relay
   // policy to apply, so the sticky composer shortcut must not block them.
-  if (solo && (target === "both" || (plan.asPairTurn && !tasklessPairStart))) {
+  if (solo && (multiTarget(target) || (plan.asPairTurn && !tasklessPairStart))) {
     throw Object.assign(new Error("Solo needs one ordinary addressee; it cannot be used with @both or a pair turn"), { status: 400 });
   }
   const relayPolicy = {
@@ -5503,10 +5514,10 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
     return;
   }
 
-  if (startingPair && target === "both") throw Object.assign(new Error("/pair needs a single worker — tag one agent"), { status: 400 });
+  if (startingPair && multiTarget(target)) throw Object.assign(new Error("/pair needs a single worker — tag one agent"), { status: 400 });
   if (startingPair && seatIds(room).length < 2) throw Object.assign(new Error("Pair mode needs at least two agents."), { status: 400 });
   if (!text && !prepared.length && !startingPair) throw Object.assign(new Error("empty message"), { status: 400 });
-  if (target !== "both" && !room.cfg.agents[target]) throw Object.assign(new Error(`unknown target: ${target}`), { status: 400 });
+  if (targetSeats(room, target).some((id) => !room.cfg.agents[id])) throw Object.assign(new Error(`unknown target: ${target}`), { status: 400 });
   if (convergenceActive(room)) {
     throw Object.assign(new Error("A convergence run is active. Wait for it to finish or stop it before starting a new task."), { status: 409 });
   }
@@ -5584,15 +5595,18 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   const effectiveTarget = asPairTurn ? pair.worker : target;
 
   const allSeats = seatIds(room);
-  const requested = effectiveTarget === "both" ? [...allSeats] : [effectiveTarget];
+  const requested = targetSeats(room, effectiveTarget);
   // Only reachable for @both: every other shape was refused above. The message
   // is real and one seat did receive it, so what the other one missed is
   // recorded against the entry rather than quietly dropped.
   // The message is real and is kept for whoever was asleep. For a split @both
   // one seat receives it now and the other's copy waits; for a message aimed
   // only at a sleeping seat, `agents` empties and nothing launches at all.
-  const sleeping = requested.filter((a) => isAsleep(room, a));
-  const agents = requested.filter((a) => !sleeping.includes(a));
+  const groupListeners = plan.group ? requested.filter((a) => room.cfg.agents[a].lurk) : [];
+  const speakers = requested.filter((a) => !groupListeners.includes(a));
+  if (!speakers.length) throw Object.assign(new Error("Every group recipient is listening. Name a seat explicitly to request a response, or turn off listening for a speaker."), { status: 400 });
+  const sleeping = speakers.filter((a) => isAsleep(room, a));
+  const agents = speakers.filter((a) => !sleeping.includes(a));
   // Every turn is appended and snapshotted the moment it is accepted, in the
   // order the user sent it; only the *work* waits. An ordinary turn holds a
   // delivery per occupied seat — including all of them, which is how a @both
@@ -5615,13 +5629,14 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   // the lurk filter downstream would drop them anyway, but not before writing a
   // second notice saying the message was never delivered, next to the one
   // saying it is being held.
-  const listeners = asPairTurn || solo || !agents.length ? [] // the reviewer is already in the loop
-    : allSeats.filter((a) => !agents.includes(a) && !sleeping.includes(a) && room.cfg.agents[a].lurk);
-  const discussion = effectiveTarget === "both" && room.cfg.mode === "work";
+  const recipientScope = String(effectiveTarget).includes(",") ? requested : null;
+  const listeners = asPairTurn || solo || recipientScope || !agents.length ? [] // the reviewer is already in the loop
+    : allSeats.filter((a) => !agents.includes(a) && !isAsleep(room, a) && room.cfg.agents[a].lurk);
+  const discussion = multiTarget(effectiveTarget) && room.cfg.mode === "work";
   const convergence = !asPairTurn && effectiveTarget === "both" && allSeats.length > 1 && discussionMode !== "parallel";
   const reviewRounds = convergence ? convergenceRoundsValue(convergenceRounds) : null;
   if (convergence && (roomWorkInFlight(room) || room.queuePaused)) throw Object.assign(new Error("Wait for current room work to finish and resume the queue before starting convergence."), { status: 409 });
-  if (convergence && sleeping.length) throw Object.assign(new Error("Convergence needs every addressed agent awake."), { status: 409 });
+  if (convergence && requested.some((a) => isAsleep(room, a))) throw Object.assign(new Error("Convergence needs every addressed agent awake."), { status: 409 });
   const attachments = persistAttachments(room, prepared);
   let userTurn;
   try {
@@ -5629,6 +5644,8 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
       kind: "user", author: harness ? `harness:${harness.client}` : "user", target: effectiveTarget, text,
       meta: {
         ...(harness ? { harness } : {}),
+        ...(target === "both" ? { groupAddress: !!plan.group } : {}),
+        ...(recipientScope ? { recipientScope } : {}),
         audience: { addressed: agents, lurking: listeners, ...(sleeping.length ? { asleep: sleeping } : {}) },
         ...(!asPairTurn ? { relay: relayPolicy } : {}),
         ...(attachments.length ? { attachments } : {}),
@@ -5642,6 +5659,7 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
     throw e;
   }
   room.state.lastAddressed = effectiveTarget;
+  room.state.lastAddressedGroup = !!plan.group;
   room.state.lastUser = {
     n: userTurn.n, text: truncate(text, 2000), target: effectiveTarget, done: {},
     pair: asPairTurn, discussion,
@@ -5649,7 +5667,7 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   };
   saveState(room);
   if (convergence) {
-    const participants = [...agents];
+    const participants = [...requested];
     const maxRounds = reviewRounds;
     const runId = `cv-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
     if (room.state.convergence) {
@@ -5658,7 +5676,7 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
       previous.actions = { resume: false, extend: false, stop: false, reason: "A newer task replaced this run." };
       room.state.convergenceHistory = [...(room.state.convergenceHistory || []), previous].slice(-20);
     }
-    room.state.convergence = createConvergenceRun({ runId, rootN: userTurn.n, task: text, maxRounds, participants: participants.map((id) => ({ id, provider: providerIdOf(room, id), configHash: convergenceConfigHash(room, id), config: structuredClone(room.cfg.agents[id]) })), plannedCalls: participants.length + maxRounds * (participants.length + 1) });
+    room.state.convergence = createConvergenceRun({ runId, rootN: userTurn.n, task: text, maxRounds, participants: participants.map((id) => ({ id, reviewOnly: groupListeners.includes(id), provider: providerIdOf(room, id), configHash: convergenceConfigHash(room, id), config: structuredClone(room.cfg.agents[id]) })), plannedCalls: agents.length + maxRounds * (participants.length + 1) });
     saveState(room); broadcast(room, { type: "room", room: roomSummary(room) });
     Object.assign(room.state.convergence, { configHash: draftHash(JSON.stringify(room.cfg)), configSnapshot: structuredClone(room.cfg), discussion });
     runConvergence(room, userTurn);
@@ -6379,7 +6397,7 @@ function deferDelivery(room, agent, userTurn, scope, dispatch = {}, opts = {}) {
       // The badge means "the other seat answered this before me", so it belongs
       // to a split @both. A single-seat message simply waiting its turn in its
       // own lane is the ordinary case and needs no marking.
-      const deferred = userTurn.target === "both";
+      const deferred = multiTarget(userTurn.target);
       if (dispatch.chain) dispatch.chain.delivered++;
       // A re-delivery clears its withheld marker here rather than at enqueue.
       // Cleared early, the receipt dot would immediately fall through to the
@@ -6791,7 +6809,7 @@ function wakeAndDeliver(room, agent) {
   // longer acquire the boundary. Without this line, a Talk-mode @both held for a
   // sleeping seat, a flip to Work, and a delivery that fails before the launch
   // path consults the scope would add up to a Retry running with write access.
-  const boundary = rootDiscussion(room, root.n) || (root.target === "both" && room.cfg.mode === "work");
+  const boundary = rootDiscussion(room, root.n) || (multiTarget(root.target) && room.cfg.mode === "work");
   room.state.lastUser = {
     n: root.n, text: truncate(root.text || "", 2000), target: agent, done: {},
     pair: false, discussion: boundary,
@@ -6841,7 +6859,9 @@ function pairRetryRoot(room, lu = room.state.lastUser) {
 function retryEnvelope(room, lu = room.state.lastUser) {
   if (!lu) return [];
   // Wake can deliberately narrow this envelope from the original @both root.
-  return lu.target === "both" ? seatIds(room) : [lu.target];
+  const root = room.entries.find((e) => e.n === lu.n && e.kind === "user");
+  const envelope = root?.meta?.groupAddress ? [...(root.meta.audience?.addressed || []), ...(root.meta.audience?.asleep || [])] : targetSeats(room, lu.target);
+  return [...new Set(envelope)].filter((id) => room.cfg.agents[id]);
 }
 
 function requireRetrySeats(room, value, envelope) {
@@ -7076,12 +7096,12 @@ function handleAsk(room, opts = {}) {
     : source.kind === "agent" ? source.author
       : (source.target === "both" ? "both" : source.target);
   if (target === "all") target = "both";
-  if (target !== "both" && !room.cfg.agents[target]) {
+  if (targetSeats(room, target).some((id) => !room.cfg.agents[id])) {
     throw Object.assign(new Error(`unknown target: ${target}`), { status: 400 });
   }
   const hasHopOverride = Object.prototype.hasOwnProperty.call(opts, "hopBudget");
   const solo = opts.solo === true;
-  if (solo && target === "both") {
+  if (solo && multiTarget(target)) {
     throw Object.assign(new Error("Solo needs one ordinary addressee; it cannot be used with @both or a pair turn"), { status: 400 });
   }
   const relayPolicy = {
@@ -7091,9 +7111,12 @@ function handleAsk(room, opts = {}) {
     solo,
   };
   const allSeats = seatIds(room);
-  const requested = target === "both" ? [...allSeats] : [target];
-  const sleeping = requested.filter((a) => isAsleep(room, a));
-  const agents = requested.filter((a) => !sleeping.includes(a));
+  const requested = targetSeats(room, target);
+  const group = target === "both" && (explicit || source.meta?.groupAddress !== false);
+  const speakers = group ? requested.filter((a) => !room.cfg.agents[a].lurk) : requested;
+  if (!speakers.length) throw Object.assign(new Error("Every group recipient is listening. Name a seat explicitly to request a response, or turn off listening for a speaker."), { status: 400 });
+  const sleeping = speakers.filter((a) => isAsleep(room, a));
+  const agents = speakers.filter((a) => !sleeping.includes(a));
   // Stopping a run and then holding the ask for a sleeping seat would leave the
   // user with a killed response and nothing asked. Refuse before the stop.
   if (mode === "stop" && !agents.length) {
@@ -7109,14 +7132,18 @@ function handleAsk(room, opts = {}) {
   // ---- 2. the atomic half: stop, then append, then place, in ONE tick ----
   const stop = mode === "stop" ? handleStop(room, { scope: "active", runs: pins }) : null;
 
-  const listeners = solo || !agents.length ? []
-    : allSeats.filter((a) => !agents.includes(a) && !sleeping.includes(a) && room.cfg.agents[a].lurk);
+  const recipientScope = String(target).includes(",") ? requested : null;
+  const listeners = solo || recipientScope || !agents.length ? []
+    : allSeats.filter((a) => !agents.includes(a) && !isAsleep(room, a) && room.cfg.agents[a].lurk);
   const attachments = persistAttachments(room, prepared);
   let userTurn;
   try {
     userTurn = appendEntry(room, {
       kind: "user", author: "user", target, text,
       meta: {
+        ...(target === "both" ? { groupAddress: group } : {}),
+        ...(recipientScope ? { recipientScope } : {}),
+        ...(multiTarget(target) && room.cfg.mode === "work" ? { discussion: true } : {}),
         audience: { addressed: agents, lurking: listeners, ...(sleeping.length ? { asleep: sleeping } : {}) },
         relay: relayPolicy,
         ...(attachments.length ? { attachments } : {}),
@@ -7134,9 +7161,9 @@ function handleAsk(room, opts = {}) {
   // Only when the user picked a seat in the dialog. A target derived from the
   // source message is not a fresh act of addressing someone, and rewriting
   // lastAddressed would re-route their next untagged composer message.
-  if (explicit) room.state.lastAddressed = target;
+  if (explicit) { room.state.lastAddressed = target; room.state.lastAddressedGroup = group; }
   room.state.lastUser = {
-    n: userTurn.n, text: truncate(text, 2000), target, done: {}, pair: false, discussion: false,
+    n: userTurn.n, text: truncate(text, 2000), target, done: {}, pair: false, discussion: multiTarget(target) && room.cfg.mode === "work",
     ...(attachments.length ? { attachments } : {}),
   };
   saveState(room);
@@ -7711,7 +7738,7 @@ function roomsWithModes() {
 const bridgeBackend = createBridgeBackend({ root: ROOT,
   port: () => server.address()?.port, listRooms, loadRoom, saveState,
   busy: (room) => convergenceActive(room) || roomWorkInFlight(room),
-  send: (room, text, target, harness) => handleUserMessage(room, text, target, [], [], target === "both" ? {} : { solo: true }, null, null, harness),
+  send: (room, text, target, harness) => handleUserMessage(room, text, target, [], [], multiTarget(target) ? {} : { solo: true }, String(target).includes(",") ? "parallel" : null, null, harness),
   append: appendEntry,
 });
 
@@ -8428,7 +8455,7 @@ const server = http.createServer(async (req, res) => {
             room.state.agents[spec.id] = defaultState({ [spec.id]: room.cfg.agents[spec.id] }).agents[spec.id];
           }
         }
-        if (room.state.lastAddressed && room.state.lastAddressed !== "both" && !live.has(room.state.lastAddressed)) {
+        if (room.state.lastAddressed && targetSeats(room, room.state.lastAddressed).some((id) => !live.has(id))) {
           room.state.lastAddressed = [...live][0] || null;
         }
         if (room.cfg.defaultAgent !== "both" && !live.has(room.cfg.defaultAgent)) {
