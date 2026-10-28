@@ -292,6 +292,14 @@ $("dlTranscript").onclick = async (ev) => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) { toast(e.message, true); }
 };
+// Reservations ride along with an agreement; they are not objections, so they
+// read as a caution line under the decision rather than a separate warning.
+function agreedReservationsHTML(list) {
+  const items = (Array.isArray(list) ? list : []).filter((r) => r && r.text);
+  if (!items.length) return "";
+  return `<div class="agreed-handoff-reservations">${items.length} reservation${items.length === 1 ? "" : "s"} · ` +
+    items.map((r) => `<span><b>${esc(seatLabel(r.agent))}:</b> ${esc(r.text)}</span>`).join(" · ") + "</div>";
+}
 function hhmm(ts) { return (ts || "").slice(11, 16); }
 function dayOf(ts) { return (ts || "").slice(0, 10); }
 // A room that spans days showed a column of indistinguishable "14:02"s, with
@@ -1004,7 +1012,7 @@ function entryEl(e) {
     const convergence = e.meta && e.meta.convergence;
     if (convergence?.status === "agreed") div.classList.add("agreed-handoff");
     div.innerHTML = convergence && convergence.status === "agreed"
-      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Agreed handoff</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
+      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Decision${convergence.participants?.length ? ` · agreed by ${esc(convergence.participants.length)}` : " · agreed"}</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div>${agreedReservationsHTML(convergence.reservations)}<details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
       : esc(e.text);
     const recovery = e.meta && e.meta.error && recoveryForEntry(e);
     if (recovery) {
@@ -1076,7 +1084,9 @@ function entryEl(e) {
   const label = e.kind === "user"
     ? `${e.meta?.harness ? esc(e.meta.harness.label) + ' <span class="badge">external · ' + esc(e.meta.harness.intent === "context" ? "context only" : "delegated") + "</span>" : "You"} <span style="opacity:.65">→ ${esc(routeLabel(e.target))}${e.meta && e.meta.discussion ? " · 💬 discussion" : ""}${userPair}</span>${askTag}`
     : esc(seatLabel(e.author)) + lurkTag + provenanceBadges(e.meta);
-  const av = e.kind === "user" ? "" : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
+  const av = e.kind === "user"
+    ? `<span class="avatar user-avatar">${esc(String(e.meta?.harness?.label || "You").trim().charAt(0).toUpperCase() || "Y")}</span>`
+    : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
     `<button class="ask" title="Ask about this message" aria-label="Ask about this message">${controlIcon("ask")}</button>` +
     `<button class="pin-decision" title="Save as persistent decision" aria-label="Save as persistent decision">${controlIcon("pin")}</button><button class="cpy" title="Copy message" aria-label="Copy message">${controlIcon("copy")}</button></div>` +
@@ -1996,6 +2006,23 @@ function injectSeatStyles() {
   if (!el) { el = document.createElement("style"); el.id = "seatStyles"; document.head.appendChild(el); }
   el.textContent = css;
 }
+// The header's who-is-here line: overlapping seat avatars and one status
+// phrase, so the room reads like a team chat before the pills are opened.
+function renderRoomCrew(s) {
+  const crew = $("roomCrew");
+  if (!crew) return;
+  const seats = s.seats || [];
+  const shown = seats.slice(0, 4);
+  crew.querySelector(".crew-stack").innerHTML = shown.map((a) =>
+    `<span class="crew-av${s.busy.includes(a) ? " busy" : ""}${s.agents?.[a]?.asleep ? " asleep" : ""}" style="--seat-color:${seatColor(a)}" title="${esc(seatLabel(a))}">${esc(seatAvatar(a))}</span>`).join("") +
+    (seats.length > shown.length ? `<span class="crew-av more">+${seats.length - shown.length}</span>` : "");
+  const busy = seats.filter((a) => s.busy.includes(a)).length;
+  const asleep = seats.filter((a) => s.agents?.[a]?.asleep).length;
+  const bits = [`${seats.length} agent${seats.length === 1 ? "" : "s"}`, busy ? `${busy} working` : "all idle"];
+  if (asleep) bits.push(`${asleep} asleep`);
+  crew.querySelector(".crew-status").textContent = bits.join(" · ");
+  crew.hidden = !seats.length;
+}
 function renderSeatsUI(s) {
   const seats = s.seats;
   $("empty").classList.toggle("room-selected", !!state.room);
@@ -2287,6 +2314,7 @@ function applySummary(s) {
   renderContextSettings(s);
   syncChipUI();
   $("roomTitle").textContent = s.name;
+  renderRoomCrew(s);
   for (const a of s.seats) {
     const pill = $("pill_" + a);
     if (!pill) continue;

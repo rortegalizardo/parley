@@ -1,4 +1,13 @@
-## Current checkpoint — room → session links (2026-10-27)
+## Current checkpoint — Team chat layout (2026-10-27)
+
+The primary agent rebuilt the chat as direction "A · Team chat", picked by the user from a design canvas. Every message, the user's too, sits on the left with a 32px round avatar, name and time on one line and plain text below (no bubbles). An agreed handoff renders as a "✓ Decision · agreed by N" card with reservations in amber. The header shows overlapping seat avatars and "N agents · all idle / N working". Class names are unchanged. Changes: a "Team chat" layer at the end of `ui/styles.css`, `#roomCrew` in `ui/index.html`, and `renderRoomCrew` / `agreedReservationsHTML` plus a user avatar in `ui/app.js`. `RUNTIME_PROTOCOL` unchanged.
+
+- Smoke 42/4 and browser 17/25: identical to the baseline, so no regressions. The visual overflow test (both themes, 1440 and 390) passes. The header crew hides below 400px wide.
+- Checked by hand on an isolated fake-provider demo, dark and light, desktop and phone width. 4142 was not touched.
+
+Next action: restart 4142 when idle (recheck ownership and idle state first), then reload tabs.
+
+## Previous checkpoint — room → session links (2026-10-27)
 
 The primary agent added `bin/parley-link.mjs` so a room can hand decisions to a linked Claude Code session without the user relaying them. Client-only: no server change, no 4142 restart, `RUNTIME_PROTOCOL` unchanged. Docs: [Room → session links](docs/HARNESS-BRIDGE.md#room--session-links); session-side instructions in the global skill `~/.claude/skills/parley-link`.
 
