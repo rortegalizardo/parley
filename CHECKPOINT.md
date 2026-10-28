@@ -4,7 +4,9 @@ The primary agent replaced the reviewed room brief with a short **room direction
 
 - Targeted isolated check (21 checks) passed: converge writes nothing, limits enforced, pin/tidy suggestions, send-once + reminder, re-send on edit, revoke on clear, legacy retired once. `test/codex-context.mjs` and `test/unit.mjs` pass. Full smoke/browser suites not run. Checked by hand on an isolated fake-provider demo.
 
-Next action: restart 4142 (user's OK + idle check), then save the user-approved M2 direction through `POST /api/context/direction`.
+- 4142 restarted with the user's OK after an idle check: server PID **51796**, runner PID **51800**. The user-approved M2 direction (goal + 10 decisions, 1,286 chars) is saved in "Factory M1-M2"; the old 21k brief stays on disk as legacy.
+
+Next action: reload open 4142 tabs to see the Direction tab.
 
 ## Previous checkpoint — fresh sessions from rooms (2026-10-27)
 
