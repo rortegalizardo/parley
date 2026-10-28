@@ -2,7 +2,7 @@
 // ------------------------------------------------------------ state
 const $ = (id) => document.getElementById(id);
 function controlIcon(name) {
-  const paths = { ear: '<path d="M8 17c0 4 6 4 6 0 0-2 5-3 5-8A7 7 0 0 0 5 9m4 1a3 3 0 0 1 6 0c0 2-3 2-3 5"/>', moon: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/>', ask: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>', pin: '<path d="M7 4h10v17l-5-4-5 4z"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>', check: '<path d="m5 12 5 5 9-10"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>' };
+  const paths = { ear: '<path d="M8 17c0 4 6 4 6 0 0-2 5-3 5-8A7 7 0 0 0 5 9m4 1a3 3 0 0 1 6 0c0 2-3 2-3 5"/>', moon: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/>', ask: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>', pin: '<path d="M7 4h10v17l-5-4-5 4z"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>', check: '<path d="m5 12 5 5 9-10"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>', more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>', folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', work: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>', archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/>', rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>', trash: '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/>' };
   return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ""}</svg>`;
 }
 
@@ -3587,13 +3587,26 @@ async function refreshRooms() {
     row.innerHTML =
       `<button type="button" class="ropen"><span class="dot"></span>` +
       `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left">${esc(name)}</span>` +
-      `<span class="rmeta">${seatTag}${linked ? "📁" : ""}${mode === "work" ? "🔨" : ""}</span></button>` +
-      `<span class="racts"><button type="button" class="ract" data-act="archive" title="Archive room" aria-label="Archive ${esc(name)}">▤</button><button type="button" class="ract" data-act="rename" title="Rename room" aria-label="Rename ${esc(name)}">✎</button>` +
+      `<span class="rmeta">${seatTag}${linked ? `<span class="rflag" title="Linked to a workspace folder">${controlIcon("folder")}</span>` : ""}${mode === "work" ? `<span class="rflag work" title="Work mode">${controlIcon("work")}</span>` : ""}</span></button>` +
+      // One stable "more" button: the row's status icons never swap places
+      // with the actions, which open as a labelled strip under the row.
+      `<button type="button" class="rmore" title="Room actions" aria-label="Actions for ${esc(name)}" aria-expanded="false">${controlIcon("more")}</button>` +
+      `<span class="racts"><button type="button" class="ract" data-act="archive" title="Archive room" aria-label="Archive ${esc(name)}">${controlIcon("archive")}Archive</button><button type="button" class="ract" data-act="rename" title="Rename room" aria-label="Rename ${esc(name)}">${controlIcon("rename")}Rename</button>` +
       // the default room is the app's fallback; it can be emptied, not removed
-      (name === "default" ? "" : `<button type="button" class="ract del" data-act="delete" title="Delete room" aria-label="Delete ${esc(name)}">✕</button>`) +
+      (name === "default" ? "" : `<button type="button" class="ract del" data-act="delete" title="Delete room" aria-label="Delete ${esc(name)}">${controlIcon("trash")}Delete</button>`) +
       `</span>`;
     row.onclick = (e) => {
+      const more = e.target.closest(".rmore");
+      if (more) {
+        e.stopPropagation();
+        const open = !row.classList.contains("menu-open");
+        closeRoomMenus();
+        row.classList.toggle("menu-open", open);
+        more.setAttribute("aria-expanded", String(open));
+        return;
+      }
       const act = e.target.closest(".ract");
+      if (act) closeRoomMenus();
       if (!act) { setNavOpen(false); return loadRoom(name); }
       e.stopPropagation();
       if (act.dataset.act === "rename") renameFlow(name); else if (act.dataset.act === "archive") archiveRoom(name); else deleteFlow(name);
@@ -3601,6 +3614,14 @@ async function refreshRooms() {
     list.appendChild(row);
   }
 }
+function closeRoomMenus() {
+  for (const row of document.querySelectorAll("#roomList .room-item.menu-open")) {
+    row.classList.remove("menu-open");
+    row.querySelector(".rmore")?.setAttribute("aria-expanded", "false");
+  }
+}
+document.addEventListener("click", (e) => { if (!e.target.closest?.("#roomList .room-item.menu-open")) closeRoomMenus(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeRoomMenus(); });
 // New-room seat pickers: pre-filled with the default pair, visible so the
 // choice is discoverable, never a required step.
 function fillSeatPickers() {
