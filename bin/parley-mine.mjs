@@ -14,9 +14,10 @@ const args = process.argv.slice(2).flatMap((arg) => {
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`Parley Mine — isolated launcher for the personal fork.
 
-Usage: parley-mine [--port N] [--root DIR] [--no-open] [--version] [--help]
+Usage: parley-mine [--port N] [--root DIR] [--no-open] [--no-runner] [--version] [--help]
 
-Defaults: http://127.0.0.1:4142 and ~/.parley-fork`);
+Defaults: http://127.0.0.1:4142 and ~/.parley-fork
+--no-runner  do not start the @desktop:new runner (bin/parley-runner.mjs)`);
   process.exit(0);
 }
 
@@ -40,6 +41,19 @@ if (!args.includes("--version") && !args.includes("-v") && Number.isFinite(reque
     process.exit(1);
   }
 }
+
+// The @desktop:new runner lives and dies with the server (see bin/parley-runner.mjs).
+if (!args.includes("--no-runner") && !args.includes("--version") && !args.includes("-v")) {
+  // The runner reads this server's own bridge credential, never another root's.
+  const root = path.resolve(args[args.indexOf("--root") + 1].replace(/^~(?=$|\/)/, os.homedir()));
+  const runnerArgs = ["--server-pid", String(process.pid), "--credential", path.join(root, ".bridge", "clients", "claude.json")];
+  if (root !== path.join(os.homedir(), ".parley-fork")) runnerArgs.push("--home", path.join(root, ".runner"));
+  const runner = spawn(process.execPath, [fileURLToPath(new URL("./parley-runner.mjs", import.meta.url)), ...runnerArgs], { stdio: ["ignore", "inherit", "inherit"] });
+  runner.on("error", () => { /* @desktop:new is unavailable; the server is unaffected */ });
+  process.on("exit", () => { try { runner.kill(); } catch { /* already gone */ } });
+}
+const runnerFlag = args.indexOf("--no-runner");
+if (runnerFlag >= 0) args.splice(runnerFlag, 1);
 
 process.argv = [process.argv[0], fileURLToPath(new URL("../parley.mjs", import.meta.url)), ...args];
 process.env.PARLEY_EXACT_PORT = "1";

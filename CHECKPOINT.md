@@ -1,4 +1,13 @@
-## Current checkpoint — Team chat layout (2026-10-27)
+## Current checkpoint — fresh sessions from rooms (2026-10-27)
+
+The primary agent added `bin/parley-runner.mjs`: a room message with a line `@desktop:new` and a `Folder:` line starts a fresh headless `claude -p --permission-mode auto` run in that folder, no click. Results come back to the room as context notes, with a `claude --resume` line. `parley-mine` starts the runner with the server (`--no-runner` opts out). Follow-ups to an existing session still use `parley-link --as <handle>` and `@desktop:<handle>`. Docs: [Fresh sessions](docs/HARNESS-BRIDGE.md#fresh-sessions-desktopnew); skill `~/.claude/skills/parley-link` updated. `RUNTIME_PROTOCOL` and the server are unchanged.
+
+- Isolated check on a fixture server with a fake `claude`: history ignored, mid-sentence mention ignored, bad folder got a "not started" note, a valid request ran in the right folder with the right flags and a clean env, and the start and result notes reached a busy room once it was free (outbox). Launcher hook checked on a temp root. Full suites not run.
+- Since the team chat checkpoint: room-row fix (`5a3a1d8`); 4142 restarted again, PID **40594** (it does not have the runner yet).
+
+Next action: restart 4142 (needs the user's OK) so the runner starts, then try one `@desktop:new` from a room.
+
+## Previous checkpoint — Team chat layout (2026-10-27)
 
 The primary agent rebuilt the chat as direction "A · Team chat", picked by the user from a design canvas. Every message, the user's too, sits on the left with a 32px round avatar, name and time on one line and plain text below (no bubbles). An agreed handoff renders as a "✓ Decision · agreed by N" card with reservations in amber. The header shows overlapping seat avatars and "N agents · all idle / N working". Class names are unchanged. Changes: a "Team chat" layer at the end of `ui/styles.css`, `#roomCrew` in `ui/index.html`, and `renderRoomCrew` / `agreedReservationsHTML` plus a user avatar in `ui/app.js`. `RUNTIME_PROTOCOL` unchanged.
 

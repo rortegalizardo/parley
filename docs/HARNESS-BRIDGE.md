@@ -87,8 +87,18 @@ node bin/parley-link.mjs --room "<room>" --as <handle> [--accept-new] [--until-d
 - Each delivery is written to `~/.parley-links/<room>/<handle>/<n>.md` (owner-only) and announced as one line: `PARLEY_DELIVERY room="…" n=… to=@desktop:<handle> kind=handoff|reply file=…`. The session reads only that file, never the transcript, so it does not take on the room's context.
 - `--until-delivery` exits after a delivery, so a background shell (Claude Code `run_in_background`) wakes the session once; relaunch it to keep listening. Saved state means nothing is missed or repeated between launches. Without the flag it prints one line per delivery forever (for a line watcher).
 - A new link starts from now; history is never delivered. One link per room and handle (`link.pid` lock). It refuses to run inside room-launched agents.
-- `--accept-new` also accepts `@desktop:new`, for a hub session that proposes a fresh session with the handoff as its brief.
+- `--accept-new` also accepts `@desktop:new`, for a hub session that proposes a fresh session with the handoff as its brief. Not needed on 4142: the runner below starts fresh sessions itself. Do not run both, or each `@desktop:new` is handled twice.
 - Errors print `PARLEY_LINK_ERROR "…"` once per distinct problem; credential, scope and server-identity errors end an `--until-delivery` run with exit code 1.
+
+### Fresh sessions (`@desktop:new`)
+
+`bin/parley-runner.mjs` starts a fresh, context-free Claude Code run for a room, with no click. `parley-mine` starts it with the server (`--no-runner` turns it off) and it stops with the server.
+
+- Trigger: a message from the user, an agent or an agreed handoff with a line that is just `@desktop:new` (bold or backticks allowed). A mention mid-sentence does nothing. History before the runner started never triggers.
+- The message must have a `Folder: <path>` line, a directory inside the home folder (`~` allowed). An optional `Title:` line names the run. A missing or bad folder gets a "not started" note instead.
+- It runs `claude -p --permission-mode auto --output-format json -n <title>` in that folder, detached, with the message (minus the trigger line) as the prompt and no Claude Code or Parley variables from the server's environment.
+- The room gets a context note when it starts and another with the final message, cost and a `claude --resume <id>` line when it ends. Notes never start room agents; a busy room gets them once it is free.
+- Runs outlive a server restart and are reported by the next runner. State and outputs: `~/.parley-links/_runner/` (owner-only). It reads the root's `claude` bridge credential and refuses to run inside room agents.
 
 The global Claude Code skill `parley-link` (`~/.claude/skills/parley-link/SKILL.md`) describes the session side: linking, acting within the user's permission, reporting back with an `intent: "context"` note, and stopping the link.
 
