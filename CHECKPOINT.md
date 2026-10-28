@@ -3,9 +3,9 @@
 The primary agent added `bin/parley-runner.mjs`: a room message with a line `@desktop:new` and a `Folder:` line starts a fresh headless `claude -p --permission-mode auto` run in that folder, no click. Results come back to the room as context notes, with a `claude --resume` line. `parley-mine` starts the runner with the server (`--no-runner` opts out). Follow-ups to an existing session still use `parley-link --as <handle>` and `@desktop:<handle>`. Docs: [Fresh sessions](docs/HARNESS-BRIDGE.md#fresh-sessions-desktopnew); skill `~/.claude/skills/parley-link` updated. `RUNTIME_PROTOCOL` and the server are unchanged.
 
 - Isolated check on a fixture server with a fake `claude`: history ignored, mid-sentence mention ignored, bad folder got a "not started" note, a valid request ran in the right folder with the right flags and a clean env, and the start and result notes reached a busy room once it was free (outbox). Launcher hook checked on a temp root. Full suites not run.
-- Since the team chat checkpoint: room-row fix (`5a3a1d8`); 4142 restarted again, PID **40594** (it does not have the runner yet).
+- Since the team chat checkpoint: room-row fix (`5a3a1d8`). 4142 restarted with the user's OK after an idle check: server PID **44448**, runner PID **44450**, both rooms intact, runner polling with no errors.
 
-Next action: restart 4142 (needs the user's OK) so the runner starts, then try one `@desktop:new` from a room.
+Next action: try one `@desktop:new` from a room.
 
 ## Previous checkpoint — Team chat layout (2026-10-27)
 
