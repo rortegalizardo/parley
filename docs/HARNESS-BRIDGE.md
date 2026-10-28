@@ -97,10 +97,10 @@ node bin/parley-link.mjs --room "<room>" --as <handle> [--accept-new] [--until-d
 - Trigger: a message from the user, an agent or an agreed handoff with a line that is just `@desktop:new` (bold or backticks allowed). A mention mid-sentence does nothing. History before the runner started never triggers.
 - The message must have a `Folder: <path>` line, a directory inside the home folder (`~` allowed). An optional `Title:` line names the run. A missing or bad folder gets a "not started" note instead.
 - It runs `claude -p --permission-mode auto --output-format json -n <title>` in that folder, detached, with the message (minus the trigger line) as the prompt and no Claude Code or Parley variables from the server's environment.
-- The room gets a context note when it starts and another with the final message, cost and a `claude --resume <id>` line when it ends. Notes never start room agents; a busy room gets them once it is free.
+- The room gets a quiet context note when it starts. When it ends, the final message, cost and a `claude --resume <id>` line go to `@all` as a request, so the room's agents react (as context only if a seat is asleep). A "not started" note also wakes the room. A busy room gets notes once it is free. The runner never triggers on its own notes.
 - Runs outlive a server restart and are reported by the next runner. State and outputs: `~/.parley-links/_runner/` (owner-only). It reads the root's `claude` bridge credential and refuses to run inside room agents.
 
-The global Claude Code skill `parley-link` (`~/.claude/skills/parley-link/SKILL.md`) describes the session side: linking, acting within the user's permission, reporting back with an `intent: "context"` note, and stopping the link.
+The global Claude Code skill `parley-link` (`~/.claude/skills/parley-link/SKILL.md`) describes the session side: linking, acting within the user's permission, reporting back (`delegate` when the room must act, `context` for a status ping), and stopping the link.
 
 ## Verification and recovery
 

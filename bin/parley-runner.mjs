@@ -75,6 +75,7 @@ const saveState = () => fs.writeFileSync(stateFile, JSON.stringify(state), { mod
 // The trigger must start a line (markdown emphasis or code ticks allowed), so a
 // message that only mentions @desktop:new in passing does not launch anything.
 const trigger = /^[\s>*_`]*@desktop:new(?![a-z0-9-])[*_`]*\s*$/im;
+const ownNote = /^(?:▶ Fresh session|[✓✗] Fresh session|@desktop:new from .+ not started)/;
 const field = (text, name) => {
   const line = String(text).split('\n').find((l) => new RegExp(`^[\\s>*_]*${name}[*_]*\\s*:`, 'i').test(l));
   if (!line) return '';
@@ -89,10 +90,11 @@ const resolveFolder = (raw) => {
   return { folder };
 };
 
-// Context notes reach the room without invoking any agent. A busy room refuses
-// them, so they wait in an outbox and go out, in order, once it is free.
-function note(roomName, text) {
-  state.outbox.push({ room: roomName, text, key: `runner-${crypto.randomUUID()}` });
+// A note the room must act on (a result, a run that could not start) wakes the
+// room's agents; a plain status note is context only and wakes nobody. A busy
+// room refuses both, so they wait in an outbox and go out, in order, once it is free.
+function note(roomName, text, wake = false) {
+  state.outbox.push({ room: roomName, text, wake, key: `runner-${crypto.randomUUID()}` });
   saveState();
 }
 async function flushOutbox(rooms) {
@@ -101,8 +103,11 @@ async function flushOutbox(rooms) {
     const room = rooms.find((r) => r.room === item.room);
     if (blocked.has(item.room)) continue;
     if (!room) { state.outbox.splice(state.outbox.indexOf(item), 1); continue; }
+    const send = (intent, key) => call('send', { room: room.room, conversationId: room.conversationId, rosterHash: room.rosterHash, text: item.text, target: '@all', intent, idempotencyKey: key });
     try {
-      await call('send', { room: room.room, conversationId: room.conversationId, rosterHash: room.rosterHash, text: item.text, target: '@all', intent: 'context', idempotencyKey: item.key });
+      // An asleep seat cannot be woken, so the result is still recorded for the user.
+      try { await send(item.wake ? 'delegate' : 'context', item.key); }
+      catch (error) { if (!item.wake || error.code !== 'participant_asleep') throw error; await send('context', `${item.key}-context`); }
       state.outbox.splice(state.outbox.indexOf(item), 1);
     } catch { blocked.add(item.room); }
     saveState();
@@ -125,7 +130,7 @@ async function launch(roomName, entry) {
   if (state.runs[id]) return;
   const who = entry.kind === 'user' ? 'you' : entry.kind === 'agent' ? `@${entry.author}` : 'the agreed handoff';
   const { folder, error } = resolveFolder(field(entry.text, 'Folder'));
-  if (error) { note(roomName, `@desktop:new from ${who} (#${entry.n}) not started. ${error}`); state.runs[id] = { done: true }; return; }
+  if (error) { note(roomName, `@desktop:new from ${who} (#${entry.n}) not started. ${error}`, true); state.runs[id] = { done: true }; return; }
   const title = field(entry.text, 'Title') || `Parley ${roomName} #${entry.n}`;
   const prompt = [
     `You are a fresh Claude Code session started from the Parley room "${roomName}" (message #${entry.n}, from ${who}). You have no other context. Do the task below in this folder. Your final message is posted back to the room, so end with a short report: what you did, what is left, anything blocked.`,
@@ -138,7 +143,7 @@ async function launch(roomName, entry) {
     stdio: ['pipe', fs.openSync(out, 'w', 0o600), fs.openSync(err, 'w', 0o600)],
   });
   const started = await new Promise((resolve) => { child.once('spawn', () => resolve(true)); child.once('error', () => resolve(false)); });
-  if (!started) { note(roomName, `@desktop:new from ${who} (#${entry.n}) not started: could not run \`${claudeBin}\`.`); state.runs[id] = { done: true }; return; }
+  if (!started) { note(roomName, `@desktop:new from ${who} (#${entry.n}) not started: could not run \`${claudeBin}\`.`, true); state.runs[id] = { done: true }; return; }
   child.stdin.end(prompt);
   child.unref();
   state.runs[id] = { room: roomName, n: entry.n, pid: child.pid, folder, title, out, err, startedAt: Date.now() };
@@ -159,7 +164,7 @@ async function reportFinished() {
         '', String(result.result || '(no final message)').slice(0, 6000), '',
         `Continue it: \`cd ${run.folder.replace(os.homedir(), '~')} && claude --resume ${result.session_id}\``].join('\n')
       : `✗ Fresh session for #${run.n} ("${run.title}") ended without a result. Log: \`${run.err}\``;
-    note(run.room, text);
+    note(run.room, text, true);
     state.runs[id] = { done: true };
     saveState();
   }
@@ -178,7 +183,7 @@ async function poll() {
       for (const entry of page.messages) {
         if (entry.n <= seen.lastN) continue;
         seen.lastN = entry.n;
-        if (catchingUp || entry.harness?.intent === 'context') continue;
+        if (catchingUp || entry.harness?.intent === 'context' || ownNote.test(entry.text || '')) continue;
         const eligible = entry.kind === 'user' || entry.kind === 'agent' || (entry.kind === 'system' && entry.convergence?.status === 'agreed');
         if (eligible && trigger.test(entry.text || '')) await launch(room.room, entry);
       }
