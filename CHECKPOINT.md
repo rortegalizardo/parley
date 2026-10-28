@@ -5,7 +5,9 @@ The primary agent rebuilt the chat as direction "A · Team chat", picked by the 
 - Smoke 42/4 and browser 17/25: identical to the baseline, so no regressions. The visual overflow test (both themes, 1440 and 390) passes. The header crew hides below 400px wide.
 - Checked by hand on an isolated fake-provider demo, dark and light, desktop and phone width. 4142 was not touched.
 
-Next action: restart 4142 when idle (recheck ownership and idle state first), then reload tabs.
+- 4142 restarted at the user's request after an idle and ownership check (both rooms idle, no agent processes). New PID **38080**; same launcher command; rooms intact.
+
+Next action: reload open 4142 tabs to see the new layout.
 
 ## Previous checkpoint — room → session links (2026-10-27)
 
