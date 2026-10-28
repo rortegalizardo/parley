@@ -1,4 +1,14 @@
-## Current checkpoint — UI visual lift (2026-10-27)
+## Current checkpoint — room → session links (2026-10-27)
+
+The primary agent added `bin/parley-link.mjs` so a room can hand decisions to a linked Claude Code session without the user relaying them. Client-only: no server change, no 4142 restart, `RUNTIME_PROTOCOL` unchanged. Docs: [Room → session links](docs/HARNESS-BRIDGE.md#room--session-links); session-side instructions in the global skill `~/.claude/skills/parley-link`.
+
+- Sol's MCP bridge (session → room: list, send, wait) was already working; the missing part was room → session. A request mentioning `@desktop:<handle>` gets its agreed Converge handoff or its agent replies written to `~/.parley-links/<room>/<handle>/<n>.md` and announced as one `PARLEY_DELIVERY` line. The session reads only that file, never the transcript.
+- Isolated e2e passed on fake providers: named reply, agreed handoff and both Parallel `@all` replies delivered; history and a handle-less converge not delivered; duplicate link refused; files owner-only; restart delivered only the new message. A live background-shell run with `--until-delivery` woke a real Claude Code session with the handoff.
+- A background wake can only *propose* a new desktop session, so `@desktop:new` needs one user click. Codex sessions have no background wake and cannot be linked yet.
+
+Next action: link a desktop session to a real room and try one `@desktop:<handle>` handoff.
+
+## Previous checkpoint — UI visual lift (2026-10-27)
 
 The primary agent restyled the UI with no behaviour changes: unified composer card, seat-tinted chat bubbles, hover-only message actions, compact agent pills, SVG sidebar icons, and lifted Settings / Create-room dialogs. Covers dark and light themes, desktop and phone widths. Changes are in `ui/styles.css` (a "Lift" layer and a dialogs layer at the end), `ui/index.html` and `ui/app.js`. `RUNTIME_PROTOCOL` is unchanged.
 
