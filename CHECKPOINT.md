@@ -5,6 +5,8 @@ The primary agent added `bin/parley-runner.mjs`: a room message with a line `@de
 - Isolated check on a fixture server with a fake `claude`: history ignored, mid-sentence mention ignored, bad folder got a "not started" note, a valid request ran in the right folder with the right flags and a clean env, and the start and result notes reached a busy room once it was free (outbox). Launcher hook checked on a temp root. Full suites not run.
 - Since the team chat checkpoint: room-row fix (`5a3a1d8`). 4142 restarted with the user's OK after an idle check: server PID **44448**, runner PID **44450**, both rooms intact, runner polling with no errors.
 
+- Result and "not started" notes now go to `@all` as delegate, so room agents react; "started" stays context only (`86de301`). Linked sessions report the same way (skill updated). Live runner swapped without touching the server: runner PID **45148** (no longer a child of 44448; it exits when 44448 does, and the next server start launches its own).
+
 Next action: try one `@desktop:new` from a room.
 
 ## Previous checkpoint — Team chat layout (2026-10-27)
