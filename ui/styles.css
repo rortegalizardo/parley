@@ -1781,3 +1781,26 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.
 #roomList .room-item .ract:hover { background: var(--panel2); color: var(--text); }
 #roomList .room-item .ract.del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 @media (hover: none) { #roomList .room-item .rmore { visibility: visible; } }
+
+/* Room direction: a goal, one-line decisions and a character counter. */
+#contextSettings .direction-card .fld { margin: 0 0 14px; }
+#contextSettings .direction-card textarea { width: 100%; }
+.direction-pins { list-style: none; padding: 0; margin: 6px 0 8px; display: grid; gap: 6px; }
+.direction-pins li { display: flex; gap: 8px; align-items: center; }
+.direction-pins li input { flex: 1; min-width: 0; }
+.direction-pins .ract { flex: none; border: 1px solid var(--border2); border-radius: 8px; padding: 5px 10px; font-size: 12px; color: var(--text-dim); }
+.direction-pins .ract:hover { background: var(--panel2); color: var(--text); }
+.direction-pins .direction-empty { color: var(--text-faint); }
+.direction-add { display: flex; gap: 8px; }
+.direction-add input { flex: 1; min-width: 0; }
+.direction-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.direction-count { margin-right: auto; color: var(--text-faint); font-size: 12px; }
+.direction-count.over { color: var(--danger); font-weight: 600; }
+#directionStatus:empty { display: none; }
+#overlay .modal #contextExtras > details { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg2); margin-top: 12px; }
+#contextSettings #legacyBrief { max-height: min(42dvh, 380px); overflow: auto; padding-right: 8px; }
+.agreed-handoff-actions { margin-top: 8px; }
+#chat .agreed-pin { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; padding: 4px 10px; }
+#chat .agreed-pin svg { width: 13px; height: 13px; }
+.direction-foot .btn:disabled { opacity: .45; cursor: default; }
+#decisionDialog #decisionText { min-height: 0; height: auto; }

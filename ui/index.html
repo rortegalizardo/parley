@@ -199,7 +199,7 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div class="settings-fixed-head"><h2 id="settingsTitle">Room settings</h2>
     <div class="sub" id="roomPath"></div>
-    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="false">Context</button></div></div>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="false">Direction</button></div></div>
     <div class="settings-scroll-body">
     <section id="agentsSettingsPane" role="tabpanel" aria-labelledby="agentsSettingsTab"><div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">Add or remove agents while keeping the transcript.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
     <div id="settingsAgentNav" class="settings-agent-nav" aria-label="Agent to edit"></div><div id="seatCards"></div></section><section id="roomSettingsPane" role="tabpanel" aria-labelledby="roomSettingsTab" hidden>
@@ -228,7 +228,7 @@
         <div class="note">Pair mode ends when the reviewer approves, so a limit is optional. A high safety stop still catches two agents that never converge.</div></div>
     </div>
     <div class="mode-policy note">Talk uses conservative provider defaults; Work enables project edits and commands.<details><summary>How agent permissions follow the mode</summary><p>Claude and Gemini follow Talk/Work when set to automatic; their explicit permission choices remain active. Codex promotes read-only to workspace-write in Work. Use Talk with read-only or Plan for a discussion without project edits.</p></details></div>
-    </section><section id="contextSettingsPane" role="tabpanel" aria-labelledby="contextSettingsTab" hidden><section id="contextSettings" aria-label="Persistent context"></section></section></div><div class="mrow settings-fixed-foot">
+    </section><section id="contextSettingsPane" role="tabpanel" aria-labelledby="contextSettingsTab" hidden><section id="contextSettings" aria-label="Room direction"></section></section></div><div class="mrow settings-fixed-foot">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="mRename">Rename…</button>
         <button class="btn danger" id="mNewConv">Clear conversation…</button>
@@ -258,12 +258,12 @@
 </dialog>
 <dialog id="decisionDialog" aria-labelledby="decisionTitle" aria-describedby="decisionRoom">
   <form id="decisionForm">
-    <h2 id="decisionTitle">Persistent decision</h2>
+    <h2 id="decisionTitle">Pin to room direction</h2>
     <p id="decisionRoom" class="note"></p>
-    <label for="decisionText">Decision for every agent</label>
-    <textarea id="decisionText" rows="10" required></textarea>
+    <label for="decisionText">One line for every agent</label>
+    <textarea id="decisionText" rows="3" maxlength="200" required></textarea>
     <p id="decisionError" role="alert" hidden></p>
-    <div class="form-actions"><button type="button" class="btn" id="decisionCancel">Cancel</button><button type="submit" class="btn primary" id="decisionSave">Save decision</button></div>
+    <div class="form-actions"><button type="button" class="btn" id="decisionCancel">Cancel</button><button type="submit" class="btn primary" id="decisionSave">Pin</button></div>
   </form>
 </dialog>
 <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>

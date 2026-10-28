@@ -1012,7 +1012,7 @@ function entryEl(e) {
     const convergence = e.meta && e.meta.convergence;
     if (convergence?.status === "agreed") div.classList.add("agreed-handoff");
     div.innerHTML = convergence && convergence.status === "agreed"
-      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Decision${convergence.participants?.length ? ` · agreed by ${esc(convergence.participants.length)}` : " · agreed"}</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div>${agreedReservationsHTML(convergence.reservations)}<details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
+      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Decision${convergence.participants?.length ? ` · agreed by ${esc(convergence.participants.length)}` : " · agreed"}</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div>${agreedReservationsHTML(convergence.reservations)}<div class="agreed-handoff-actions"><button type="button" class="btn pin-decision agreed-pin" title="Keep a one-line summary of this decision in the room direction">${controlIcon("pin")} Pin to room</button></div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
       : esc(e.text);
     const recovery = e.meta && e.meta.error && recoveryForEntry(e);
     if (recovery) {
@@ -1089,7 +1089,7 @@ function entryEl(e) {
     : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
     `<button class="ask" title="Ask about this message" aria-label="Ask about this message">${controlIcon("ask")}</button>` +
-    `<button class="pin-decision" title="Save as persistent decision" aria-label="Save as persistent decision">${controlIcon("pin")}</button><button class="cpy" title="Copy message" aria-label="Copy message">${controlIcon("copy")}</button></div>` +
+    `<button class="pin-decision" title="Pin to room direction" aria-label="Pin to room direction">${controlIcon("pin")}</button><button class="cpy" title="Copy message" aria-label="Copy message">${controlIcon("copy")}</button></div>` +
     entryQuoteHTML(e) +
     `<div class="bubble${statusDimmed(e) ? " dimmed" : ""}">${renderMD(e.text)}</div>` +
     statusChipHTML(e) + heardHTML(e) + whyRunHTML(e);
@@ -4831,11 +4831,7 @@ $("mSave").onclick = async () => {
   // Build the request from what is on screen now, then retire the picker: a
   // dialog that resolves while the save is in flight would otherwise fill the
   // field with a folder this request did not carry.
-  const revisionField = $("contextRevisionRounds");
-  const contextRevisionRounds = revisionField ? Number(revisionField.value) : Number(s.cfg.contextRevisionRounds || 0);
-  if ((revisionField && !revisionField.value.trim()) || !Number.isInteger(contextRevisionRounds) || contextRevisionRounds < 0 || contextRevisionRounds > 999) return toast("Choose 0 (no limit) or a whole number from 1 to 999 for context revision rounds.", true);
   const config = {
-    contextRevisionRounds,
     defaultAgent: roster.some((seat) => seat.id === $("s_default").value) ? $("s_default").value : roster[0].id,
     timeoutMs: Math.max(10, Number($("s_timeout").value) || 300) * 1000,
     hopBudget: roomHopBudget,
@@ -4852,7 +4848,6 @@ $("mSave").onclick = async () => {
       return { id: seat.id, provider: seat.provider, model: values.model || null, effort: values.effort || null, instructions: values.instructions || null };
     });
     const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config });
-    $("contextSettings")._contextRevisionDraft = null;
     closeSettings();
     // The panel above already shows the new permission, but a CLI process that
     // has launched cannot be changed. Say what the user is actually watching —
@@ -4980,157 +4975,193 @@ else loadRoom(state.room).catch((e) => toast(e.message, true));
 $("homeLink").onclick = (event) => { event.preventDefault(); closeSettings(); clearLive(); showNoRoom(); refreshRooms().catch((e) => toast(e.message, true)); setNavOpen(false); };
 input.focus();
 
-// Durable context is server owned and survives conversation resets.
+// Durable context is server owned and survives conversation resets: a short
+// room direction the user curates, plus the session events Parley records.
 function contextDate(value) {
   return value && Number.isFinite(new Date(value).getTime()) ? new Date(value).toLocaleString() : "";
 }
-function contextReviewsHTML(reviews, seats = []) {
-  const entries = Array.isArray(reviews) ? reviews.map((review) => [review.agent || review.seat || review.id, review]) : Object.entries(reviews || {});
-  const reviewers = [...new Set([...seats, ...entries.map(([seat]) => seat)])].filter(Boolean);
-  return reviewers.length ? `<ul class="context-reviews">${reviewers.map((seat) => {
-    const review = entries.find(([id]) => id === seat)?.[1];
-    const decision = review?.decision || review?.status || (review?.approved === true ? "approve" : "waiting");
-    const verdict = {approve: "Approved", approved: "Approved", object: "Changes requested", waiting: "Waiting"}[decision] || decision;
-    return `<li><b>@${esc(seat)}</b><span>${esc(verdict)}</span>${review?.reason || review?.rationale ? `<details class="context-review-notes" data-context-detail="review-${esc(seat)}-${esc(review.hash || "pending")}"><summary>Review notes</summary><div class="bubble context-markdown">${renderMD(review.reason || review.rationale)}</div></details>` : ""}</li>`;
-  }).join("")}</ul>` : '<p class="note">No agent reviews yet.</p>';
+// Mirrors the server's directionBody, so the counter matches what is saved.
+function directionChars(goal, pins) {
+  const lines = pins.map((p) => p.text.replace(/\s+/g, " ").trim()).filter(Boolean);
+  return [goal.trim() ? `Goal: ${goal.trim()}` : "", lines.length ? "Decisions:\n" + lines.map((t) => `- ${t}`).join("\n") : ""]
+    .filter(Boolean).join("\n").length;
 }
-function contextChangesHTML(changes) {
-  if (!changes || (Array.isArray(changes) && !changes.length)) return '<p class="note">No change summary recorded.</p>';
-  if (!Array.isArray(changes)) return `<div class="bubble context-changes">${renderMD(typeof changes === "string" ? changes : JSON.stringify(changes, null, 2))}</div>`;
-  const labels = {carried_forward: "Kept", superseded: "Replaced", merged: "Combined", user_removed: "Removed"};
-  return `<ul class="context-changes-list">${changes.map((change) => typeof change === "string" ? `<li>${esc(change)}</li>` : `<li>${change.disposition ? `<b>${esc(labels[change.disposition] || change.disposition)}:</b> ` : ""}${esc(change.summary || change.text || "")}${change.sourceIds?.length ? `<small>Sources: ${change.sourceIds.map((id) => esc(id)).join(", ")}</small>` : ""}</li>`).join("")}</ul>`;
+function directionDraft(host, s) {
+  const room = s.name || state.room;
+  if (host._directionDraft?.room === room) return host._directionDraft;
+  const direction = s.context?.direction || { goal: "", pins: [] };
+  return { room, dirty: false, goal: direction.goal || "", pins: (direction.pins || []).map((p) => ({ ...p })) };
 }
-function contextSourceHistoryHTML(records) {
-  return records.slice().reverse().map((record) => `<article class="saved-decision"><small>${esc({add: "Added", edit: "Edited", delete: "Removed"}[record.action] || record.action || "Earlier version")} · ${esc(contextDate(record.at))}${record.decision?.id ? ` · ${esc(record.decision.id)}` : ""}</small>${record.previous?.text ? `<h4>Previous version</h4><div class="bubble context-markdown">${renderMD(record.previous.text)}</div><h4>Saved version</h4>` : ""}<div class="bubble context-markdown">${renderMD(record.decision?.text || record.text || "")}</div></article>`).join("");
+function updateDirectionCount() {
+  const host = $("contextSettings"), draft = host?._directionDraft, count = $("directionCount");
+  if (!draft || !count) return;
+  const max = state.summary?.context?.directionMax || 2000, used = directionChars(draft.goal, draft.pins);
+  count.textContent = `${used.toLocaleString()} / ${max.toLocaleString()} characters`;
+  count.classList.toggle("over", used > max);
+  $("directionSave").disabled = !draft.dirty || used > max;
+  $("directionDiscard").hidden = !draft.dirty;
 }
-function contextSourceQuestionHTML(source) {
-  const provenance = source.questionProvenance || {}, labels = [];
-  if (Number.isFinite(provenance.rootN)) labels.push(`Conversation message #${provenance.rootN}`);
-  if (Number.isFinite(provenance.sourceEntryN)) labels.push(`Saved from message #${provenance.sourceEntryN}`);
-  if (provenance.runId) labels.push(`Review run ${provenance.runId}`);
-  if (provenance.unavailable) labels.push("Exact initiating question link unavailable");
-  const question = source.question || source.subject;
-  return `<div class="context-source-question"><h4>Question this answers</h4>${question ? `<div class="bubble context-markdown">${renderMD(question)}</div>` : '<p class="note">The initiating question was not saved with this decision. Available source links are recovered when context is updated.</p>'}${source.subject && source.subject !== question ? `<p class="note">Subject: ${esc(source.subject)}</p>` : ""}${labels.length ? `<small class="context-source-provenance">${esc(labels.join(" · "))}</small>` : ""}</div>`;
+function renderDirectionCard(host, s) {
+  const card = host.querySelector("#directionCard"), context = s.context || {};
+  const draft = directionDraft(host, s);
+  host._directionDraft = draft;
+  const pinMax = context.pinMax || 200;
+  card.innerHTML = `<div class="context-section-head"><div><h3>Room direction</h3><p class="note">A short goal and the key decisions every agent should keep in mind. Each agent session gets it once, then a one-line reminder until it changes.</p></div></div>
+    <div class="fld"><label for="directionGoal">Goal</label><textarea id="directionGoal" rows="3" placeholder="What this room is working toward…">${esc(draft.goal)}</textarea></div>
+    <div class="fld"><label>Decisions</label><ul class="direction-pins">${draft.pins.map((pin, i) => `<li><input type="text" data-pin-index="${i}" maxlength="${pinMax}" value="${esc(pin.text)}" aria-label="Decision ${i + 1}"><button type="button" class="ract" data-pin-remove="${i}" aria-label="Remove decision ${i + 1}">Remove</button></li>`).join("") || '<li class="note direction-empty">No decisions pinned yet.</li>'}</ul>
+    <div class="direction-add"><input type="text" id="directionNewPin" maxlength="${pinMax}" placeholder="Add a one-line decision…"><button type="button" class="btn" id="directionAddPin">Add</button></div>
+    <p class="note">Use the pin on a message or on an agreed decision to add one from the chat. Converge results are not kept unless you pin them.</p></div>
+    <div class="direction-foot"><span id="directionCount" class="direction-count"></span><button type="button" class="btn" id="directionTidy" ${context.suggesting ? "disabled" : ""}>Tidy</button><button type="button" class="btn" id="directionDiscard" hidden>Discard changes</button><button type="button" class="btn primary" id="directionSave">Save direction</button></div>
+    <p id="directionStatus" class="note" role="status">${esc(host._directionStatus || "")}</p>`;
+  updateDirectionCount();
 }
-function contextSourceReasoningHTML(source) {
-  if (!source.reasoning) return "";
-  const reasoning = source.reasoning;
-  return `<details class="context-source-reasoning"><summary>Full source reasoning</summary>${typeof reasoning === "string" ? `<div class="bubble context-markdown">${renderMD(reasoning)}</div>` : `<pre>${esc(JSON.stringify(reasoning, null, 2))}</pre>`}</details>`;
-}
-function contextDecisionHTML(decision, editable = true) {
-  return `<article class="saved-decision" data-decision-id="${esc(decision.id)}">${contextSourceQuestionHTML(decision)}<h4>Decision</h4><div class="bubble context-markdown">${renderMD(decision.text || "")}</div>${contextSourceReasoningHTML(decision)}<small>${decision.source === "convergence" ? "Agreed handoff" : "Pinned decision"}${decision.contextStatus ? ` · ${esc(decision.contextStatus)}` : ""} · ${esc(contextDate(decision.updatedAt || decision.createdAt))}</small>${editable ? '<div><button type="button" class="ract" data-decision-action="edit">Edit</button><button type="button" class="ract" data-decision-action="remove">Remove</button></div>' : ""}</article>`;
-}
-function contextHistoryHTML(history) {
-  return history.slice().reverse().map((run, index) => `<details class="context-version" data-context-detail="run-${esc(run.id || index)}"><summary>${esc(contextDate(run.updatedAt || run.createdAt || run.startedAt))} · ${esc(run.status === "limit_reached" ? "Revision limit reached" : run.status || "Previous update")}${run.reason ? ` · ${esc(run.reason)}` : ""}</summary>${run.sourceSnapshot?.length ? `<details data-context-detail="run-sources-${esc(run.id || index)}"><summary>Source material (${run.sourceSnapshot.length})</summary>${run.sourceSnapshot.map((source) => contextDecisionHTML(source, false)).join("")}</details>` : ""}${(run.candidates || []).map((candidate, ci) => `<details data-context-detail="candidate-${esc(run.id || index)}-${ci}"><summary>Version ${esc(candidate.version || ci + 1)}${candidate.hash ? ` · ${esc(candidate.hash.slice(0, 12))}` : ""}</summary><div class="bubble context-markdown">${renderMD(candidate.text || "")}</div><h4>What changed</h4>${contextChangesHTML(candidate.changes)}<h4>Agent reviews</h4>${contextReviewsHTML(candidate.reviews)}${candidate.hash ? `<p class="note context-hash">Reviewed text: ${esc(candidate.hash)}</p>` : ""}</details>`).join("") || (run.text ? `<div class="bubble context-markdown">${renderMD(run.text)}</div>` : '<p class="note">No draft was recorded.</p>')}</details>`).join("") || '<p class="note">No previous updates.</p>';
+function renderContextExtras(host, s) {
+  const extras = host.querySelector("#contextExtras"), context = s.context || {}, legacy = context.legacy;
+  const openDetails = new Set([...extras.querySelectorAll("details[open][data-context-detail]")].map((detail) => detail.dataset.contextDetail));
+  extras.innerHTML = `${legacy ? `<details class="context-legacy" data-context-detail="legacy"><summary>Old saved brief (no longer sent to agents) · ${esc(legacy.chars.toLocaleString())} characters</summary><p class="note">Kept on disk for the record${legacy.version ? ` · version ${esc(legacy.version)}` : ""}${legacy.savedAt ? ` · ${esc(contextDate(legacy.savedAt))}` : ""}. Copy anything still useful into the room direction.</p><div class="bubble context-markdown" id="legacyBrief"><p class="note">Loading…</p></div></details>` : ""}
+    <details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}${context.observations?.[seat] ? `<br><span class="context-observation">${esc(context.observations[seat].status)} · ${esc(context.observations[seat].reason)}${context.observations[seat].at ? ` · ${esc(contextDate(context.observations[seat].at))}` : ""}</span>` : ""}</p>`).join("")}<details data-context-detail="events"><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(contextDate(event.at))}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details></details>`;
+  extras.querySelectorAll("details[data-context-detail]").forEach((detail) => { detail.open = openDetails.has(detail.dataset.contextDetail); });
+  if (extras.querySelector('details[data-context-detail="legacy"]')?.open) loadLegacyBrief();
 }
 function renderContextSettings(s) {
   const host = $("contextSettings"); if (!host || !s) return;
-  const contextRoom = s.name || state.room;
-  if (host._contextRevisionRoom !== contextRoom) { host._contextRevisionDraft = null; host._contextRevisionRoom = contextRoom; }
-  const context = s.context || {}, budget = context.budget || {}, brief = context.activeBrief, editor = context.editor || {};
-  const signature = JSON.stringify([s.name || state.room, context, s.seats, s.agents, s.seatInfo, s.cfg?.contextRevisionRounds]);
-  if (host._contextSignature === signature) return;
-  host._contextSignature = signature;
-  const openDetails = new Set([...host.querySelectorAll("details[open][data-context-detail]")].map((detail) => detail.dataset.contextDetail));
-  const running = ["editing", "reviewing", "revising"].includes(editor.status);
-  const failed = ["failed", "rejected", "limit_reached", "stale", "interrupted", "stopped"].includes(editor.status);
-  const phase = !running && editor.status === "active" && brief?.pendingUpdate ? "Context has new sources to include" : {editing: "Writing an updated brief", reviewing: "Agents are reviewing the draft", revising: "Revising after agent feedback", active: "Context is up to date", failed: "Update failed", rejected: "Revision limit reached", limit_reached: "Revision limit reached", stopped: "Update stopped", stale: "Sources changed during the update", interrupted: "Update was interrupted"}[editor.status] || "Ready to update";
-  const latestCandidate = (editor.candidates || []).slice(-1)[0];
-  const pending = context.pendingSourceIds?.length || 0;
-  const activeMarkup = brief ? `<div class="context-brief-meta">Version ${esc(brief.version || 1)} · ${esc(contextDate(brief.createdAt))}${brief.stale ? " · Needs an update" : " · Active"}<span class="context-brief-budget">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity" : ""}</span></div><div class="bubble context-markdown active-context-brief">${renderMD(brief.text || "")}</div><details data-context-detail="active-proof"><summary>What changed and agent approval</summary><h4>What changed</h4>${contextChangesHTML(brief.changes)}<h4>Agent reviews</h4>${contextReviewsHTML(brief.reviews)}${brief.hash ? `<p class="note context-hash">Reviewed text: ${esc(brief.hash)}</p>` : ""}</details>` : running ? '<p class="context-empty">First brief awaiting review; existing saved decisions remain active.</p>' : '<p class="context-empty">No shared brief yet. Update context to combine saved decisions into a brief for every agent.</p>';
-  const currentReviews = latestCandidate?.reviews || editor.reviews;
-  const roundLimit = Number(s.cfg?.contextRevisionRounds || 0);
-  const revisionDraft = host._contextRevisionDraft?.room === (s.name || state.room) ? host._contextRevisionDraft.value : String(roundLimit);
-  const revisionFocused = document.activeElement?.id === "contextRevisionRounds";
-  const revisionControls = `<div class="fld context-revision-settings"><label for="contextRevisionRounds">Context revision rounds</label><div class="context-revision-row"><input id="contextRevisionRounds" type="number" min="0" max="999" step="1" value="${esc(revisionDraft)}"><button type="button" class="btn" id="saveContextRevisionLimit">Save limit</button></div><p class="note">0 = Unlimited · applies to the next update. Update/Continue saves this value too.</p><details data-context-detail="revision-help"><summary>How continuation works</summary><p class="note">Continue revises the latest unapproved draft using its feedback, then starts another batch with the chosen limit. Every agent reviews the new draft again. A running update keeps its current limit; three size repairs per batch remain a separate bound. Stop retains the approved brief, latest draft and all history.</p></details></div>`;
-  const continuation = failed && latestCandidate;
-  const callsLabel = editor.calls ? editor.unlimited || editor.calls.unlimited
-    ? `${editor.calls.used || 0} calls · no limit on review rounds`
-    : `${editor.calls.used || 0} / ${editor.calls.planned || 0} calls (includes up to 3 size repairs)` : "";
-  const roundLabel = editor.round ? ` · Review round ${editor.round}${editor.maxRounds ? ` of ${editor.maxRounds} in this batch` : editor.unlimited ? " · no limit" : ""}` : "";
-  host.innerHTML = `<section class="context-brief-card"><div class="context-section-head"><div><h3>Shared context</h3><p class="note">The current brief carries the room’s decisions into future agent turns.</p></div><button type="button" class="btn" id="updateContext" ${running ? "disabled" : ""}>${running ? "Updating…" : continuation ? "Continue update" : failed ? "Retry update" : "Update context"}</button>${running ? '<button type="button" class="btn" id="stopContextUpdate">Stop update</button>' : ""}</div>${revisionControls}${activeMarkup}</section>
-    <section class="context-update-status ${failed ? "context-update-failed" : ""}" aria-label="Context update status"><div role="status"><b>${esc(phase)}</b><p class="note">Editor: Claude Sonnet${esc(roundLabel)}${callsLabel ? ` · ${esc(callsLabel)}` : ""}${pending ? ` · ${esc(pending)} saved source${pending === 1 ? "" : "s"} waiting` : ""}</p>${editor.reason ? `<p>${esc(editor.reason)}</p>` : ""}${failed && brief ? '<p class="note">The previous brief is still shown above.</p>' : ""}${brief?.stale ? '<p class="note">Saved sources changed. Update context before agents can use the brief again.</p>' : ""}</div>${running || failed ? `<h4>Agent review</h4>${contextReviewsHTML(currentReviews, editor.reviewerIds || s.seats || [])}` : ""}${latestCandidate ? `<details data-context-detail="current-draft"><summary>Inspect current draft</summary><div class="bubble context-markdown">${renderMD(latestCandidate.text || "")}</div><h4>What changed</h4>${contextChangesHTML(latestCandidate.changes)}</details>` : ""}</section>
-    <details class="context-history" data-context-detail="history"><summary>Full version history (${(context.history || []).length})</summary>${contextHistoryHTML(context.history || [])}</details>
-    <details class="context-sources" data-context-detail="sources"><summary>Saved decisions and source history (${(context.decisions || []).length})</summary><p class="note">Pinned messages and agreed handoffs are kept as sources. Earlier decisions remain available here after a new brief replaces them.</p><p class="note">${esc(budget.usedChars || 0)} / ${esc(budget.maxChars || 24000)} characters${budget.overflow ? " · Over capacity: shorten decisions before agents can continue." : ""}</p><div class="saved-decisions">${(context.decisions || []).map((decision) => contextDecisionHTML(decision)).join("") || '<p class="note">No saved decisions. Use 📌 on a message to retain it.</p>'}</div><button type="button" class="btn" id="addDecision">Add decision</button>${(context.sourceHistory || []).length ? `<details data-context-detail="source-history"><summary>Earlier source versions (${context.sourceHistory.length})</summary>${contextSourceHistoryHTML(context.sourceHistory)}</details>` : ""}</details>
-    <details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}${context.observations?.[seat] ? `<br><span class="context-observation">${esc(context.observations[seat].status)} · ${esc(context.observations[seat].reason)}${context.observations[seat].at ? ` · ${esc(contextDate(context.observations[seat].at))}` : ""}</span>` : ""}</p>`).join("")}<details data-context-detail="events"><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(contextDate(event.at))}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details></details>`;
-  host.querySelectorAll("details[data-context-detail]").forEach((detail) => { detail.open = openDetails.has(detail.dataset.contextDetail); });
-  if (revisionFocused) $("contextRevisionRounds")?.focus({ preventScroll: true });
+  if (!host.querySelector("#directionCard")) host.innerHTML = '<section id="directionCard" class="context-brief-card direction-card"></section><div id="contextExtras"></div>';
+  const room = s.name || state.room, context = s.context || {};
+  if (host._directionDraft && host._directionDraft.room !== room) { host._directionDraft = null; host._directionStatus = ""; }
+  // An unsaved edit is never overwritten by a broadcast; only the busy state of Tidy follows it.
+  const cardSignature = JSON.stringify([room, context.direction, context.directionMax, context.suggesting]);
+  if (host._cardSignature !== cardSignature) {
+    host._cardSignature = cardSignature;
+    if (host._directionDraft?.dirty) { const tidy = $("directionTidy"); if (tidy) tidy.disabled = !!context.suggesting; }
+    else { host._directionDraft = null; renderDirectionCard(host, s); }
+  }
+  const extrasSignature = JSON.stringify([room, context.legacy, context.events, context.observations, context.visibility, s.seats, s.agents, s.seatInfo]);
+  if (host._extrasSignature !== extrasSignature) { host._extrasSignature = extrasSignature; renderContextExtras(host, s); }
 }
-async function mutateDecision(body, method = "POST", room = state.room) {
-  await api("/api/context/decisions", {room, ...body}, method);
-  if (state.room === room) { const data = await api("/api/room?name=" + encodeURIComponent(room)); if (state.room === room) applySummary(data.room); }
+async function loadLegacyBrief() {
+  const box = $("legacyBrief"), room = state.room;
+  if (!box || box.dataset.loaded === room) return;
+  box.dataset.loaded = room;
+  try {
+    const result = await api("/api/context/legacy", { room });
+    if (state.room === room && $("legacyBrief") === box) box.innerHTML = renderMD(result.text || "");
+  } catch (error) { box.dataset.loaded = ""; box.innerHTML = `<p class="note">${esc(error.message)}</p>`; }
 }
+function markDirectionDirty(status = "") {
+  const host = $("contextSettings");
+  host._directionDraft.dirty = true;
+  host._directionStatus = status;
+  if ($("directionStatus")) $("directionStatus").textContent = status;
+  updateDirectionCount();
+}
+async function saveDirection(room, goal, pins) {
+  const result = await api("/api/context/direction", { room, goal, pins });
+  if (state.room === room && result.context) applySummary({ ...state.summary, context: result.context });
+  return result;
+}
+document.addEventListener("input", (event) => {
+  const draft = $("contextSettings")?._directionDraft;
+  if (!draft) return;
+  if (event.target.id === "directionGoal") { draft.goal = event.target.value; markDirectionDirty(); }
+  else if (event.target.dataset?.pinIndex !== undefined && event.target.closest("#directionCard")) {
+    draft.pins[Number(event.target.dataset.pinIndex)].text = event.target.value; markDirectionDirty();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.target.id === "directionNewPin" && event.key === "Enter") { event.preventDefault(); $("directionAddPin").click(); }
+});
+document.addEventListener("toggle", (event) => {
+  if (event.target.dataset?.contextDetail === "legacy" && event.target.open) loadLegacyBrief();
+}, true);
 document.addEventListener("click", async (event) => {
+  const host = $("contextSettings");
   try {
     const pin = event.target.closest(".pin-decision");
-    if (pin) { await mutateDecision({entryN: Number(pin.closest("[data-n]").dataset.n)}); toast("Decision saved."); return; }
-    if (event.target.closest("#saveContextRevisionLimit")) {
-      const field = $("contextRevisionRounds");
-      const value = Number(field.value);
-      if (!field.value.trim() || !Number.isInteger(value) || value < 0 || value > 999) throw new Error("Choose 0 (no limit) or a whole number from 1 to 999.");
-      await api("/api/config", { room: state.room, config: { contextRevisionRounds: value } });
-      $("contextSettings")._contextRevisionDraft = null;
-      const data = await api("/api/room?name=" + encodeURIComponent(state.room)); applySummary(data.room);
-      toast("Context revision limit saved for the next update or continuation.");
+    if (pin) { openPinDialog(Number(pin.closest("[data-n]").dataset.n)); return; }
+    if (!event.target.closest("#directionCard")) return;
+    const draft = host._directionDraft;
+    const remove = event.target.closest("[data-pin-remove]");
+    if (remove) { draft.pins.splice(Number(remove.dataset.pinRemove), 1); markDirectionDirty(); renderDirectionCard(host, state.summary); return; }
+    if (event.target.closest("#directionAddPin")) {
+      const text = $("directionNewPin").value.replace(/\s+/g, " ").trim();
+      if (!text) return;
+      draft.pins.push({ text }); markDirectionDirty(); renderDirectionCard(host, state.summary); $("directionNewPin").focus();
       return;
     }
-    if (event.target.closest("#stopContextUpdate")) {
-      const button = event.target.closest("#stopContextUpdate"); button.disabled = true; button.textContent = "Stopping…";
-      await api("/api/context/stop", { room: state.room });
-      return;
+    if (event.target.closest("#directionDiscard")) {
+      host._directionDraft = null; host._directionStatus = ""; renderDirectionCard(host, state.summary); return;
     }
-    if (event.target.closest("#updateContext")) {
-      const button = event.target.closest("#updateContext"), room = state.room;
-      button.disabled = true; button.textContent = "Starting…";
+    if (event.target.closest("#directionSave")) {
+      const button = $("directionSave"), room = draft.room;
+      button.disabled = true;
       try {
-        const field = $("contextRevisionRounds"), value = Number(field.value);
-        if (!field.value.trim() || !Number.isInteger(value) || value < 0 || value > 999) throw new Error("Choose 0 (no limit) or a whole number from 1 to 999.");
-        if (value !== Number(state.summary.cfg.contextRevisionRounds || 0)) await api("/api/config", { room, config: { contextRevisionRounds: value } });
-        $("contextSettings")._contextRevisionDraft = null;
-        const result = await api("/api/context/regenerate", {room});
-        if (state.room === room && result.context) applySummary({...state.summary, context: result.context});
-        else if (state.room === room) { const data = await api("/api/room?name=" + encodeURIComponent(room)); if (state.room === room) applySummary(data.room); }
-      } catch (error) { button.disabled = false; button.textContent = "Retry update"; throw error; }
+        host._directionDraft = null; host._directionStatus = "Saved. Each agent gets the new direction on its next turn.";
+        await saveDirection(room, draft.goal, draft.pins);
+        renderDirectionCard(host, state.summary);
+      } catch (error) { host._directionDraft = draft; host._directionStatus = ""; renderDirectionCard(host, state.summary); throw error; }
       return;
     }
-    if (event.target.closest("#addDecision")) { openDecisionEditor(); return; }
-    const action = event.target.closest("[data-decision-action]"); if (!action) return;
-    const id = action.closest("[data-decision-id]").dataset.decisionId;
-    if (action.dataset.decisionAction === "remove") await mutateDecision({id}, "DELETE");
-    else { const decision = state.summary.context.decisions.find((item) => String(item.id) === id); if (decision) openDecisionEditor(decision); }
+    if (event.target.closest("#directionTidy")) {
+      if (draft.dirty) throw new Error("Save or discard your changes before Tidy.");
+      const button = $("directionTidy"), room = draft.room;
+      button.disabled = true; $("directionStatus").textContent = "Asking Claude Sonnet for a tidier version…";
+      try {
+        const { suggestion } = await api("/api/context/suggest", { room, tidy: true });
+        if (state.room !== room) return;
+        host._directionDraft = { room, dirty: true, goal: suggestion.goal, pins: suggestion.pins.map((text) => ({ text })) };
+        host._directionStatus = "Tidy suggestion loaded. Review it, then Save direction or Discard changes.";
+        renderDirectionCard(host, state.summary);
+      } catch (error) { button.disabled = false; $("directionStatus").textContent = ""; throw error; }
+    }
   } catch (error) { toast(error.message, true); }
 });
 
-let decisionDraft = null;
-function openDecisionEditor(decision = null) {
+let pinDraft = null;
+async function openPinDialog(entryN) {
   if (!state.room || $("decisionDialog").open) return;
-  decisionDraft = {room: state.room, id: decision?.id || null, opener: document.activeElement};
-  $("decisionTitle").textContent = decision ? "Edit persistent decision" : "Add persistent decision";
-  $("decisionRoom").textContent = `Room: ${decisionDraft.room}. Saved decisions remain available after conversation resets.`;
-  $("decisionText").value = decision?.text || "";
-  $("decisionError").hidden = true; $("decisionSave").disabled = false;
-  openModalDialog($("decisionDialog")); $("decisionText").focus();
+  const draft = pinDraft = { room: state.room, entryN, opener: document.activeElement };
+  const field = $("decisionText");
+  $("decisionRoom").textContent = `Room: ${draft.room}. Adds one line to the room direction that every agent keeps in mind.`;
+  field.value = ""; field.disabled = true; field.placeholder = "Suggesting a one-line summary…";
+  field.maxLength = state.summary?.context?.pinMax || 200;
+  $("decisionError").hidden = true; $("decisionSave").disabled = true;
+  openModalDialog($("decisionDialog"));
+  try {
+    const { suggestion } = await api("/api/context/suggest", { room: draft.room, entryN });
+    if (pinDraft !== draft) return;
+    field.value = suggestion.pin;
+    if (!suggestion.pin) { $("decisionError").textContent = "This looks like a one-off answer with nothing lasting to keep. You can still write a line."; $("decisionError").hidden = false; }
+  } catch (error) {
+    if (pinDraft !== draft) return;
+    $("decisionError").textContent = `${error.message} Write the line yourself instead.`; $("decisionError").hidden = false;
+  }
+  field.disabled = false; field.placeholder = "One line for every agent"; $("decisionSave").disabled = false; field.focus();
 }
 $("decisionCancel").onclick = () => $("decisionDialog").close();
 $("decisionDialog").addEventListener("keydown", (event) => event.stopPropagation());
 $("decisionDialog").addEventListener("close", () => {
-  const opener = decisionDraft?.opener; decisionDraft = null;
+  const opener = pinDraft?.opener; pinDraft = null;
   if (opener && document.contains(opener)) opener.focus();
 });
 $("decisionForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const draft = decisionDraft, text = $("decisionText").value.trim();
+  const draft = pinDraft, text = $("decisionText").value.replace(/\s+/g, " ").trim();
   if (!draft || $("decisionSave").disabled) return;
-  if (!text) { $("decisionError").textContent = "Enter a decision before saving."; $("decisionError").hidden = false; return; }
+  if (!text) { $("decisionError").textContent = "Enter a line before pinning."; $("decisionError").hidden = false; return; }
   $("decisionSave").disabled = true; $("decisionError").hidden = true;
   try {
-    await mutateDecision({...(draft.id ? {id: draft.id} : {}), text}, draft.id ? "PATCH" : "POST", draft.room);
-    if (decisionDraft === draft) $("decisionDialog").close();
-    toast(`Decision saved in ${draft.room}.`);
+    const { room } = await api("/api/room?name=" + encodeURIComponent(draft.room));
+    const direction = room.context?.direction || { goal: "", pins: [] };
+    await saveDirection(draft.room, direction.goal, [...direction.pins, { text, entryN: draft.entryN }]);
+    // An open unsaved edit replaces the whole list on Save, so it carries the pin too.
+    const open = $("contextSettings")._directionDraft;
+    if (open?.dirty && open.room === draft.room) { open.pins.push({ text, entryN: draft.entryN }); renderDirectionCard($("contextSettings"), state.summary); }
+    if (pinDraft === draft) $("decisionDialog").close();
+    toast(`Pinned to the room direction in ${draft.room}.`);
   } catch (error) {
-    if (decisionDraft === draft) { $("decisionError").textContent = error.message; $("decisionError").hidden = false; }
+    if (pinDraft === draft) { $("decisionError").textContent = error.message; $("decisionError").hidden = false; }
     else toast(error.message, true);
-  } finally { if (decisionDraft === draft) $("decisionSave").disabled = false; }
+  } finally { if (pinDraft === draft) $("decisionSave").disabled = false; }
 });
 
 $("agentToolbarBtn").onclick = () => {
@@ -5139,8 +5170,3 @@ $("agentToolbarBtn").onclick = () => {
   $("agentToolbarBtn").setAttribute("aria-expanded", String(!hidden));
 };
 
-document.addEventListener("input", (event) => {
-  if (event.target.id === "contextRevisionRounds") {
-    $("contextSettings")._contextRevisionDraft = { room: state.room, value: event.target.value };
-  }
-});

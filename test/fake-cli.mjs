@@ -99,6 +99,18 @@ const rawInput = await new Promise((resolve) => {
   if (process.stdin.isTTY) resolve("");
 });
 
+// The room-direction helper: one tool-less `--output-format json` call. Pin
+// prompts get one line (or NONE for FAKE-ONEOFF), Tidy prompts get JSON.
+if (!codexMode && arg("--output-format") === "json" && argv.includes("--no-session-persistence")) {
+  const message = rawInput.split("<<<\n")[1]?.split("\n>>>")[0] || "";
+  const result = /^Tidy the room direction/.test(rawInput)
+    ? JSON.stringify({ goal: "Ship the release plan safely.", pins: ["Migrate behind a dry-run flag; drop the old table one release later."] })
+    : /FAKE-ONEOFF/.test(message) ? "NONE"
+    : `Pinned: ${message.replace(/\s+/g, " ").trim().slice(0, 80)}`;
+  process.stdout.write(JSON.stringify({ type: "result", is_error: false, result }) + "\n");
+  process.exit(0);
+}
+
 let prompt = rawInput;
 const receivedImages = [];
 if (!codexMode && arg("--input-format") === "stream-json") {

@@ -1,4 +1,12 @@
-## Current checkpoint — fresh sessions from rooms (2026-10-27)
+## Current checkpoint — room direction (2026-10-28)
+
+The primary agent replaced the reviewed room brief with a short **room direction**: a goal plus one-line pinned decisions, 2,000 characters at most, changed only by the user. Converge no longer writes context. **Pin to room** (on any message and on the agreed decision card) makes one tool-less Sonnet call that suggests a line; **Tidy** makes one call that suggests a shorter direction. No agent review rounds, no automatic compression. Each session gets the direction in full once, then a one-line reminder until it changes; live sessions are told once that the old "Saved room decisions" block is retired. The old brief and decisions stay in `context.json`, viewable from the Direction tab, never sent. Removed: `lib/context-editor.mjs`, the context-revision rounds setting, `/api/context/{stop,regenerate,decisions}`. New: `/api/context/{direction,legacy,suggest}`. Docs: `docs/ROOM-BEHAVIOR.md`. `RUNTIME_PROTOCOL` unchanged.
+
+- Targeted isolated check (21 checks) passed: converge writes nothing, limits enforced, pin/tidy suggestions, send-once + reminder, re-send on edit, revoke on clear, legacy retired once. `test/codex-context.mjs` and `test/unit.mjs` pass. Full smoke/browser suites not run. Checked by hand on an isolated fake-provider demo.
+
+Next action: restart 4142 (user's OK + idle check), then save the user-approved M2 direction through `POST /api/context/direction`.
+
+## Previous checkpoint — fresh sessions from rooms (2026-10-27)
 
 The primary agent added `bin/parley-runner.mjs`: a room message with a line `@desktop:new` and a `Folder:` line starts a fresh headless `claude -p --permission-mode auto` run in that folder, no click. Results come back to the room as context notes, with a `claude --resume` line. `parley-mine` starts the runner with the server (`--no-runner` opts out). Follow-ups to an existing session still use `parley-link --as <handle>` and `@desktop:<handle>`. Docs: [Fresh sessions](docs/HARNESS-BRIDGE.md#fresh-sessions-desktopnew); skill `~/.claude/skills/parley-link` updated. `RUNTIME_PROTOCOL` and the server are unchanged.
 
