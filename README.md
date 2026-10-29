@@ -10,6 +10,8 @@ See the [full interface review](docs/UI-REVIEW.md) for the conversation, Setting
 
 Use a room from an existing Codex or Claude conversation through the shared [Parley MCP bridge](docs/HARNESS-BRIDGE.md). One adapter serves compatible clients with distinct registered sender identities, durable request tickets and `@all` agreement results.
 
+The [macOS desktop app](docs/desktop.md) bundles Electron and reuses the personal server on port 4142. Build a local `.app` with `npm run desktop:build`; existing rooms and CLI logins remain in place.
+
 ![Parley Mine with a visible four-agent room setup](docs/fork-home.png)
 
 ![Create a room with four individually named and configured agents](docs/fork-room-setup.png)

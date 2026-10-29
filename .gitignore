@@ -34,3 +34,6 @@ browser-failure/
 # Local scratch: drafts and captured command output.
 /radmeopus5.md
 /vlc-help.txt
+
+# Local desktop export
+/release/

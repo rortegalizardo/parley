@@ -7751,7 +7751,8 @@ const server = http.createServer(async (req, res) => {
       const html = UI_HTML
         .replace("<!--PARLEY_TOKEN-->", `<meta name="parley-token" content="${SESSION_TOKEN}">`)
         .replace("<!--PARLEY_RUNTIME_PROTOCOL-->",
-          `<meta name="parley-runtime-protocol" content="${RUNTIME_PROTOCOL}">`);
+          `<meta name="parley-runtime-protocol" content="${RUNTIME_PROTOCOL}">` +
+          (process.env.PARLEY_DESKTOP_INSTANCE ? `<meta name="parley-desktop-instance" content="${process.env.PARLEY_DESKTOP_INSTANCE.replace(/[^a-zA-Z0-9-]/g, "")}">` : ""));
       // Browser caching is still disabled, while UI_HTML remains pinned to the
       // backend build loaded by this process. Upgrades therefore need a restart
       // instead of silently mixing a new UI with an old runtime.

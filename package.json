@@ -33,7 +33,9 @@
     "test:roster-edit": "node test/roster-edit.mjs",
     "test:convergence": "node --test test/convergence-integrity.mjs && node test/convergence.mjs",
     "test:bridge-adapter": "node --test test/bridge-adapter.mjs",
-    "test:bridge": "node --test test/bridge-adapter.mjs test/bridge-backend.mjs test/bridge-backend-lifecycle.mjs && node test/bridge-e2e.mjs"
+    "test:bridge": "node --test test/bridge-adapter.mjs test/bridge-backend.mjs test/bridge-backend-lifecycle.mjs && node test/bridge-e2e.mjs",
+    "desktop": "electron .",
+    "desktop:build": "node scripts/package-desktop.mjs"
   },
   "license": "MIT",
   "publishConfig": {
@@ -62,10 +64,14 @@
     "docs/HARNESS-BRIDGE.md"
   ],
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": "^1.62.1",
+    "electron": "^45.1.0",
+    "@electron/packager": "^20.3.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.7"
-  }
+  },
+  "main": "desktop/main.cjs",
+  "productName": "Parley"
 }
