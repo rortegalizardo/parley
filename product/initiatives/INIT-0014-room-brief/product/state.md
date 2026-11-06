@@ -3,16 +3,16 @@ id: PSTATE-INIT-0014
 type: product-state
 title: Product definition state for INIT-0014
 status: authoritative
-revision: 4
+revision: 5
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0014
-phase: SOLUTION_EXPLORATION
+phase: SOLUTION_CONVERGENCE
 phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
-next_action: "ROLE-product-manager: dispatch the technical architect (product-feasibility-assessment) and the design author (hero), then record options and PD-0004"
+next_action: "ROLE-product-manager: record the chosen-option PD- (option B), the RQ-1..RQ-6 rulings and the Solution Contract"
 blocked_by: []
 converged: false
 readiness_verdict: none
@@ -45,7 +45,7 @@ reliably hold either.
 
 ## Next action
 
-ROLE-product-manager: dispatch the technical architect (product-feasibility-assessment) and the design author (hero), then record options and PD-0004.
+ROLE-product-manager: record the chosen-option PD- (option B), the RQ-1..RQ-6 rulings and the Solution Contract.
 
 ## Blocked by
 
@@ -217,6 +217,7 @@ _Written at ENGINEERING_READY._
 | 2026-11-06 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | eb4558fc5acdc614 |
 | 2026-11-06 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0001 mapping, success signals, non-goals (S1-S3) | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | 5435e20a90e90919 |
 | 2026-11-06 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1-O3, non-empty out of scope, success measures, three draft REQs covering every outcome element, Product Definition Contract citing both raw sources | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1 out of scope non-empty; F2 draft coverage run, 0 defects, no R1) | bbbe87f58d18ce70 |
+| 2026-11-06 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: options A and B recorded, each with a feasibility verdict and a user-visible trade-off; PM recommendation B with reasoning | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 two options; X2 verdicts from the allowed set; one Consultation log row per delegate response) | 76290e15dc559ddc |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
