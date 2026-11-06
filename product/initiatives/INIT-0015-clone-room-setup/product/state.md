@@ -3,16 +3,16 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: INTAKE
+phase: PRODUCT_DEFINITION
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: exit INTAKE and enter DISCOVERY (SKILL-advance-product-phase)"
+next_action: "ROLE-product-manager: populate the initiative, draft the requirement, record the decisions and the Product Definition Contract (PRODUCT_DEFINITION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
@@ -45,7 +45,7 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-manager: exit INTAKE and enter DISCOVERY.
+ROLE-product-manager: populate the initiative, draft the requirement, record the decisions and the Product Definition Contract (PRODUCT_DEFINITION).
 
 ## Blocked by
 
@@ -65,7 +65,51 @@ Nothing.
 
 ## Discovery
 
-_Written at DISCOVERY._
+No interview round was run: the requester's decisions are final and
+pre-authorized ([run instructions](sources/run-instructions.md)); every fact
+below is cited.
+
+**Target users.**
+- The room owner (the requester, Ricardo): runs several rooms with
+  hand-configured agents, permissions, instructions and a Room Brief, and
+  wants a fresh room with the same setup ([raw request](sources/raw-request.md),
+  "Decision to build").
+- The cloned room's agents: start in the new room with their copied setup and
+  a fresh session, holding nothing of the original room's conversation (same
+  source, "NOT copied").
+
+**Jobs and problems, with evidence.**
+1. *Start a clean room set up like an existing one.* Today the only way is
+   Create room, re-entering up to four agents (provider, model, effort, Fast
+   mode, permissions, listening, instructions), the Goal, Rules, folder and
+   settings by hand ([CAP-0002](../../../capabilities/CAP-0002-room-creation-and-setup.md),
+   "No way to copy a room's setup").
+2. *Keep the two rooms independent.* Editing either room must never change
+   the other ([raw request](sources/raw-request.md), "Independent").
+3. *Know what carries over.* The dialog says in one line what is copied and
+   what is not, including that agent permissions are copied, without promising
+   separate project memory ([raw request](sources/raw-request.md), "Flow",
+   "Independent").
+
+**Current-state capability mapping.**
+[CAP-0002](../../../capabilities/CAP-0002-room-creation-and-setup.md) — room
+creation and setup (changed: gains a clone path).
+[CAP-0001](../../../capabilities/CAP-0001-room-shared-context.md) — room
+shared context; its record still describes the room note and direction, while
+`main` at `704039f` has the Room Brief (INIT-0014, PRL-1..PRL-3 merged; the
+initiative is not yet closed). This initiative reads the Room Brief as built,
+it does not change it.
+
+**Success signals** ([raw request](sources/raw-request.md), "Done means").
+- The clone's agents, Goal and Rules match the original.
+- Its chat is empty and its agent sessions are fresh.
+- Editing the clone leaves the original unchanged.
+- Creating it starts no agent and commissions no work.
+- Shown by one check covering all four; no new unit or smoke suites.
+
+**Known non-goals** ([raw request](sources/raw-request.md), "Out of scope").
+Templates; syncing between rooms; an option to copy Decisions (open question
+to the requester, default no).
 
 ## Options
 
@@ -135,6 +179,8 @@ _Assembled at ENGINEERING_READY._
 | Date | From | To | Role | Trigger | Outcome | `context_digest` |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-06 | BOOTSTRAP | INTAKE | ROLE-product-manager | Raw request; Product Memory present, packet `ready` | Entered. Hooks: HOOK-canonical-root pass (one root), HOOK-hydrate pass | 4c42601397d4b647 |
+| 2026-11-06 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | 4c42601397d4b647 |
+| 2026-11-06 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0002 recorded as current state and CAP-0001 mapped, success signals, non-goals | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | b9db171eb1a049ab |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
