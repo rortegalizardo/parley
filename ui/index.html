@@ -178,7 +178,8 @@
       <label class="form-label" for="newRoomInput">Room name</label>
       <input id="newRoomInput" placeholder="room name…" maxlength="40" spellcheck="false">
 
-        <div class="fld"><label for="newRoomNote">Shared room instructions</label><textarea id="newRoomNote" rows="7" maxlength="8000" placeholder="Goals, shared context, or rules for every agent…"></textarea><div class="note">Every agent receives these instructions on each turn.</div></div>
+        <div class="fld"><label for="newRoomGoal">Goal <span class="note req">required</span></label><textarea id="newRoomGoal" rows="2" maxlength="2000" aria-required="true" placeholder="What should this room achieve?"></textarea></div>
+        <div class="fld"><label for="newRoomRules">Rules <span class="note">optional</span></label><textarea id="newRoomRules" rows="5" maxlength="8000" placeholder="How agents behave and work together…"></textarea><div class="note">Every agent gets the room brief on every turn. You can add decisions later by pinning messages.</div></div>
         <div class="fld"><label for="newRoomProjectPath">Project folder <span class="note">optional</span></label><div class="project-folder-field"><input id="newRoomProjectPath" spellcheck="false" placeholder="/path/to/your/project"><button type="button" id="newRoomProj" class="btn"><span data-picker-label>Browse…</span></button></div><div class="note">Leave blank to use a new room workspace.</div></div>
         <label id="newRoomReview" class="review-preset"><input type="checkbox" id="newRoomReviewChk"><span><b>Start in Work mode</b><small>Allows project edits and commands. Talk uses conservative defaults.</small></span></label>
       </section>
@@ -187,7 +188,7 @@
            implicit submission, which the HTML spec only performs when there is
            exactly one text field — so adding the seat-name inputs silently
            stopped Enter from creating anything at all. -->
-      <div class="form-actions"><button type="button" id="newRoomCancelBottom" class="btn">Cancel</button><button type="submit" id="newRoomCreate" class="btn primary"
+      <div class="form-actions"><button type="button" id="newRoomCancelBottom" class="btn">Cancel</button><button type="submit" id="newRoomCreate" disabled class="btn primary"
         style="padding:8px 18px;font-size:12px">Create room</button></div>
     </form>
 </dialog>
@@ -199,12 +200,10 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div class="settings-fixed-head"><h2 id="settingsTitle">Room settings</h2>
     <div class="sub" id="roomPath"></div>
-    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="false">Direction</button></div></div>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="false">Brief</button></div></div>
     <div class="settings-scroll-body">
     <section id="agentsSettingsPane" role="tabpanel" aria-labelledby="agentsSettingsTab"><div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">Add or remove agents while keeping the transcript.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
     <div id="settingsAgentNav" class="settings-agent-nav" aria-label="Agent to edit"></div><div id="seatCards"></div></section><section id="roomSettingsPane" role="tabpanel" aria-labelledby="roomSettingsTab" hidden>
-    <div class="fld" style="margin-top:14px"><label>Shared room instructions</label><div class="note">Every agent sees these instructions on every turn. You can also update them with /note.</div>
-      <textarea id="s_roomnote" rows="5" placeholder="Shared context and instructions for every agent…" spellcheck="false"></textarea></div>
     <div class="fld" style="margin-top:14px"><label>Project folder</label><div class="note">Leave blank to use this room’s own sandbox workspace.</div>
       <div style="display:flex;gap:8px">
         <input id="s_projdir" placeholder="e.g. D:\Projects\my-app" spellcheck="false" style="flex:1">
@@ -228,7 +227,7 @@
         <div class="note">Pair mode ends when the reviewer approves, so a limit is optional. A high safety stop still catches two agents that never converge.</div></div>
     </div>
     <div class="mode-policy note">Talk uses conservative provider defaults; Work enables project edits and commands.<details><summary>How agent permissions follow the mode</summary><p>Claude and Gemini follow Talk/Work when set to automatic; their explicit permission choices remain active. Codex promotes read-only to workspace-write in Work. Use Talk with read-only or Plan for a discussion without project edits.</p></details></div>
-    </section><section id="contextSettingsPane" role="tabpanel" aria-labelledby="contextSettingsTab" hidden><section id="contextSettings" aria-label="Room direction"></section></section></div><div class="mrow settings-fixed-foot">
+    </section><section id="contextSettingsPane" role="tabpanel" aria-labelledby="contextSettingsTab" hidden><section id="contextSettings" aria-label="Room brief"></section></section></div><div class="mrow settings-fixed-foot">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="mRename">Rename…</button>
         <button class="btn danger" id="mNewConv">Clear conversation…</button>

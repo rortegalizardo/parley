@@ -64,6 +64,7 @@ export { expect };
 export async function createRoom(page, server, name, { enter = false, sameProvider = false } = {}) {
   await page.locator("#addRoomBtn").click();
   await page.locator("#newRoomInput").fill(name);
+  await page.locator("#newRoomGoal").fill(`Goal for ${name}`);
   if (sameProvider) {
     await page.locator("#seat2").selectOption("claude");
     await expect(page.locator("#seat1Name")).toBeVisible();

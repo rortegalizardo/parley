@@ -77,7 +77,12 @@ test("room builder scales from one to eight agents and keeps the footer reachabl
 test("settings save, rename, archive, and delete cancellation paths remain reachable", async ({ app, server }) => {
   await createRoom(app, server, "dialog-audit");
   await app.locator("#settingsBtn").click();
-  await app.locator("#s_roomnote").fill("Audit note");
+  await app.locator("#contextSettingsTab").click();
+  await app.locator("#briefRules").fill("Audit rule");
+  const briefSave = app.waitForResponse((res) => new URL(res.url()).pathname === "/api/context/brief" && res.request().method() === "POST");
+  await app.locator("#briefSave").click();
+  expect((await briefSave).status()).toBe(200);
+  await app.locator("#agentsSettingsTab").click();
   const save = app.waitForResponse((res) => new URL(res.url()).pathname === "/api/config" && res.request().method() === "POST");
   await app.locator("#mSave").click();
   expect((await save).status()).toBe(200);
