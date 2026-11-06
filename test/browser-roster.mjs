@@ -55,6 +55,7 @@ for (const viewport of [{ width: 640, height: 576 }, { width: 390, height: 844 }
     await expect(app.locator(".roster-instructions").nth(2)).toHaveValue(/skeptical customer/);
     await expect(app.locator(".roster-instructions").nth(3)).toHaveValue(/personal data/);
     await app.locator("#newRoomInput").fill(`team-${viewport.width}`);
+    await app.locator("#newRoomGoal").fill("A goal for this room");
     await app.locator("#newRoomCreate").click();
     await expect(app.locator("#roomTitle")).toHaveText(`team-${viewport.width}`);
     const saved = (await server.room(`team-${viewport.width}`)).room;
@@ -73,6 +74,7 @@ test("creates four individually configured agents and keeps the roster readable"
   await app.screenshot({ animations: "disabled", path: captureRoot + "/parley-home-desktop.png" });
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("panel");
+  await app.locator("#newRoomGoal").fill("A goal for this room");
   await app.locator("#addSeatBtn").click();
   await app.locator("#addSeatBtn").click();
   const rows = app.locator(".roster-row");
@@ -208,6 +210,7 @@ test("mobile room dialog supports one agent, keyboard dismissal and reopening", 
   await app.locator(".roster-remove").last().click();
   await expect(app.locator("#newRoomReview")).toBeHidden();
   await app.locator("#newRoomInput").fill("solo-room");
+  await app.locator("#newRoomGoal").fill("A goal for this room");
   await app.locator("#seat1Name").fill("privacy");
   const bounds = await dialog.boundingBox();
   expect(bounds.x).toBeGreaterThanOrEqual(0);
@@ -228,6 +231,7 @@ test("mobile room dialog supports one agent, keyboard dismissal and reopening", 
 test("legacy first-two selectors still create a same-provider room", async ({ app, server }) => {
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("legacy-roster");
+  await app.locator("#newRoomGoal").fill("A goal for this room");
   await app.locator("#seat2").selectOption("claude");
   await app.locator("#seat1Name").fill("builder");
   await app.locator("#seat2Name").fill("reviewer");
@@ -257,6 +261,7 @@ test("switching rooms refreshes agents after an unchanged first pair", async ({ 
 test("an expanded roster stays valid after removing and replacing a seat", async ({ app, server }) => {
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("full-table");
+  await app.locator("#newRoomGoal").fill("A goal for this room");
   for (let i = 0; i < 6; i++) await app.locator("#addSeatBtn").click();
   await expect(app.locator(".roster-row")).toHaveCount(8);
   await app.locator("#addSeatBtn").click();

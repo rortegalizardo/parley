@@ -1782,12 +1782,11 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.
 #roomList .room-item .ract.del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 @media (hover: none) { #roomList .room-item .rmore { visibility: visible; } }
 
-/* Room direction: a goal, one-line decisions and a character counter. */
+/* Room Brief editor and shared pin controls. */
 #contextSettings .direction-card .fld { margin: 0 0 14px; }
 #contextSettings .direction-card textarea { width: 100%; }
 .direction-pins { list-style: none; padding: 0; margin: 6px 0 8px; display: grid; gap: 6px; }
 .direction-pins li { display: flex; gap: 8px; align-items: center; }
-.direction-pins li input { flex: 1; min-width: 0; }
 .direction-pins .ract { flex: none; border: 1px solid var(--border2); border-radius: 8px; padding: 5px 10px; font-size: 12px; color: var(--text-dim); }
 .direction-pins .ract:hover { background: var(--panel2); color: var(--text); }
 .direction-pins .direction-empty { color: var(--text-faint); }
@@ -1796,7 +1795,6 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.
 .direction-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
 .direction-count { margin-right: auto; color: var(--text-faint); font-size: 12px; }
 .direction-count.over { color: var(--danger); font-weight: 600; }
-#directionStatus:empty { display: none; }
 #overlay .modal #contextExtras > details { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg2); margin-top: 12px; }
 #contextSettings #legacyBrief { max-height: min(42dvh, 380px); overflow: auto; padding-right: 8px; }
 .agreed-handoff-actions { margin-top: 8px; }
@@ -1804,3 +1802,26 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.
 #chat .agreed-pin svg { width: 13px; height: 13px; }
 .direction-foot .btn:disabled { opacity: .45; cursor: default; }
 #decisionDialog #decisionText { min-height: 0; height: auto; }
+
+/* Room Brief: wrapped decisions and advisory notices inside the bounded dialog. */
+.brief-decisions li { align-items: flex-start; min-width: 0; }
+.brief-decision-field { flex: 1; min-width: 0; }
+.brief-decisions textarea { display: block; width: 100%; field-sizing: content; resize: none; overflow: hidden; overflow-wrap: anywhere; }
+#overlay .modal .brief-decisions textarea { min-height: 0; padding: 8px 11px; font-size: 13.5px; line-height: 1.45; }
+.brief-decisions .ract { margin-top: 3px; }
+.brief-decisions .ract.del:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border2)); background: var(--danger-wash); }
+.brief-decisions .brief-archived-text { flex: 1; min-width: 0; margin: 0; padding: 8px 11px; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); border: 1px dashed var(--border2); border-radius: 9px; overflow-wrap: anywhere; white-space: pre-wrap; }
+#overlay .modal .brief-card details { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
+#overlay .modal .brief-card details > summary { font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+#overlay .modal .brief-card details[open] > summary { margin-bottom: 6px; }
+#overlay .modal .brief-card details > .note { margin: 0 0 8px; }
+.brief-notice { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border2); border-radius: 10px; background: var(--panel); color: var(--text-dim); font-size: 12.5px; line-height: 1.5; }
+.brief-notice.warn { background: var(--warn-wash); border-color: var(--warn-edge); color: var(--text); }
+.brief-length { margin: 0 0 14px; }
+.brief-length .direction-count { display: block; margin: 0 0 6px; font-size: 12.5px; }
+.brief-length .brief-notice { margin: 0; }
+.brief-preview { min-width: 0; max-width: 100%; box-sizing: border-box; margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg2); color: var(--text); font: inherit; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.brief-card .direction-foot { padding-top: 4px; }
+.brief-length .direction-count.over { color: var(--warn); }
+#briefStatus:empty { display: none; }
+#newRoomPane .fld > label .req { color: var(--text-faint); font-weight: 400; }

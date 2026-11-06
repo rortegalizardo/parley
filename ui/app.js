@@ -4327,11 +4327,15 @@ function applyRoomTemplate(kind) {
   $("fourAgentTemplate").setAttribute("aria-pressed", String(kind === "team"));
   renderRoster();
 }
+function updateNewRoomCreate() {
+  $("newRoomCreate").disabled = !$("newRoomGoal").value.trim();
+}
+$("newRoomGoal").oninput = updateNewRoomCreate;
 function openNewRoom(kind = "pair") {
   clearNewRoomProject(); // a fresh form never inherits the last one's folder
   $("newRoomInput").value = "";
   $("newRoomReviewChk").checked = false;
-  $("newRoomNote").value = ""; showNewRoomPane(kind === "team" ? "agents" : "room");
+  $("newRoomGoal").value = ""; $("newRoomRules").value = ""; updateNewRoomCreate(); showNewRoomPane(kind === "team" ? "agents" : "room");
   applyRoomTemplate(kind);
   setNavOpen(false);
   openModalDialog($("newRoomDialog"));
@@ -4347,6 +4351,7 @@ function closeNewRoom() {
   newRoomPick++;
   $("newRoomDialog").close();
   $("newRoomInput").value = "";
+  $("newRoomGoal").value = ""; $("newRoomRules").value = ""; updateNewRoomCreate();
   newRoster = [];
   clearNewRoomProject();
 }
@@ -4373,12 +4378,14 @@ $("newRoomForm").onsubmit = async (e) => {
   e.preventDefault();
   const name = $("newRoomInput").value.trim();
   if (!name) { showNewRoomPane("room"); $("newRoomInput").focus(); toast("Enter a room name.", true); return; }
+  const goal = $("newRoomGoal").value, rules = $("newRoomRules").value;
+  if (!goal.trim()) { showNewRoomPane("room"); $("newRoomGoal").focus(); return; }
   const seats = newRoster.map((a, i) => ({ id: (a.id || `agent${i + 1}`).trim().toLowerCase(), provider: a.provider, ...(a.model ? { model: a.model.trim() } : {}), ...(a.effort ? { effort: a.effort.trim() } : {}), ...(a.instructions ? { instructions: a.instructions.trim() } : {}), ...(a.provider === "codex" ? {serviceTier: a.serviceTier || "default"} : {}) }));
   if (!seats.length) return toast("Add at least one agent.", true);
   if (seats.length > 4) return toast("Rooms support up to four agents.", true);
   const names = new Set();
   for (const seat of seats) { if (names.has(seat.id)) return toast("Give each agent a different name.", true); names.add(seat.id); const issue = seatNameIssue(seat.id); if (issue) return toast(issue, true); }
-  const body = { name, rules: $("newRoomNote").value, mode: $("newRoomReviewChk").checked ? "work" : "talk" };
+  const body = { name, goal, rules, decisions: [], mode: $("newRoomReviewChk").checked ? "work" : "talk" };
   body.seats = seats;
   const projectDir = $("newRoomProjectPath").value.trim();
   if (projectDir) body.projectDir = projectDir;
@@ -4395,6 +4402,7 @@ $("newRoomForm").onsubmit = async (e) => {
     if (s2n) s2n.value = "";
     newRoster = [];
     $("newRoomReviewChk").checked = false;
+    $("newRoomGoal").value = ""; $("newRoomRules").value = ""; updateNewRoomCreate();
     $("newRoomDialog").close();
     clearNewRoomProject();
     await loadRoom(name);
@@ -4618,6 +4626,7 @@ document.addEventListener("click", (e) => {
 });
 let selectedSettingsAgent = 0;
 function showSettingsPane(which) {
+  if (which === "context") requestAnimationFrame(resizeBriefDecisions);
   for (const name of ["agents", "room", "context"]) {
     $(name + "SettingsPane").hidden = name !== which;
     $(name + "SettingsTab").setAttribute("aria-selected", String(name === which));
@@ -4628,7 +4637,6 @@ $("roomSettingsTab").onclick = () => showSettingsPane("room");
 $("contextSettingsTab").onclick = () => showSettingsPane("context");
 let settingsRosterDraft = null;
 let settingsRosterVersion = null;
-let settingsBriefDraft = null;
 function rosterDraftFromSummary(s) {
   return s.seats.map((id) => {
     const p = (s.seatInfo && s.seatInfo[id]) || s.providers[id] || {};
@@ -4727,7 +4735,6 @@ function closeSettings() {
   syncToastHost();
   settingsRosterDraft = null;
   settingsRosterVersion = null;
-  settingsBriefDraft = null;
   // Closing a dialog used to leave focus on nothing at all.
   if (settingsOpener && document.contains(settingsOpener)) settingsOpener.focus();
   settingsOpener = null;
@@ -4743,21 +4750,11 @@ function openSettings() {
   selectedSettingsAgent = 0;
   settingsRosterDraft = rosterDraftFromSummary(s);
   settingsRosterVersion = s.rosterVersion;
-  const brief = s.context?.brief || { revision: 0, goal: "", rules: "", decisions: [] };
-  settingsBriefDraft = {
-    baseRevision: brief.revision,
-    goal: brief.goal || "",
-    rules: brief.rules ?? "",
-    decisions: (brief.decisions || []).map((decision) => ({ ...decision })),
-    deleteArchivedIds: [],
-  };
   $("roomPath").textContent = s.dir;
   $("mDelete").hidden = s.name === "default"; // the fallback room can't be removed
   renderSeatCards(s);
   $("s_notify").checked = notifyEnabled();
   $("s_projdir").value = s.cfg.projectDir || "";
-  $("s_roomnote").value = settingsBriefDraft.rules;
-  settingsBriefDraft.rulesControlValue = $("s_roomnote").value;
   $("s_default").innerHTML = settingsRosterDraft.map((x) => `<option>${esc(x.id)}</option>`).join("");
   $("s_default").value = s.cfg.defaultAgent || settingsRosterDraft[0].id;
   $("s_timeout").value = Math.round((s.cfg.timeoutMs || 300000) / 1000);
@@ -4873,10 +4870,7 @@ $("mSave").onclick = async () => {
       const values = agents[seat.id] || {};
       return { id: seat.id, provider: seat.provider, model: values.model || null, effort: values.effort || null, instructions: values.instructions || null };
     });
-    const briefDraft = settingsBriefDraft || { baseRevision: s.context?.brief?.revision || 0, goal: s.context?.brief?.goal || "", rules: "", decisions: [], deleteArchivedIds: [] };
-    const currentRules = $("s_roomnote").value;
-    briefDraft.rules = currentRules === briefDraft.rulesControlValue ? (settingsBriefDraft?.rules ?? currentRules) : currentRules;
-    const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config, brief: briefDraft });
+    const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config });
     closeSettings();
     // The panel above already shows the new permission, but a CLI process that
     // has launched cannot be changed. Say what the user is actually watching —
@@ -4887,9 +4881,6 @@ $("mSave").onclick = async () => {
       ? `Saved — ${late.join(" and ")} ${late.length > 1 ? "are" : "is"} mid-answer, and the ${late.length > 1 ? "runs" : "run"} already in progress ${late.length > 1 ? "keep" : "keeps"} the previous permissions.`
       : "Settings saved.");
   } catch (e) {
-    if (e.status === 409 && e.data?.brief) {
-      settingsBriefDraft = { ...settingsBriefDraft, baseRevision: e.data.brief.revision };
-    }
     toast(e.message, true);
   }
 };
@@ -5009,8 +5000,7 @@ else loadRoom(state.room).catch((e) => toast(e.message, true));
 $("homeLink").onclick = (event) => { event.preventDefault(); closeSettings(); clearLive(); showNoRoom(); refreshRooms().catch((e) => toast(e.message, true)); setNavOpen(false); };
 input.focus();
 
-// Durable context is server owned and survives conversation resets: a short
-// room direction the user curates, plus the session events Parley records.
+// Durable context is server owned; the editor keeps exact draft text until Save brief.
 function contextDate(value) {
   return value && Number.isFinite(new Date(value).getTime()) ? new Date(value).toLocaleString() : "";
 }
@@ -5023,58 +5013,125 @@ function briefChars(goal, rules, decisions) {
     .filter((decision) => decision.status !== "archived")
     .reduce((total, decision) => total + String(decision.text || "").length, 0);
 }
-function directionDraft(host, s) {
-  const room = s.name || state.room;
-  if (host._directionDraft?.room === room && host._directionDraft.dirty) return host._directionDraft;
+const briefDrafts = new Map();
+function briefContent(draft) {
+  return JSON.stringify([draft.goal, draft.rules, draft.decisions, draft.deleteArchivedIds]);
+}
+function newBriefDraft(s) {
   const brief = briefFromSummary(s);
-  return { room, dirty: false, baseRevision: brief.revision, goal: brief.goal, rules: brief.rules, decisions: brief.decisions };
+  const draft = { room: s.name || state.room, baseRevision: brief.revision, goal: brief.goal, rules: brief.rules,
+    decisions: brief.decisions, deleteArchivedIds: [], saved: brief, dirty: false, status: "", generation: 0 };
+  // Keep a separate saved copy for per-field allowances and explicit deletion eligibility.
+  draft.saved = structuredClone(brief);
+  draft.baseline = briefContent(draft);
+  return draft;
 }
-function updateDirectionCount() {
-  const host = $("contextSettings"), draft = host?._directionDraft, count = $("directionCount");
-  if (!draft || !count) return;
-  const max = state.summary?.context?.briefGuide || 2000;
-  const used = briefChars(draft.goal, draft.rules, draft.decisions);
-  count.textContent = `${used.toLocaleString()} / ${max.toLocaleString()} characters`;
-  count.classList.toggle("over", used > max);
-  $("directionSave").disabled = !draft.dirty || used > max;
-  $("directionDiscard").hidden = !draft.dirty;
+function briefFieldLimit(draft, part, decision) {
+  const saved = decision ? draft.saved.decisions.find((d) => d.id && d.id === decision.id)?.text || "" : draft.saved[part];
+  return Math.max(decision ? 200 : part === "goal" ? 2000 : 8000, saved.length);
 }
-function renderDirectionCard(host, s) {
-  const card = host.querySelector("#directionCard"), context = s.context || {};
-  const draft = directionDraft(host, s);
-  host._directionDraft = draft;
-  const pinMax = context.decisionMax || 200;
-  const active = draft.decisions.filter((decision) => decision.status !== "archived");
-  card.innerHTML = `<div class="context-section-head"><div><h3>Room direction</h3><p class="note">A short goal and the key decisions every agent should keep in mind. Each agent session gets it once, then a one-line reminder until it changes.</p></div></div>
-    <div class="fld"><label for="directionGoal">Goal</label><textarea id="directionGoal" rows="3" placeholder="What this room is working toward…">${esc(draft.goal)}</textarea></div>
-    <div class="fld"><label>Decisions</label><ul class="direction-pins">${active.map((pin, i) => `<li><input type="text" data-pin-index="${i}" maxlength="${pinMax}" value="${esc(pin.text)}" aria-label="Decision ${i + 1}"><button type="button" class="ract" data-pin-remove="${i}" aria-label="Remove decision ${i + 1}">Remove</button></li>`).join("") || '<li class="note direction-empty">No decisions pinned yet.</li>'}</ul>
-    <div class="direction-add"><input type="text" id="directionNewPin" maxlength="${pinMax}" placeholder="Add a one-line decision…"><button type="button" class="btn" id="directionAddPin">Add</button></div>
-    <p class="note">Use the pin on a message or on an agreed decision to add one from the chat. Converge results are not kept unless you pin them.</p></div>
-    <div class="direction-foot"><span id="directionCount" class="direction-count"></span><button type="button" class="btn" id="directionTidy" ${context.suggesting ? "disabled" : ""}>Tidy</button><button type="button" class="btn" id="directionDiscard" hidden>Discard changes</button><button type="button" class="btn primary" id="directionSave">Save direction</button></div>
-    <p id="directionStatus" class="note" role="status">${esc(host._directionStatus || "")}</p>`;
-  updateDirectionCount();
+function briefOverLimit(draft, part, decision) {
+  const limit = decision ? 200 : part === "goal" ? 2000 : 8000;
+  return briefFieldLimit(draft, part, decision) > limit
+    ? `<p class="note">This is longer than the ${limit.toLocaleString("en-US")}-character limit for new text. It is kept and sent as is; it can't grow further.</p>` : "";
+}
+function updateBriefNotices() {
+  const draft = $("contextSettings")?._briefDraft;
+  if (!draft || !$("briefCount")) return;
+  const count = briefChars(draft.goal, draft.rules, draft.decisions);
+  $("briefCount").textContent = `${count.toLocaleString("en-US")} characters · guide about 2,000`;
+  $("briefCount").classList.toggle("over", count > 2000);
+  $("briefLengthWarning").hidden = count <= 2000;
+  $("briefSave").disabled = !draft.dirty || !!draft.saving || !!draft.tidying;
+  $("briefDiscard").hidden = !draft.dirty;
+  const normalize = (value) => value.replace(/\s+/g, " ").trim().toLowerCase();
+  const goal = normalize(draft.goal), rules = normalize(draft.rules), pairs = [];
+  if (goal.length >= 20 && rules.includes(goal)) pairs.push("Goal and Rules");
+  for (const decision of draft.decisions.filter((d) => d.status === "active")) {
+    const text = normalize(decision.text);
+    if (text.length >= 20 && rules.includes(text)) pairs.push("a decision and Rules");
+    if (goal && goal === text) pairs.push("Goal and a decision");
+  }
+  $("briefMergeNotice").hidden = !pairs.length;
+  $("briefMergeNotice").textContent = pairs.length ? `Some text appears in more than one part of the brief (${pairs.join("; ")}). You may want to keep it in one place; agents get every part either way.` : "";
+  $("briefStatus").textContent = draft.status;
+  $("briefUnsaved").hidden = !draft.dirty;
+}
+function renderBriefCard(host, s) {
+  const room = s.name || state.room;
+  const draft = briefDrafts.get(room) || newBriefDraft(s);
+  briefDrafts.set(room, draft);
+  const sameRoom = host._briefDraft?.room === room;
+  const card = host.querySelector("#briefCard"), legacy = s.context?.legacy;
+  const open = sameRoom ? new Set([...card.querySelectorAll("details[open]")].map((d) => d.id)) : new Set();
+  host._briefDraft = draft;
+  const active = draft.decisions.filter((d) => d.status === "active");
+  const archived = draft.decisions.filter((d) => d.status === "archived")
+    .sort((a, b) => String(b.archivedAt || "").localeCompare(String(a.archivedAt || "")));
+  card.innerHTML = `<div class="context-section-head"><div><h3>Room brief</h3><p class="note">Every agent gets this whole brief — goal, rules and active decisions — on every turn. Edits apply on each agent's next turn.</p></div></div>
+    <div class="fld"><label for="briefGoal">Goal</label><textarea id="briefGoal" rows="3" maxlength="${briefFieldLimit(draft, "goal")}" placeholder="${draft.saved.goal ? "What should this room achieve?" : "No goal yet. Add one so every agent knows what this room should achieve."}">${esc(draft.goal)}</textarea>${briefOverLimit(draft, "goal")}</div>
+    <div class="fld"><label for="briefRules">Rules</label><textarea id="briefRules" rows="9" maxlength="${briefFieldLimit(draft, "rules")}" placeholder="How agents behave and work together…">${esc(draft.rules)}</textarea>${briefOverLimit(draft, "rules")}</div>
+    <div class="fld"><label>Decisions</label><ul class="direction-pins brief-decisions">${active.map((d, i) => `<li><div class="brief-decision-field"><textarea rows="1" data-decision-index="${draft.decisions.indexOf(d)}" maxlength="${briefFieldLimit(draft, null, d)}" aria-label="Decision ${i + 1}">${esc(d.text)}</textarea>${briefOverLimit(draft, null, d)}</div><button type="button" class="ract" data-brief-archive="${draft.decisions.indexOf(d)}" aria-label="Archive decision ${i + 1}">Archive</button></li>`).join("") || '<li class="note direction-empty">No decisions yet. Pin a message, or add one here.</li>'}</ul>
+    <div class="direction-add"><input type="text" id="briefNewDecision" maxlength="200" placeholder="Add a one-line decision…" aria-label="New decision"><button type="button" class="btn" id="briefAddDecision">Add</button></div></div>
+    ${archived.length ? `<details id="briefArchived"><summary>Archived decisions (${archived.length})</summary><p class="note">Kept, not sent to agents.</p><ul class="direction-pins brief-decisions">${archived.map((d, i) => `<li><p class="brief-archived-text">${esc(d.text)}</p><button type="button" class="ract" data-brief-restore="${draft.decisions.indexOf(d)}" aria-label="Restore archived decision ${i + 1}">Restore</button><button type="button" class="ract del" data-brief-delete="${draft.decisions.indexOf(d)}" aria-label="Delete archived decision ${i + 1}">Delete</button></li>`).join("")}</ul></details>` : ""}
+    <div id="briefMergeNotice" class="brief-notice" role="status" hidden></div>
+    <div class="brief-length"><span id="briefCount" class="direction-count"></span><p id="briefLengthWarning" class="brief-notice warn" role="status" hidden>This brief is longer than the 2,000-character guide (about 500 tokens), and every agent reads all of it on every turn. Consider archiving decisions you no longer need or trimming the rules. Nothing is cut automatically.</p></div>
+    <details id="briefPreviewDetails"><summary>What agents see</summary><p id="briefUnsaved" class="note" hidden>Includes unsaved changes.</p><pre id="briefPreview" class="brief-preview" aria-label="The exact block every agent receives"></pre></details>
+    ${legacy ? `<details id="briefLegacy" class="context-legacy" data-context-detail="legacy"><summary>Old saved brief (no longer sent to agents) · ${esc(legacy.chars.toLocaleString())} characters</summary><p class="note">Kept on disk for the record${legacy.version ? ` · version ${esc(legacy.version)}` : ""}${legacy.savedAt ? ` · ${esc(contextDate(legacy.savedAt))}` : ""}. Copy anything still useful into the room brief.</p><div class="bubble context-markdown" id="legacyBrief"><p class="note">Loading…</p></div></details>` : ""}
+    <div class="direction-foot"><button type="button" class="btn" id="briefTidy" ${s.context?.suggesting || draft.tidying ? "disabled" : ""}>Tidy</button><button type="button" class="btn" id="briefDiscard" hidden>Discard changes</button><button type="button" class="btn primary" id="briefSave">Save brief</button></div>
+    <p id="briefStatus" class="note" role="status"></p>`;
+  card.querySelectorAll("details").forEach((d) => { d.open = open.has(d.id); });
+  // Set values as properties so HTML's leading-newline rule cannot change the display.
+  $("briefGoal").value = draft.goal;
+  $("briefRules").value = draft.rules;
+  card.querySelectorAll("[data-decision-index]").forEach((field) => { field.value = draft.decisions[Number(field.dataset.decisionIndex)].text; });
+  if (draft.saving || draft.tidying) card.querySelectorAll("button, input, textarea").forEach((el) => { el.disabled = true; });
+  updateBriefNotices();
+  resizeBriefDecisions();
+  if ($("briefPreviewDetails").open) refreshBriefPreview();
+  if ($("briefLegacy")?.open) loadLegacyBrief();
+}
+window.addEventListener("resize", resizeBriefDecisions);
+function resizeBriefDecisions() {
+  document.querySelectorAll(".brief-decision-field textarea").forEach((field) => {
+    // Size from the actual wrapped text, including on engines without field-sizing.
+    if (!field.getClientRects().length) return;
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight + 2}px`;
+  });
+}
+async function refreshBriefPreview() {
+  const host = $("contextSettings"), draft = host._briefDraft, box = $("briefPreview");
+  if (!draft || !box || !$("briefPreviewDetails").open) return;
+  const generation = ++draft.generation;
+  box.textContent = "Loading…";
+  try {
+    const { prompt } = await api("/api/context/preview", { room: draft.room, goal: draft.goal, rules: draft.rules, decisions: draft.decisions });
+    if (state.room === draft.room && host._briefDraft === draft && draft.generation === generation && $("briefPreview") === box) box.textContent = prompt;
+  } catch (error) {
+    if (state.room === draft.room && host._briefDraft === draft && draft.generation === generation && $("briefPreview") === box) box.textContent = error.message;
+  }
 }
 function renderContextExtras(host, s) {
-  const extras = host.querySelector("#contextExtras"), context = s.context || {}, legacy = context.legacy;
+  const extras = host.querySelector("#contextExtras"), context = s.context || {};
   const openDetails = new Set([...extras.querySelectorAll("details[open][data-context-detail]")].map((detail) => detail.dataset.contextDetail));
-  extras.innerHTML = `${legacy ? `<details class="context-legacy" data-context-detail="legacy"><summary>Old saved brief (no longer sent to agents) · ${esc(legacy.chars.toLocaleString())} characters</summary><p class="note">Kept on disk for the record${legacy.version ? ` · version ${esc(legacy.version)}` : ""}${legacy.savedAt ? ` · ${esc(contextDate(legacy.savedAt))}` : ""}. Copy anything still useful into the room direction.</p><div class="bubble context-markdown" id="legacyBrief"><p class="note">Loading…</p></div></details>` : ""}
-    <details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}${context.observations?.[seat] ? `<br><span class="context-observation">${esc(context.observations[seat].status)} · ${esc(context.observations[seat].reason)}${context.observations[seat].at ? ` · ${esc(contextDate(context.observations[seat].at))}` : ""}</span>` : ""}</p>`).join("")}<details data-context-detail="events"><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(contextDate(event.at))}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details></details>`;
+  extras.innerHTML = `    <details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p>${(s.seats || []).map((seat) => `<p class="note"><b>@${esc(seat)}</b> · ${esc(s.agents?.[seat]?.linked ? "Session linked" : "No linked session")} · ${esc(context.visibility?.[s.seatInfo?.[seat]?.provider || s.cfg?.agents?.[seat]?.provider || seat] || "Provider does not report context usage or compaction.")}${context.observations?.[seat] ? `<br><span class="context-observation">${esc(context.observations[seat].status)} · ${esc(context.observations[seat].reason)}${context.observations[seat].at ? ` · ${esc(contextDate(context.observations[seat].at))}` : ""}</span>` : ""}</p>`).join("")}<details data-context-detail="events"><summary>Confirmed context events (${(context.events || []).length})</summary>${(context.events || []).slice().reverse().map((event) => `<p class="context-event"><b>@${esc(event.seat)} · ${esc(event.type)}</b><br><time>${esc(contextDate(event.at))}</time> · ${esc(event.reason)}</p>`).join("") || '<p class="note">No confirmed events recorded.</p>'}</details></details>`;
   extras.querySelectorAll("details[data-context-detail]").forEach((detail) => { detail.open = openDetails.has(detail.dataset.contextDetail); });
-  if (extras.querySelector('details[data-context-detail="legacy"]')?.open) loadLegacyBrief();
 }
 function renderContextSettings(s) {
   const host = $("contextSettings"); if (!host || !s) return;
-  if (!host.querySelector("#directionCard")) host.innerHTML = '<section id="directionCard" class="context-brief-card direction-card"></section><div id="contextExtras"></div>';
+  if (!host.querySelector("#briefCard")) host.innerHTML = '<section id="briefCard" class="context-brief-card direction-card brief-card"></section><div id="contextExtras"></div>';
   const room = s.name || state.room, context = s.context || {};
-  if (host._directionDraft && host._directionDraft.room !== room) { host._directionDraft = null; host._directionStatus = ""; }
-  // An unsaved edit is never overwritten by a broadcast; only the busy state of Tidy follows it.
-  const cardSignature = JSON.stringify([room, context.brief, context.suggesting]);
-  if (host._cardSignature !== cardSignature) {
-    host._cardSignature = cardSignature;
-    if (host._directionDraft?.dirty) { const tidy = $("directionTidy"); if (tidy) tidy.disabled = !!context.suggesting; }
-    else { host._directionDraft = null; renderDirectionCard(host, s); }
+  const signature = JSON.stringify([room, context.brief, context.legacy]);
+  if (host._cardSignature !== signature || host._briefDraft?.room !== room) {
+    host._cardSignature = signature;
+    const draft = briefDrafts.get(room);
+    if (!draft || (!draft.dirty && !draft.saving && !draft.tidying)) briefDrafts.set(room, newBriefDraft(s));
+    if (host._briefDraft !== briefDrafts.get(room)) renderBriefCard(host, s);
   }
-  const extrasSignature = JSON.stringify([room, context.legacy, context.events, context.observations, context.visibility, s.seats, s.agents, s.seatInfo]);
+  const tidy = $("briefTidy");
+  if (tidy) tidy.disabled = !!context.suggesting || !!host._briefDraft?.saving || !!host._briefDraft?.tidying;
+  const extrasSignature = JSON.stringify([room, context.events, context.observations, context.visibility, s.seats, s.agents, s.seatInfo]);
   if (host._extrasSignature !== extrasSignature) { host._extrasSignature = extrasSignature; renderContextExtras(host, s); }
 }
 async function loadLegacyBrief() {
@@ -5086,103 +5143,121 @@ async function loadLegacyBrief() {
     if (state.room === room && $("legacyBrief") === box) box.innerHTML = renderMD(result.text || "");
   } catch (error) { box.dataset.loaded = ""; box.innerHTML = `<p class="note">${esc(error.message)}</p>`; }
 }
-function markDirectionDirty(status = "") {
-  const host = $("contextSettings");
-  host._directionDraft.dirty = true;
-  host._directionStatus = status;
-  if ($("directionStatus")) $("directionStatus").textContent = status;
-  updateDirectionCount();
-}
-async function saveDirection(room, goal, pins, sourceDraft = null) {
-  const draft = sourceDraft || $("contextSettings")?._directionDraft;
-  const brief = draft && draft.room === room ? draft : briefFromSummary(state.summary);
-  const result = await api("/api/context/brief", {
-    room,
-    baseRevision: brief.baseRevision ?? brief.revision,
-    goal,
-    rules: brief.rules ?? "",
-    decisions: pins,
-    deleteArchivedIds: [],
-  });
-  if (state.room === room) {
-    const nextBrief = result.brief || result.context?.brief;
-    if (nextBrief) applySummary({ ...state.summary, context: { ...state.summary.context, brief: nextBrief } });
-  }
-  return result;
+function markBriefDirty(status = "") {
+  const draft = $("contextSettings")._briefDraft;
+  draft.dirty = briefContent(draft) !== draft.baseline;
+  draft.status = status;
+  draft.generation++;
+  updateBriefNotices();
+  refreshBriefPreview();
 }
 document.addEventListener("input", (event) => {
-  const draft = $("contextSettings")?._directionDraft;
-  if (!draft) return;
-  if (event.target.id === "directionGoal") { draft.goal = event.target.value; markDirectionDirty(); }
-  else if (event.target.dataset?.pinIndex !== undefined && event.target.closest("#directionCard")) {
-    const active = draft.decisions.filter((decision) => decision.status !== "archived");
-    if (active[Number(event.target.dataset.pinIndex)]) active[Number(event.target.dataset.pinIndex)].text = event.target.value;
-    markDirectionDirty();
-  }
+  const draft = $("contextSettings")?._briefDraft;
+  if (!draft || draft.saving || draft.tidying) return;
+  if (event.target.id === "briefGoal") draft.goal = event.target.value;
+  else if (event.target.id === "briefRules") draft.rules = event.target.value;
+  else if (event.target.dataset?.decisionIndex !== undefined && event.target.closest("#briefCard")) {
+    draft.decisions[Number(event.target.dataset.decisionIndex)].text = event.target.value;
+    resizeBriefDecisions();
+  } else return;
+  markBriefDirty();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.target.id === "directionNewPin" && event.key === "Enter") { event.preventDefault(); $("directionAddPin").click(); }
+  if (event.target.id === "briefNewDecision" && event.key === "Enter") { event.preventDefault(); $("briefAddDecision").click(); }
 });
 document.addEventListener("toggle", (event) => {
   if (event.target.dataset?.contextDetail === "legacy" && event.target.open) loadLegacyBrief();
+  if (event.target.id === "briefPreviewDetails") {
+    if (event.target.open) refreshBriefPreview();
+    else if ($("contextSettings")._briefDraft) $("contextSettings")._briefDraft.generation++;
+  }
 }, true);
 document.addEventListener("click", async (event) => {
   const host = $("contextSettings");
   try {
     const pin = event.target.closest(".pin-decision");
     if (pin) { openPinDialog(Number(pin.closest("[data-n]").dataset.n)); return; }
-    if (!event.target.closest("#directionCard")) return;
-    const draft = host._directionDraft;
-    const remove = event.target.closest("[data-pin-remove]");
-    if (remove) {
-      const active = draft.decisions.filter((decision) => decision.status !== "archived");
-      const decision = active[Number(remove.dataset.pinRemove)];
-      if (decision) decision.status = "archived";
-      markDirectionDirty(); renderDirectionCard(host, state.summary); return;
-    }
-    if (event.target.closest("#directionAddPin")) {
-      const text = $("directionNewPin").value.replace(/\s+/g, " ").trim();
-      if (!text) return;
-      draft.decisions.push({ text, status: "active" }); markDirectionDirty(); renderDirectionCard(host, state.summary); $("directionNewPin").focus();
-      return;
-    }
-    if (event.target.closest("#directionDiscard")) {
-      host._directionDraft = null; host._directionStatus = ""; renderDirectionCard(host, state.summary); return;
-    }
-    if (event.target.closest("#directionSave")) {
-      const button = $("directionSave"), room = draft.room;
-      button.disabled = true;
+    if (!event.target.closest("#briefCard")) return;
+    const draft = host._briefDraft;
+    if (!draft || draft.saving || draft.tidying) return;
+    const archive = event.target.closest("[data-brief-archive]");
+    const restore = event.target.closest("[data-brief-restore]");
+    const remove = event.target.closest("[data-brief-delete]");
+    if (archive) {
+      const decision = draft.decisions[Number(archive.dataset.briefArchive)];
+      decision.status = "archived"; decision.archivedAt = new Date().toISOString();
+    } else if (restore) {
+      const [decision] = draft.decisions.splice(Number(restore.dataset.briefRestore), 1);
+      decision.status = "active"; decision.archivedAt = null;
+      draft.decisions.push(decision);
+    } else if (remove) {
+      const decision = draft.decisions[Number(remove.dataset.briefDelete)];
+      if (!await confirmRoomAction("Delete this archived decision? It can't be restored.", "", "Delete")) return;
+      if (state.room !== draft.room || host._briefDraft !== draft || draft.saving) return;
+      const saved = draft.saved.decisions.find((d) => d.id && d.id === decision.id);
+      // Only IDs already persisted as archived can be deleted by PRL-1.
+      if (saved && saved.status !== "archived") {
+        draft.status = "Save brief to archive this decision before deleting it."; updateBriefNotices(); return;
+      }
+      if (saved) draft.deleteArchivedIds.push(saved.id);
+      draft.decisions.splice(draft.decisions.indexOf(decision), 1);
+    } else if (event.target.closest("#briefAddDecision")) {
+      const text = $("briefNewDecision").value;
+      if (!text.trim()) return;
+      draft.decisions.push({ text, status: "active" });
+    } else if (event.target.closest("#briefDiscard")) {
+      briefDrafts.set(draft.room, newBriefDraft(state.summary));
+      renderBriefCard(host, state.summary); return;
+    } else if (event.target.closest("#briefSave")) {
+      if (!draft.dirty) return;
+      draft.saving = true;
+      renderBriefCard(host, state.summary);
       try {
-        host._directionDraft = null; host._directionStatus = "Saved. Each agent gets the new direction on its next turn.";
-        await saveDirection(room, draft.goal, draft.decisions, draft);
-        renderDirectionCard(host, state.summary);
+        const result = await api("/api/context/brief", { room: draft.room, baseRevision: draft.baseRevision,
+          goal: draft.goal, rules: draft.rules, decisions: draft.decisions, deleteArchivedIds: draft.deleteArchivedIds });
+        const next = newBriefDraft({ name: draft.room, context: result.context });
+        next.status = "Saved. Each agent gets the new brief on its next turn.";
+        briefDrafts.set(draft.room, next);
+        if (state.room === draft.room) {
+          applySummary({ ...state.summary, context: result.context });
+          renderBriefCard(host, state.summary);
+        }
       } catch (error) {
         if (error.status === 409 && error.data?.brief) draft.baseRevision = error.data.brief.revision;
-        host._directionDraft = draft; host._directionStatus = ""; renderDirectionCard(host, state.summary); throw error;
+        draft.status = error.message;
+      } finally {
+        draft.saving = false;
+        if (state.room === draft.room && briefDrafts.get(draft.room) === draft) renderBriefCard(host, state.summary);
       }
       return;
-    }
-    if (event.target.closest("#directionTidy")) {
-      if (draft.dirty) throw new Error("Save or discard your changes before Tidy.");
-      const button = $("directionTidy"), room = draft.room;
-      button.disabled = true; $("directionStatus").textContent = "Asking Claude Sonnet for a tidier version…";
+    } else if (event.target.closest("#briefTidy")) {
+      if (draft.dirty) { draft.status = "Save or discard your changes before Tidy."; updateBriefNotices(); return; }
+      draft.tidying = true; draft.status = "Asking Claude Sonnet for a shorter goal and decisions…";
+      renderBriefCard(host, state.summary);
+      host.querySelectorAll("#briefCard button, #briefCard input, #briefCard textarea").forEach((el) => { el.disabled = true; });
       try {
-        const { suggestion } = await api("/api/context/suggest", { room, tidy: true });
-        if (state.room !== room) return;
-        const suggested = suggestion.decisions || suggestion.pins || [];
-        const existing = draft.decisions.filter((decision) => decision.status !== "archived");
-        const remaining = [...existing];
-        const decisions = suggested.map((value) => {
+        const { suggestion } = await api("/api/context/suggest", { room: draft.room, tidy: true });
+        const remaining = draft.decisions.filter((d) => d.status === "active");
+        const decisions = (suggestion.decisions || suggestion.pins || []).map((value) => {
           const text = typeof value === "string" ? value : value.text;
-          const index = remaining.findIndex((decision) => decision.text === text);
-          const match = index >= 0 ? remaining.splice(index, 1)[0] : null;
-          return match ? { ...match } : { text, status: "active" };
-        }).concat(draft.decisions.filter((decision) => decision.status === "archived").map((decision) => ({ ...decision })));
-        host._directionDraft = { ...draft, dirty: true, goal: suggestion.goal ?? draft.goal, decisions };
-        host._directionStatus = "Tidy suggestion loaded. Review it, then Save direction or Discard changes.";
-        renderDirectionCard(host, state.summary);
-      } catch (error) { button.disabled = false; $("directionStatus").textContent = ""; throw error; }
-    }
+          const index = remaining.findIndex((d) => d.text === text);
+          return index >= 0 ? { ...remaining.splice(index, 1)[0] } : { text, status: "active" };
+        });
+        // Retain omitted active records as archived in the draft too, including unsaved text.
+        draft.decisions = decisions.concat(remaining.map((d) => ({ ...d, status: "archived", archivedAt: new Date().toISOString() })),
+          draft.decisions.filter((d) => d.status === "archived"));
+        draft.goal = suggestion.goal ?? draft.goal;
+        draft.dirty = true;
+        draft.status = "Tidy suggestion loaded. Rules are unchanged; decisions it leaves out move to Archived when you save. Review it, then Save brief or Discard changes.";
+      } catch (error) { draft.status = error.message; }
+      finally {
+        draft.tidying = false;
+        if (state.room === draft.room && host._briefDraft === draft) renderBriefCard(host, state.summary);
+      }
+      return;
+    } else return;
+    markBriefDirty(); renderBriefCard(host, state.summary);
+    if (event.target.closest("#briefAddDecision")) $("briefNewDecision").focus();
   } catch (error) { toast(error.message, true); }
 });
 
@@ -5231,15 +5306,11 @@ $("decisionForm").addEventListener("submit", async (event) => {
     const priorIds = new Set((draft.brief.decisions || []).map((decision) => decision.id).filter(Boolean));
     const canonical = nextBrief?.decisions?.find((decision) => decision.text === text && decision.status !== "archived" && (!decision.id || !priorIds.has(decision.id))) || { text, entryN: draft.entryN, status: "active" };
     // An open unsaved edit replaces the whole list on Save, so it carries the pin too.
-    const open = $("contextSettings")._directionDraft;
+    const open = $("contextSettings")._briefDraft;
     if (open?.dirty && open.room === draft.room) {
       open.decisions.push({ ...canonical });
       if (nextBrief?.revision !== undefined) open.baseRevision = nextBrief.revision;
-      renderDirectionCard($("contextSettings"), state.summary);
-    }
-    if (settingsBriefDraft && state.room === draft.room) {
-      settingsBriefDraft.decisions.push({ ...canonical });
-      if (nextBrief?.revision !== undefined) settingsBriefDraft.baseRevision = nextBrief.revision;
+      renderBriefCard($("contextSettings"), state.summary);
     }
     if (pinDraft === draft) $("decisionDialog").close();
     toast(`Pinned to the room direction in ${draft.room}.`);

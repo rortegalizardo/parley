@@ -9,6 +9,7 @@ test("large rosters use a searchable compact agent picker", async ({ app, server
   await createRoom(app, server, "many-agents");
   await app.locator("#addRoomBtn").click();
   await app.locator("#newRoomInput").fill("many-agents-8");
+  await app.locator("#newRoomGoal").fill("A goal for this room");
   for (let i = 0; i < 7; i++) await app.locator("#addSeatBtn").click();
   const rows = app.locator(".roster-row");
   await expect(rows).toHaveCount(9);

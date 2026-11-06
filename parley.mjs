@@ -7970,6 +7970,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (route === "POST /api/context/preview") {
+      const body = await readBody(req);
+      if (!body || typeof body !== "object" || Array.isArray(body) ||
+          typeof body.room !== "string" || !validRoomName(body.room) || typeof body.goal !== "string" ||
+          typeof body.rules !== "string" || !Array.isArray(body.decisions) || body.decisions.some((item) =>
+            !item || typeof item !== "object" || Array.isArray(item) || typeof item.text !== "string" ||
+            !["active", "archived"].includes(item.status) ||
+            (Object.hasOwn(item, "id") && typeof item.id !== "string"))) {
+        throw badBrief("Preview requires a room, Goal, Rules and Decisions with text and status.");
+      }
+      // Render the draft directly: no room loading, normalization or save path.
+      return json(res, 200, { ok: true, prompt: renderBrief(body) });
+    }
+
     if (route === "POST /api/context/brief") {
       const body = await readBody(req);
       const room = loadRoom(body.room || "default");
