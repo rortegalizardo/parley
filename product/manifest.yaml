@@ -1,0 +1,207 @@
+# product/manifest.yaml
+# Machine-readable root manifest. First file a stateless agent reads.
+# Mutable. Updated in the same commit as any artifact creation that allocates
+# an identifier or registers an area.
+#
+# Scaffolded on 2026-11-06 by SKILL-bootstrap-product-memory from the Core
+# product-memory template, version 1.0.0. Provenance:
+# architecture/adoption-notes.md.
+
+schema_version: 1
+
+product:
+  key: PRL
+  name: "Parley"
+  repository_root: "."
+  canonical_root: "product/"
+
+# S = flat (no areas). M = areas. L = areas + subsystems.
+# See architecture/scaling-profiles.md. Promotion never rewrites identifiers.
+# New project: profile S. Hierarchy is never pre-created.
+scaling_profile: S
+
+# Registered product areas / domains / subsystems.
+# Empty under profile S. Each entry requires product/areas/<slug>/area.md.
+areas: []
+
+# External systems this repository mirrors. Each is a system of record for its
+# own domain only; product/ holds the committed mirror used by stateless agents.
+external_systems:
+  issue_tracker:
+    kind: ariadne
+    # Ariadne project binding recorded at bootstrap (the Factory project key
+    # unless the requester named another). Tickets are created in this project
+    # at HANDOFF by SKILL-create-tickets-from-stories; no ticket exists yet.
+    project: PRL
+    ticket_key_pattern: "^[A-Z]+-[0-9]+$"
+    mirror: "product/delivery/tickets.md"
+  # Claude Design. Editable source of every DES- record; the repository holds
+  # the committed local export, which is what implementation roles build from
+  # (product-memory.md §4.7.9). Durable identity per DES- record is
+  # `external_system` + `external_project_id` + `external_node_id` +
+  # `external_revision`; `external_url` alone is a pointer, never an identity.
+  design_tool:
+    kind: claude-design
+    # Node ids are the design file's name within its project, so the DES-
+    # `external_url` is formed as <project_url>?file=<url-encoded external_node_id>.
+    node_id_pattern: "^.+\\.dc\\.html$"
+    # No project yet: the design roles register projects per initiative later.
+    projects: []
+    mirror: "product/design/index.md"
+
+# Context-assembly parameters. Consumed by SKILL-hydrate-product-context.
+# Additive to schema_version 1: every key has a specified default, so a manifest
+# without this block behaves identically. See architecture/context-assembly.md.
+context:
+  # Absolute token ceiling for a Working Context Packet. Expressed absolutely,
+  # not as a fraction of a model window, so the same repository yields the same
+  # packet under any provider. Lower it for smaller windows; the rules do not
+  # change. Default 24000.
+  budget_tokens: 24000
+  # estimate = ceil(utf8_bytes / 4). Overridden to `tokenizer` only when the
+  # environment provides a real one. Default estimate.
+  token_method: estimate
+  # Age beyond which a committed mirror of an external system is advisory only.
+  freshness_windows:
+    tickets: 24h
+    delivery_board: 24h
+    design_external: 30d
+  # Depth limits. Reference expansion is depth 1 by design: it is what makes an
+  # initiative self-contained without pulling in the whole repository.
+  reference_expansion_depth: 1
+  supersession_chain_max_depth: 5
+
+# Role registry. THE AUTHORITY TABLE for what each role may persist.
+#
+# Agent and skill DECLARATIONS live in the global agent home (~/.claude/), not
+# in this repository — see architecture/repository-layout.md §2.
+# What stays here is this registry: the machine-readable binding of role id ->
+# permitted artifact types -> the declaration that implements it.
+#
+# SKILL-checkpoint-product-state reads `writes` from this block to decide
+# whether a persist is in-authority. schemas/frontmatter.md resolves every
+# artifact's `owner_role` against the keys here. Both were previously served by
+# product/agents/<role>.md; this block replaces that read.
+#
+# `implementation: external` marks a role played by an agent that predates this
+# system and is declared globally under its own name.
+roles:
+  # `decision` is granted for ARCHITECTURE decisions only — a `PD-` whose
+  # subject is the memory system itself (its artifact catalog, identifier
+  # space, authority rules, scaling profile, or the contracts in
+  # architecture/). The architect never records a decision about what the
+  # PRODUCT should do; that is ROLE-product-manager's, and the boundary is the
+  # decision's subject, not its author.
+  # `question` is granted for TWO acts only: answering a `Q-` whose `owner_role`
+  # is this role, and raising one. The architect never answers a question about
+  # what the product should do — the boundary is the question's subject, the
+  # same test that applies to `decision`.
+  # `area` is granted for the STRUCTURAL BAND ONLY — the record's existence,
+  # `id`, `parent_area`, and the Boundary section, whose subject is the memory
+  # tree (the boundary IS the rule deciding which artifact carries which
+  # `area:` tag). Vision, Strategy, and Area vocabulary are the product band and
+  # remain ROLE-product-manager's; an architect writing an area vision would be
+  # authoring product content. Banded exactly as `delivery-manifest` is banded
+  # between the PM and the orchestrator below. Granted because without it the
+  # S -> M promotion procedure in architecture/scaling-profiles.md would be
+  # unexecutable by the role that owns it.
+  ROLE-product-architect:
+    writes: [architecture, schema, role, skill, template, decision, question, area]
+    implementation: "agents/product-architect.md"
+  # `delivery-manifest` is granted for the PRODUCT BAND ONLY — the sections
+  # schemas/delivery-manifest.md §2 assigns to ROLE-product-manager, written
+  # once at ENGINEERING_READY by SKILL-compile-delivery-manifest and frozen the
+  # moment ROLE-orchestrator accepts. The PM still never writes delivery/state.md
+  # and never writes a ticket manifest or a ticket graph.
+  # `tickets` is granted for the initial `REQ- -> ticket` mapping only, written
+  # once at HANDOFF by SKILL-create-tickets-from-stories. The tracker still owns
+  # ticket identity: every key comes from an Ariadne response, never from the PM.
+  # Branch, PR, and status columns belong to the delivery roles thereafter.
+  ROLE-product-manager:
+    writes: [project-context, area, capability, decision, initiative, requirement, product-state, product-state-history, question, delivery-manifest, tickets]
+    implementation: "agents/product-manager-orchestrator.md"
+  # `question` is permitted as an escalation only — SKILL-design-decision-
+  # escalation raises a `Q-` when design exposes a material product decision.
+  # The designer never decides a product question (declaration §1).
+  ROLE-product-designer:
+    writes: [design, question]
+    implementation: "agents/design-lead.md"
+  ROLE-product-readiness-reviewer:
+    writes: [product-state, question]
+    implementation: "agents/product-readiness-reviewer.md"
+  # Receives the product handoff (architecture/engineering-handoff.md) and owns
+  # everything after it. Its `requirement` authority is RESTRICTED to the
+  # lifecycle fields in schemas/frontmatter.md §"The immutability surface" —
+  # `status` advanced along accepted -> implemented -> verified, and `tickets`
+  # appended. It may never edit a story's product content; a defect is a `Q-`
+  # to ROLE-product-manager, which supersedes the story.
+  # `delivery-manifest` is granted for the EXECUTION BAND ONLY, from acceptance
+  # onward, and only at INITIATIVE SCOPE — architecture/delivery-fanout.md §4.
+  # A ticket-scope orchestrator writes no manifest.
+  ROLE-orchestrator:
+    writes: [delivery-state, tickets, requirement, delivery-manifest]
+    implementation: external
+  # Two modes, one role. PRODUCT-DISCOVERY mode is consulted by
+  # ROLE-product-manager before handoff and writes technical-assessment files
+  # under the initiative; ENGINEERING HLD mode runs after handoff and writes no
+  # product/ artifact. `question` is permitted as an escalation only — the
+  # architect recommends and never decides a product question.
+  ROLE-planner:
+    writes: [tickets, technical-assessment, question]
+    implementation: "agents/planner.md"
+  # Same restricted `requirement` authority as ROLE-orchestrator above.
+  ROLE-implementer:
+    writes: [tickets, requirement]
+    implementation: external
+  # Execution planning, after the handoff and after any HLD
+  # (architecture/engineering-handoff.md §5, `N3`). Writes no product/
+  # artifact: an execution plan is session-local by `C10`.
+  ROLE-tech-lead:
+    writes: [tickets]
+    implementation: external
+  ROLE-reviewer:
+    writes: [tickets, requirement]
+    implementation: external
+  ROLE-release:
+    writes: [tickets, delivery-state, requirement]
+    implementation: external
+
+# Root of the global agent home, relative to the user's home directory. Every
+# `implementation:` path above resolves against it. Declarations are NOT
+# version-controlled with this repository by design.
+agent_home: "~/.claude/"
+
+
+# Monotonic identifier counters. Allocate by reading the counter, incrementing
+# it, and committing the increment together with the new artifact.
+# Identifiers are never reused and never renumbered.
+id_counters:
+  # AREA- is a SLUG identifier (architecture/identifiers.md §1) and allocates no
+  # counter, exactly like ROLE- and SKILL-. This key stays at 0 permanently.
+  area: 0
+  capability: 0
+  decision: 0
+  initiative: 0
+  requirement: 0
+  design: 0
+  question: 0
+
+# Deterministic discovery entry points.
+# No `areas` entry: profile S has no areas/ directory (schemas/index-formats.md).
+indexes:
+  capabilities: "product/capabilities/index.md"
+  decisions: "product/decisions/index.md"
+  initiatives: "product/initiatives/index.md"
+  requirements: "product/requirements/index.md"
+  design: "product/design/index.md"
+  questions: "product/questions/index.md"
+  tickets: "product/delivery/tickets.md"
+  delivery_board: "product/delivery/board.md"
+  archive: "product/archive/index.md"
+  skill_contracts: "product/architecture/skill-library.md"
+  story_schema: "product/schemas/frontmatter.md"
+  engineering_handoff: "product/architecture/engineering-handoff.md"
+  delivery_manifest_schema: "product/schemas/delivery-manifest.md"
+  delivery_fanout: "product/architecture/delivery-fanout.md"
+  lifecycle_hooks: "product/architecture/lifecycle-hooks.md"
+  architecture_overview: "product/architecture/README.md"
