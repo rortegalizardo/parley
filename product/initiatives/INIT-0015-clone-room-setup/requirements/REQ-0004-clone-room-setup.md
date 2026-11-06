@@ -2,8 +2,8 @@
 id: REQ-0004
 type: requirement
 title: The user clones a room's setup into a new room with an empty chat, from the room's menu
-status: draft
-revision: 2
+status: accepted
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -16,9 +16,9 @@ acceptance:
   - "Press Create room → the new room opens; every agent setup value, the Rules and every room setting equal the original's; the Goal and folder equal the dialog's; it has no Decisions"
   - "Press Create room → the new room's conversation is empty, no agent has a session, no agent turn runs, nothing is sent, and the original room's files are byte-identical to before"
   - "Change the clone's Goal, an agent's model and send it a message → the original room's setup, Room Brief and conversation are unchanged"
-  - "composition: at 1440 wide, light theme, the dialog with a 40-character name, a 2,000-character Goal and a 200-character folder path shows every field and the one line in full, with no truncation, clipping or horizontal scroll"
+  - "composition: at 1440 wide, light theme, the dialog with a 40-character name, a 2,000-character Goal and a 200-character folder path shows every field label, the one line in full and both buttons, with no truncation, clipping, ellipsis or horizontal scroll of the dialog; long values scroll inside their own fields"
 capabilities: [CAP-0002]
-design_refs: []
+design_refs: [DES-0002]
 decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 depends_on: [none]
 constraints: [C-01, C-02, C-03, C-04, C-05, C-06, C-07, C-08, C-12, C-13]
@@ -48,8 +48,11 @@ Parley's server makes the copy from the original's saved setup
 - The `Clone room setup…` item in the room list's Room actions menu.
 - The `Clone room setup` dialog (name, Goal, project folder, the one line,
   Cancel, Create room), in the Create room dialog's look.
+- Design reference: [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md)
+  (one static frame of the menu and the dialog, 1440 light); where it and
+  this requirement differ, this requirement wins (PD-0009 item 3).
 - The server side that creates the new room from the original's saved setup.
-- Every detail of [PD-0010](../../../decisions/PD-0010-clone-room-setup-behaviour-clarifications.md).
+- Every detail of [PD-0010](../../../decisions/PD-0010-clone-room-setup-behaviour-rulings.md).
 
 ## Non-goals
 
@@ -158,7 +161,8 @@ Parley's server makes the copy from the original's saved setup
       item 3), the dialog with a 40-character name, a 2,000-character Goal
       and a 200-character folder path shows every field label, the one line
       in full and both buttons, with no truncation, clipping, ellipsis or
-      horizontal scroll; the Room actions menu of a room with a 40-character
+      horizontal scroll of the dialog (a long Goal or folder value scrolls
+      inside its own field, as in Create room); the Room actions menu of a room with a 40-character
       name shows `Clone room setup…` in full.
 
 ## Sequencing
@@ -216,4 +220,14 @@ requester restarts it; engineering never restarts it
   criteria of PD-0007 item 7 — the clone's agents, Goal and Rules match; its chat is empty and
   sessions fresh; editing the clone leaves the original unchanged; creating
   it starts no agent and commissions no work. No new unit or smoke suites.
+- Test rooms: the copy of the store may be seeded with the rooms these
+  criteria need, through the isolated server's API or, for what the API
+  refuses (a five-agent room, a Goal over 2,000 or Rules over 8,000), by
+  editing the copy's files before the isolated server starts. The live store
+  is never touched. The original is idle when its "before" copy is taken
+  (coherence defect 1).
+- The "send that agent a message" check uses the repo's fake provider
+  (`test/fake-cli.mjs`, whose briefing dump shows the prompt), with that
+  agent's command pointed at it in the clone, which the criterion's own flow
+  allows (coherence defect 2).
 - Current room creation: [CAP-0002](../../../capabilities/CAP-0002-room-creation-and-setup.md).

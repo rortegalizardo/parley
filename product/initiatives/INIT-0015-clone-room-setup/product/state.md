@@ -3,21 +3,21 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 5
+revision: 7
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: DECOMPOSITION
+phase: READINESS
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-designer (design-lead, author): draw the one static reference frame of PD-0009 item 3 for REQ-0004 (DECOMPOSITION)"
+next_action: "ROLE-product-readiness-reviewer: readiness review round 1 of the story set REQ-0004 (READINESS)"
 blocked_by: []
-converged: false
+converged: true
 readiness_verdict: none
 stories: [REQ-0004]
-design_refs: []
+design_refs: [DES-0002]
 decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 ---
 
@@ -45,10 +45,9 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-designer (design-lead, author): draw the one static reference
-frame of [PD-0009](../../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md)
-item 3 for REQ-0004 on the design branch; then the DES recorder records it,
-and the coherence check runs (DECOMPOSITION).
+ROLE-product-readiness-reviewer: readiness review round 1 of the story set
+(REQ-0004), after the PM's full-mode coverage run returns zero defects
+(READINESS).
 
 ## Blocked by
 
@@ -155,6 +154,9 @@ the option that keeps the accepted outcome intact is the PM's under §4.1.
 | Date | Delegate role | Question | Answer / verdict | Recorded as |
 | --- | --- | --- | --- | --- |
 | 2026-11-06 | ROLE-planner (technical architect, `product-feasibility-assessment`) — vendor claude, model opus | Feasibility of options A (server-side clone) and B (browser-assembled clone) for REQ-0004, with capability scan and system impact (size rule §9d.1) | A: feasible-with-constraints (multi-component); B: feasible-with-constraints (multi-component); C-01..C-13; R-01..R-05; PC-01..PC-07 all pm-resolvable; no requester question; recommends A | Consultation log; [technical/assessment.md](../technical/assessment.md), [capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md); CAP-0002 revision 2; rulings to PD-0010 at SOLUTION_CONVERGENCE |
+| 2026-11-06 | ROLE-product-designer, design author (`design-lead`) — vendor claude, model fable | Step 1b reference frame of PD-0009 item 3 for REQ-0004: Room actions menu with `Clone room setup…` and the `Clone room setup` dialog, 1440 light | DONE — `cba8cfe` on `design/INIT-0015-clone-room-setup`: `design/heroes/clone-room-setup` (.dc.html, .png), `approach.md` with two proposals (folder note, optional markers) | Merged into the product branch at `a5cc3ee`; both proposals dropped (not in REQ-0004; the requester asked for a short dialog); `DES-0002` |
+| 2026-11-06 | ROLE-planner (technical architect, `story-set-technical-coherence`) — vendor claude, model opus | Coherence of the draft set (REQ-0004 rev 2) for option A; round 1 of 2, full pass, terminal unless blocking (§9d.3) | `coherent`; 0 blocking, 3 non-blocking (1: verification setup for test rooms; 2: message check needs the fake provider; 3: broken PD-0010 link) | [technical/coherence.md](../technical/coherence.md); all three fixed inline in REQ-0004 rev 3 (Notes, Scope link); terminal round, no round 2 |
+| 2026-11-06 | ROLE-product-designer, DES recorder (`des-recorder`) — vendor claude, model sonnet | Step 11, adapted by PD-0009 item 3: record the reference frame | DONE — [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md), accepted, `local_export` the three hero files; index row; counter `design: 2` | `DES-0002` on REQ-0004 |
 
 ## Escalation log
 
@@ -165,12 +167,13 @@ the option that keeps the accepted outcome intact is the PM's under §4.1.
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
-| REQ-0004 | The user clones a room's setup into a new room with an empty chat, from the room's menu | draft | CAP-0002 | pending (DECOMPOSITION) | `depends_on: [none]`; on the frontier; starts from `main` at or after `704039f` (Room Brief merged) |
+| REQ-0004 | The user clones a room's setup into a new room with an empty chat, from the room's menu | accepted | CAP-0002 | DES-0002 | `depends_on: [none]`; on the frontier; starts from `main` at or after `704039f` (Room Brief merged) |
 
 ## Design coverage
 
 | `REQ-` | Coverage |
 | --- | --- |
+| REQ-0004 | needs-engineering (DES-0002 is a static reference frame; the menu item, dialog and server copy are built by engineering) |
 
 ## Readiness log
 
@@ -230,6 +233,28 @@ _Assembled at ENGINEERING_READY._
   rows); REQ-0004 revision 2 aligned (PD-0010 items, C-01..C-08, C-12, C-13,
   R-03); Solution Contract written inline (size rule §9d.2) and validated
   against PD-0009, PD-0010, PD-0007 and the assessment. No requester question.
+- 2026-11-06 — Dispatch log: `DECOMPOSITION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a4805c6fd4fa638e0 | design/heroes/* at cba8cfe`; `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | af601cbad2d260c31 | technical/coherence.md`; `DECOMPOSITION (step 11) | ROLE-product-designer (des-recorder) | claude | sonnet | S | a377e0bf6e11a5048 | design/DES-0002-clone-room-setup-reference-frame.md`.
+- 2026-11-06 — DECOMPOSITION: design worktree
+  `~/Factory/Artifacts/projects/PRL/initiatives/INIT-0015/design-worktree` on
+  `design/INIT-0015-clone-room-setup` (from `d520504`); design steps per
+  PD-0009 item 3: 1a skipped (derivative), 1b one reference frame, 2a–10
+  not run (no React/Storybook, constraints #2), design branch merged locally
+  into the product branch at `a5cc3ee` (no PR: nothing is pushed), 11
+  `DES-0002`. The author's commit trailer names the model that ran (fable).
+  Coherence round 1 `coherent`, terminal; its three non-blocking defects fixed
+  in REQ-0004 rev 3, with the composition criterion made explicit that long
+  values scroll inside their own fields. REQ-0004 accepted with `DES-0002`;
+  convergence declared. Publication push skipped: the run instructions allow
+  a push only where the release step strictly requires it.
+- 2026-11-06 — Coverage, full mode (PM, inline): R1–R12 all pass, 0 defects.
+  Map: O1 → REQ-0004 (accepted) → CAP-0002, DES-0002 (3 exports on disk),
+  PD-0003/0004/0006/0007/0009/0010 (accepted), Q-0001 (`important`, not a
+  dependency); depends_on none; coherence r1 `coherent`, terminal; counters
+  requirement 4, design 2, decision 10; every link in the changed records
+  resolves.
+- 2026-11-06 — Step 12 usage (`node ~/Factory/Core/ledger/summary.mjs INIT-0015`):
+  planner opus 2 runs, 76k out; author fable 1 run, 39k out; des-recorder
+  sonnet 1 run, 2k out. No fix score: no design PR (PD-0009 item 3).
 
 ## Phase log
 
@@ -241,6 +266,7 @@ _Assembled at ENGINEERING_READY._
 | 2026-11-06 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1, non-empty out of scope, success measures, draft REQ-0004 covering O1, Product Definition Contract citing both raw sources | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1 out of scope non-empty; F2 draft coverage run, R4/R9 pending by phase, no R1) | 07c051a6ed7f80aa |
 | 2026-11-06 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: options A and B recorded, each with a feasibility verdict (both feasible-with-constraints) and a user-visible trade-off; PM recommendation A with reasoning; design 1a–1b skipped as derivative work, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 two options; X2 verdicts in set; one Consultation log row for the one delegate response) | e1586e7ff9742488 |
 | 2026-11-06 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0009 (A, feasible-with-constraints), indexed; REQ-0004 revision 2 consistent with PD-0009 and PD-0010; B rejected, none left under consideration; Solution Contract cites PD-0009 and its design concept (PD-0009 item 3) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (R1 accepted + index row in one commit; R2 PD-0010 supersedes PD-0008, both ways, PD-0008 stays in decisions/; R3 rejected options non-empty; D11 counter 10); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | 5581573a0fbaafdd |
+| 2026-11-06 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1 maps to accepted REQ-0004; REQ-0004 meets §10.3 (accepted, one testable outcome, pass/fail AC, CAP-0002, DES-0002 with exports on disk, depends_on none, no blocker Q-, no PD- or constraint contradicted, indexed); coherence round 1 of 2 (terminal, §9d.3) `coherent`, no open blocking defect; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-design-coverage pass (DES-0002 accepted, exports on disk, names REQ-0004); HOOK-dependency-graph pass (one node, acyclic); HOOK-phase-entry pass (`converged: true`; traceability full mode 0 defects; terminal coherence not regression-required; accepted DES-0002 for the user-facing story). Publication push skipped: the run instructions forbid pushing outside the release step | 94e15b3ace8ae733 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

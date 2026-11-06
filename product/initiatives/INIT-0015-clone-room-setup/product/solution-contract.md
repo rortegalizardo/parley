@@ -3,14 +3,14 @@ initiative: INIT-0015
 type: solution-contract
 title: Solution contract — Clone a room's setup into a new room with an empty chat
 status: accepted
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 drafted_by: ROLE-product-manager (inline, size rule §9d.2)
 validated_by: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 chosen_decision: PD-0009
-design_refs: []
+design_refs: [DES-0002]
 ---
 
 # Solution contract — INIT-0015
@@ -71,12 +71,11 @@ one static reference frame, no code-level design review (PD-0009 item 3).
 
 ## DES- references
 
-The reference frame of PD-0009 item 3 is drawn and recorded at
-DECOMPOSITION; this table is filled then.
+The reference frame of PD-0009 item 3, drawn and recorded at DECOMPOSITION.
 
 | DES- id | Local export | Requirements served |
 | --- | --- | --- |
-| pending (DECOMPOSITION) | — | REQ-0004 |
+| [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md) | `initiatives/INIT-0015-clone-room-setup/design/heroes/clone-room-setup.dc.html`, `clone-room-setup.png`, `approach.md` | REQ-0004 |
 
 ## Validation
 
