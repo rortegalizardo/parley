@@ -3,22 +3,22 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: PRODUCT_DEFINITION
+phase: SOLUTION_EXPLORATION
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: populate the initiative, draft the requirement, record the decisions and the Product Definition Contract (PRODUCT_DEFINITION)"
+next_action: "ROLE-planner (technical architect): product-feasibility-assessment of options A and B for REQ-0004 (SOLUTION_EXPLORATION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
-stories: []
+stories: [REQ-0004]
 design_refs: []
-decisions: []
+decisions: [PD-0003, PD-0007, PD-0008]
 ---
 
 # Product definition state — INIT-0015
@@ -45,7 +45,7 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-manager: populate the initiative, draft the requirement, record the decisions and the Product Definition Contract (PRODUCT_DEFINITION).
+ROLE-planner (technical architect): product-feasibility-assessment of options A and B for REQ-0004, writing `technical/capability-scan.md`, `impact.md` and `assessment.md` in one dispatch (size rule §9d.1).
 
 ## Blocked by
 
@@ -55,13 +55,16 @@ Nothing.
 
 | Date | Ambiguity | Class (`pm-resolvable` / `escalation`) | Resolution or `Q-` |
 | --- | --- | --- | --- |
-| 2026-11-06 | "Room settings (mode, hop budget, default agent)": is the list exhaustive, or examples of the room-level settings? | pm-resolvable (clarification consistent with "a one-time copy of a room's setup") | To decide at PRODUCT_DEFINITION, recorded as a `PD-` |
-| 2026-11-06 | The pre-filled name "<room> copy" may already exist or exceed the 40-character room-name limit | pm-resolvable (clarification; does not change the outcome) | To decide at PRODUCT_DEFINITION, recorded as a `PD-` |
-| 2026-11-06 | Copied Goal or Rules longer than today's new-text limits (Goal 2,000, Rules 8,000; existing over-limit text is preserved by PRL-1) | pm-resolvable (conforms to principle 2, never cut) | To decide at PRODUCT_DEFINITION, recorded as a `PD-` |
-| 2026-11-06 | A source room with more than four agents (legacy rosters are preserved; new rooms allow four). No such room exists in the data root today (read-only check: 2, 3, 4, 4 seats) | pm-resolvable (conforms to the existing four-agent maximum for new rooms) | To decide at PRODUCT_DEFINITION, recorded as a `PD-` |
-| 2026-11-06 | Rules text that mentions a `@desktop:` handle (the live room's Rules do) versus "Desktop session links are not copied" | pm-resolvable (Rules are copied verbatim, principle 2; link registrations are not copied) | To decide at PRODUCT_DEFINITION, recorded as a `PD-` |
-| 2026-11-06 | Exact wording of the dialog's one-line summary | pm-resolvable (the requester fixed its meaning: says permissions are copied, promises no separate project memory; the PM fixes the copy) | To decide at PRODUCT_DEFINITION, recorded as a `PD-` |
-| 2026-11-06 | Option to also copy Decisions | out of scope by the requester; held as a non-blocking open question, default no ([raw request](sources/raw-request.md), "Out of scope") | `Q-` at PRODUCT_DEFINITION, severity `important` |
+| 2026-11-06 | "Room settings (mode, hop budget, default agent)": is the list exhaustive, or examples of the room-level settings? | pm-resolvable (clarification consistent with "a one-time copy of a room's setup") | PD-0008 item 3 |
+| 2026-11-06 | The pre-filled name "<room> copy" may already exist or exceed the 40-character room-name limit | pm-resolvable (clarification; does not change the outcome) | PD-0008 item 4 |
+| 2026-11-06 | Copied Goal or Rules longer than today's new-text limits (Goal 2,000, Rules 8,000; existing over-limit text is preserved by PRL-1) | pm-resolvable (conforms to principle 2, never cut) | PD-0008 items 5, 6 |
+| 2026-11-06 | A source room with more than four agents (legacy rosters are preserved; new rooms allow four). No such room exists in the data root today (read-only check: 2, 3, 4, 4 seats) | pm-resolvable (conforms to the existing four-agent maximum for new rooms) | PD-0008 item 14 |
+| 2026-11-06 | Rules text that mentions a `@desktop:` handle (the live room's Rules do) versus "Desktop session links are not copied" | pm-resolvable (Rules are copied verbatim, principle 2; link registrations are not copied) | PD-0008 items 6, 9 |
+| 2026-11-06 | Exact wording of the dialog's one-line summary | pm-resolvable (the requester fixed its meaning: says permissions are copied, promises no separate project memory; the PM fixes the copy) | PD-0008 item 10 |
+| 2026-11-06 | Option to also copy Decisions | out of scope by the requester; held as a non-blocking open question, default no ([raw request](sources/raw-request.md), "Out of scope") | Q-0001 (`important`, open, default no) |
+| 2026-11-06 | "Listening settings": does it include an agent's sleep state? | pm-resolvable (clarification; keeps the user's choice to stop an agent's calls) | PD-0008 item 2 |
+| 2026-11-06 | Is a Goal required in the clone dialog? | pm-resolvable (conforms to PD-0003 item 1: only Create room requires one) | PD-0008 item 5 |
+| 2026-11-06 | Where the menu item sits; dialog title, fields, buttons; when the setup is read; what the new room shows | pm-resolvable (clarifications; same user outcome as PD-0007) | PD-0008 items 1, 11, 12, 13 |
 
 ## Discovery
 
@@ -129,6 +132,7 @@ _Written at SOLUTION_EXPLORATION._
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
+| REQ-0004 | The user clones a room's setup into a new room with an empty chat, from the room's menu | draft | CAP-0002 | pending (DECOMPOSITION) | `depends_on: [none]`; on the frontier; starts from `main` at or after `704039f` (Room Brief merged) |
 
 ## Design coverage
 
@@ -173,6 +177,13 @@ _Assembled at ENGINEERING_READY._
   ROLE-product-manager; root `/Users/ortega/Desktop/Projects/parley/product`
   (key PRL); destination `initiatives/INIT-0015-clone-room-setup/` on branch
   `product/INIT-0015-clone-room-setup`; provenance the two raw sources.
+- 2026-11-06 — PRODUCT_DEFINITION: initiative populated (O1, out of scope,
+  success measures); REQ-0004 drafted; PD-0007 (requester's decisions) and
+  PD-0008 (fourteen details, all pm-resolvable under §4.1); Q-0001 raised
+  (`important`, non-blocking, default no, triage A); Product Definition
+  Contract written inline (size rule §9d.2) and validated against both raw
+  sources item by item. Draft coverage run: R4 (no `DES-` yet) and R9 (no
+  chosen option yet) pending by phase; no other defect.
 
 ## Phase log
 
@@ -181,6 +192,7 @@ _Assembled at ENGINEERING_READY._
 | 2026-11-06 | BOOTSTRAP | INTAKE | ROLE-product-manager | Raw request; Product Memory present, packet `ready` | Entered. Hooks: HOOK-canonical-root pass (one root), HOOK-hydrate pass | 4c42601397d4b647 |
 | 2026-11-06 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | 4c42601397d4b647 |
 | 2026-11-06 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0002 recorded as current state and CAP-0001 mapped, success signals, non-goals | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | b9db171eb1a049ab |
+| 2026-11-06 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1, non-empty out of scope, success measures, draft REQ-0004 covering O1, Product Definition Contract citing both raw sources | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1 out of scope non-empty; F2 draft coverage run, R4/R9 pending by phase, no R1) | 07c051a6ed7f80aa |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

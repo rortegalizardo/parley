@@ -180,11 +180,11 @@ id_counters:
   # counter, exactly like ROLE- and SKILL-. This key stays at 0 permanently.
   area: 0
   capability: 2
-  decision: 6
+  decision: 8
   initiative: 15
-  requirement: 3
+  requirement: 4
   design: 1
-  question: 0
+  question: 1
 
 # Deterministic discovery entry points.
 # No `areas` entry: profile S has no areas/ directory (schemas/index-formats.md).
