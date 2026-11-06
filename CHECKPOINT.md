@@ -1,4 +1,11 @@
-## Current checkpoint — room direction (2026-10-28)
+## Current checkpoint — room direction and note sent in full every turn (2026-11-06)
+
+Cause confirmed: the room direction went in full once per session, then only "[The room direction from your earlier briefing still applies.]"; room notes of 340+ characters did the same. After compaction or a session restart the agent no longer held the text. Now `noteBlock` sends both in full on every agent turn; both reminder lines are gone. A cleared direction is still revoked once. Edits apply on the next turn, no restart.
+
+- Isolated fake-provider prompt check: 60/60 (full text on every turn, after an edit and after a server restart; 8/60 before the fix). Manual repeat with real agents (haiku, codex low) on an isolated port: existing agents, after an edit, after a server restart, and a newly added agent each quoted the current goal and rules. Smoke note-diet assertion updated, not run; no other suites run.
+- 4142 was not touched; it picks this up on its next restart. The Room Brief UI (Goal/Rules/Decisions) is a separate product session.
+
+## Previous checkpoint — room direction (2026-10-28)
 
 The primary agent replaced the reviewed room brief with a short **room direction**: a goal plus one-line pinned decisions, 2,000 characters at most, changed only by the user. Converge no longer writes context. **Pin to room** (on any message and on the agreed decision card) makes one tool-less Sonnet call that suggests a line; **Tidy** makes one call that suggests a shorter direction. No agent review rounds, no automatic compression. Each session gets the direction in full once, then a one-line reminder until it changes; live sessions are told once that the old "Saved room decisions" block is retired. The old brief and decisions stay in `context.json`, viewable from the Direction tab, never sent. Removed: `lib/context-editor.mjs`, the context-revision rounds setting, `/api/context/{stop,regenerate,decisions}`. New: `/api/context/{direction,legacy,suggest}`. Docs: `docs/ROOM-BEHAVIOR.md`. `RUNTIME_PROTOCOL` unchanged.
 

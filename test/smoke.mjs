@@ -2592,9 +2592,9 @@ async function main() {
     /\(Continuation allowance: /.test(hopDumps[1].text),
     (hopDumps[1] || { text: "" }).text.slice(-400));
 
-  // The room note rode in EVERY prompt of every turn type. A long note on a
-  // session that durably received it is now a one-line reminder; short notes
-  // always go in full (salience is worth more than a few bytes).
+  // The room note rides in full in EVERY prompt of every turn type, long or
+  // short: a reminder line relied on the session still holding the text,
+  // which compaction and session restarts break.
   await api("POST", "/api/rooms", { name: "notediet" });
   await useFakes("notediet");
   const longNote = "Project context: " + "the answer must stay grounded in the shipped API surface. ".repeat(8);
@@ -2607,9 +2607,9 @@ async function main() {
   ok("a long room note goes in full on the session's first turn",
     noteEchoes.length >= 2 && /Current room note from the user/.test(noteEchoes[0].text),
     (noteEchoes[0] || { text: "" }).text.slice(0, 200));
-  ok("…and as a one-line reminder on the next turn of the same session",
-    noteEchoes.length >= 2 && !/Current room note from the user/.test(noteEchoes[1].text) &&
-    /standing room note from your earlier briefing still applies/.test(noteEchoes[1].text),
+  ok("…and in full again on the next turn of the same session",
+    noteEchoes.length >= 2 && /Current room note from the user/.test(noteEchoes[1].text) &&
+    !/earlier briefing still applies/.test(noteEchoes[1].text),
     (noteEchoes[1] || { text: "" }).text.slice(0, 300));
 
   // Stop on a MERGED turn. The older messages' coordinators used to carry on

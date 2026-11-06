@@ -3165,9 +3165,9 @@ function notePrefix(room) {
 }
 
 // ---- session-scoped static blocks ----
-// The lurk criteria, the hop ground rules, the @both discussion note and a long
-// room note are byte-identical on every turn of a resumed session — measured at
-// ~915B, ~340B, ~550B and framing+note respectively, re-sent dozens of times a
+// The lurk criteria, the hop ground rules and the @both discussion note are
+// byte-identical on every turn of a resumed session — measured at
+// ~915B, ~340B and ~550B respectively, re-sent dozens of times a
 // day on the highest-frequency invocation types. A session that has already
 // received one durably keeps its fingerprint (stamped through the same
 // success-only, sentinel-aware path as the contract), and while the fingerprint
@@ -3199,27 +3199,20 @@ function staticBlock(room, agent, delivery, key, fullText, dedupAllowed = true, 
   if (!current && delivery.blocksFull) delivery.blocksFull[key] = fp;
   return current ? reminder : fullText;
 }
-// The room note has its own revision machinery, so its currency check is the
-// one composePromptDelivery already computes. Short notes are always sent in
-// full — the dedup is for long ones, where the cost is real, and a note the
-// user just wrote should stay in the model's face for a while regardless.
+// The room note and the room direction are the user's standing brief. Both go
+// in full on every turn: a reminder line depended on the native session still
+// holding the earlier text, which compaction and session restarts break.
 function noteBlock(room, agent, delivery) {
   return roomNoteBlock(room, agent, delivery) + directionBlock(room, agent, delivery);
 }
 function roomNoteBlock(room, agent, delivery) {
-  const full = notePrefix(room);
-  if (!full || full.length < 340 || !delivery.noteCurrent || delivery.fresh) {
-    delivery.noteFull = true;
-    return full;
-  }
-  return "[The user's standing room note from your earlier briefing still applies — follow it.]\n\n";
+  delivery.noteFull = true;
+  return notePrefix(room);
 }
-// The room direction rides with the room note: in full once per session,
-// then a one-line reminder until it changes. A cleared direction is revoked
-// once in a session that held one. Sessions that may still hold the retired
-// "Saved room decisions" block are told once that it no longer applies; a
-// fresh session never saw it, so it is only stamped.
-const DIRECTION_REMINDER = "[The room direction from your earlier briefing still applies.]\n\n";
+// A cleared direction is revoked once in a session that held one. Sessions
+// that may still hold the retired "Saved room decisions" block are told once
+// that it no longer applies; a fresh session never saw it, so it is only
+// stamped.
 const DIRECTION_CLEARED = "[Room direction from the user: none is set now; disregard earlier room direction.]\n\n";
 const BRIEF_RETIRED = "[Parley update: the earlier \"Saved room decisions\" block is retired and no longer current. Do not rely on it; the room direction, when set, replaces it.]\n\n";
 function directionBlock(room, agent, delivery) {
@@ -3230,8 +3223,11 @@ function directionBlock(room, agent, delivery) {
     else if (delivery.blocksSent) delivery.blocksSent.briefRetired = delivery.blocksFull.briefRetired = blockFp(BRIEF_RETIRED);
   }
   const text = directionText(room);
-  if (text) out += staticBlock(room, agent, delivery, "direction", text, true, DIRECTION_REMINDER);
-  else if (!delivery.fresh && room.state.agents[agent].staticBlocks?.direction) {
+  if (text) {
+    // Always in full; the stamp only lets a later clear be revoked once.
+    if (delivery.blocksSent) delivery.blocksSent.direction = delivery.blocksFull.direction = blockFp(text);
+    out += text;
+  } else if (!delivery.fresh && room.state.agents[agent].staticBlocks?.direction) {
     out += staticBlock(room, agent, delivery, "direction", DIRECTION_CLEARED, true, "");
   }
   return out;
