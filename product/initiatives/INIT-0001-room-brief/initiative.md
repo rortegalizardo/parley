@@ -1,9 +1,9 @@
 ---
-id: INIT-0014
+id: INIT-0001
 type: initiative
 title: Every agent knows the room's goal, rules and decisions from one Room Brief
 status: active
-revision: 3
+revision: 4
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -13,7 +13,7 @@ tickets: [PRL-1, PRL-2, PRL-3]
 decisions: [PD-0001, PD-0002, PD-0003, PD-0004, PD-0005, PD-0006]
 ---
 
-# INIT-0014 — Every agent knows the room's goal, rules and decisions from one Room Brief
+# INIT-0001 — Every agent knows the room's goal, rules and decisions from one Room Brief
 
 ## Outcome
 
@@ -113,3 +113,4 @@ None.
 | 2026-11-06 | 1 | Created at INTAKE (`new-initiative`) | Raw request from the requester |
 | 2026-11-06 | 2 | Outcome, scope, out-of-scope, success measures and three draft requirements | PRODUCT_DEFINITION |
 | 2026-11-06 | 3 | Option B chosen (PD-0005); platform rulings (PD-0006); brief-delivery landed as `b6591be` | SOLUTION_CONVERGENCE |
+| 2026-11-06 | 4 | Renumbered to INIT-0001: initiatives now count per project (old-to-new map: `~/Factory/Artifacts/tracker/migration/prl-init-renumber-map.json`) | Owner decision, room Factory M3 #181 |

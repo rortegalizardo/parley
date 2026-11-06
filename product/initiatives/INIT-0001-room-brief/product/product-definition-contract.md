@@ -1,5 +1,5 @@
 ---
-initiative: INIT-0014
+initiative: INIT-0001
 type: product-definition-contract
 title: Product definition contract — Every agent knows the room's goal, rules and decisions from one Room Brief
 status: accepted
@@ -15,7 +15,7 @@ decisions: [PD-0001, PD-0002, PD-0003]
 raw_sources: [sources/raw-request.md, sources/run-instructions.md]
 ---
 
-# Product definition contract — INIT-0014
+# Product definition contract — INIT-0001
 
 A contract cites raw sources; it never supersedes them. Where this contract and
 [the raw request](sources/raw-request.md) differ, the raw request wins and this

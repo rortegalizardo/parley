@@ -11,7 +11,7 @@ updated: 2026-11-06
 
 # Product mission
 
-> **Status: accepted** at INIT-0014 DISCOVERY (2026-11-06) by `ROLE-product-manager`,
+> **Status: accepted** at INIT-0001 DISCOVERY (2026-11-06) by `ROLE-product-manager`,
 > [PD-0001](../decisions/PD-0001-accept-mission-and-first-principles.md). The
 > description below is transcribed from the repository's `README.md`; nothing here
 > is new product intent.

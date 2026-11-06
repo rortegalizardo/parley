@@ -1,5 +1,5 @@
 ---
-initiative: INIT-0014
+initiative: INIT-0001
 type: solution-contract
 title: Solution contract — Every agent knows the room's goal, rules and decisions from one Room Brief
 status: accepted
@@ -13,7 +13,7 @@ chosen_decision: PD-0005
 design_refs: [DES-0001]
 ---
 
-# Solution contract — INIT-0014
+# Solution contract — INIT-0001
 
 Cites [PD-0005](../../../decisions/PD-0005-room-brief-chosen-option-brief-tab.md),
 [PD-0006](../../../decisions/PD-0006-room-brief-platform-rulings.md) and the

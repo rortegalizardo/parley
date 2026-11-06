@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0014]
+affects: [INIT-0001]
 supersedes:
 superseded_by:
 ---
@@ -20,7 +20,7 @@ superseded_by:
 Product Memory was bootstrapped on 2026-11-06 with a draft mission and an
 empty draft principles file. A draft foundation degrades every context packet.
 Parley already ships; its `README.md` states what it is, and the requester has
-stated two rules about room context more than once (INIT-0014 raw request;
+stated two rules about room context more than once (INIT-0001 raw request;
 `CHECKPOINT.md` 2026-10-28).
 
 ## Decision

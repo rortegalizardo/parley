@@ -1,6 +1,6 @@
 ---
 mode: PRODUCT-DISCOVERY
-initiative: INIT-0014
+initiative: INIT-0001
 type: technical-assessment
 title: Technical assessment — Every agent knows the room's goal, rules and decisions from one Room Brief
 status: authoritative
@@ -18,7 +18,7 @@ updated_by_role: ROLE-planner
 ---
 
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0014
+Initiative: INIT-0001
 Phase at assessment: SOLUTION_EXPLORATION
 Assessed: 2026-11-06
 Round: 1

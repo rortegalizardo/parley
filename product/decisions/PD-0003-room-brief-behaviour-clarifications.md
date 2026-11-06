@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0014, CAP-0001]
+affects: [INIT-0001, CAP-0001]
 supersedes:
 superseded_by:
 ---

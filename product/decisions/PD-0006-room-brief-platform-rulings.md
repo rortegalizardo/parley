@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0014, REQ-0001, REQ-0002, REQ-0003]
+affects: [INIT-0001, REQ-0001, REQ-0002, REQ-0003]
 supersedes:
 superseded_by:
 ---
@@ -19,7 +19,7 @@ superseded_by:
 
 The technical architect raised six recommended questions, RQ-1 to RQ-6, where
 [PD-0003](PD-0003-room-brief-behaviour-clarifications.md) meets the platform
-([assessment](../initiatives/INIT-0014-room-brief/technical/assessment.md),
+([assessment](../initiatives/INIT-0001-room-brief/technical/assessment.md),
 "Open questions raised"). Each was triaged (`escalation-policy` §3) as
 pm-resolvable: every ruling picks the option that keeps
 [PD-0002](PD-0002-room-brief-requester-decisions.md)'s outcome — the whole
@@ -64,7 +64,7 @@ or principle. None changes what the requester asked for.
    one.
 6. **The migration adds no conversation note (RQ-6, option a).** Agent
    sessions that existed before it get the one-time transition line
-   ([REQ-0001](../initiatives/INIT-0014-room-brief/requirements/REQ-0001-room-brief-delivered-every-turn.md));
+   ([REQ-0001](../initiatives/INIT-0001-room-brief/requirements/REQ-0001-room-brief-delivered-every-turn.md));
    the timeline note of PD-0003 item 8 starts with the first change the user
    saves.
 

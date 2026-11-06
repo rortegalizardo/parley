@@ -7,7 +7,7 @@ revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
-initiative: INIT-0014
+initiative: INIT-0001
 outcome_element: "The user edits one Room Brief in Room Settings — Goal, Rules, Decisions with archive — and sees exactly what agents receive."
 acceptance:
   - "Open Room settings → the tabs are Agents, Room and Brief; the Room tab has no room-instructions field"

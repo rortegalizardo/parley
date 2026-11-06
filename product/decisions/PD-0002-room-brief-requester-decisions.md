@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0014, CAP-0001]
+affects: [INIT-0001, CAP-0001]
 supersedes:
 superseded_by:
 ---
@@ -17,9 +17,9 @@ superseded_by:
 
 Decided by the requester (Ricardo) in the room "Parlay Product Evolution",
 step 3 of its agreed decision; recorded from
-[the raw request](../initiatives/INIT-0014-room-brief/product/sources/raw-request.md),
+[the raw request](../initiatives/INIT-0001-room-brief/product/sources/raw-request.md),
 "Decision to build". Final: not re-asked
-([run instructions](../initiatives/INIT-0014-room-brief/product/sources/run-instructions.md)).
+([run instructions](../initiatives/INIT-0001-room-brief/product/sources/run-instructions.md)).
 
 ## Context
 

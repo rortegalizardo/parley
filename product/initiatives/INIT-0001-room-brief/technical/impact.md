@@ -1,6 +1,6 @@
 ---
 mode: PRODUCT-DISCOVERY
-initiative: INIT-0014
+initiative: INIT-0001
 type: technical-assessment
 title: System impact map — Every agent knows the room's goal, rules and decisions from one Room Brief
 status: authoritative
@@ -18,7 +18,7 @@ updated_by_role: ROLE-planner
 ---
 
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0014
+Initiative: INIT-0001
 Mapped: 2026-11-06
 Options mapped: A (Room Brief on the Room tab, Direction tab removed), B (Brief tab replaces the Direction tab, Room tab loses its note field)
 
