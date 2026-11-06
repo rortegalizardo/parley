@@ -3,7 +3,7 @@ id: REQ-0003
 type: requirement
 title: Pinning a message adds it to the Room Brief's Decisions
 status: draft
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -16,10 +16,10 @@ acceptance:
 capabilities: [CAP-0001]
 design_refs: [DES-0001]
 decisions: [PD-0002, PD-0003, PD-0004, PD-0006]
-depends_on: [REQ-0001]
+depends_on: [REQ-0001, REQ-0002]
 constraints: [C-08, C-11]
 observability: []
-rollout: none
+rollout: coordinated
 readiness: not-assessed
 tickets: []
 supersedes:
@@ -60,8 +60,10 @@ Decision; editing the brief is [REQ-0002](REQ-0002-room-brief-in-room-settings.m
    ([REQ-0001](REQ-0001-room-brief-delivered-every-turn.md) Behavior 8). The
    toast reads `Pinned to the room brief in {room}.`
 4. If the Brief tab of that room has unsaved changes in the same window, the
-   pinned line joins them and is saved with them (as today), with no
-   outdated-edit message ([PD-0006](../../../decisions/PD-0006-room-brief-platform-rulings.md) item 4).
+   pin is saved at once (Behavior 3) and the line is also added to the open
+   edit, as today. The next `Save brief` in that window keeps it and shows no
+   outdated-edit message; `Discard changes` keeps it too, because it is
+   already saved ([PD-0006](../../../decisions/PD-0006-room-brief-platform-rulings.md) item 4).
 5. Every agent's next turn carries the new Decision (REQ-0001).
 
 ## Acceptance criteria
@@ -72,8 +74,8 @@ Decision; editing the brief is [REQ-0002](REQ-0002-room-brief-in-room-settings.m
       the conversation gains the note `Brief updated: Decisions`, the toast
       reads `Pinned to the room brief in {room}.`, and no agent turn starts.
 - [ ] With unsaved Brief tab edits open in the same window, pin a message →
-      the line appears in the edit; `Save brief` saves both, with no
-      outdated-edit message.
+      the line is saved at once and appears in the edit; `Save brief` saves
+      the edits with the line kept, with no outdated-edit message.
 - [ ] The next agent turn after the pin → its prompt's Decisions list ends
       with the pinned line.
 - [ ] composition: at 1440 wide, light theme (the display matrix of PD-0004),
@@ -83,8 +85,11 @@ Decision; editing the brief is [REQ-0002](REQ-0002-room-brief-in-room-settings.m
 
 ## Sequencing
 
-After [REQ-0001](REQ-0001-room-brief-delivered-every-turn.md): the pin writes
-into the saved Room Brief that REQ-0001 creates. Independent of REQ-0002.
+After [REQ-0001](REQ-0001-room-brief-delivered-every-turn.md) and
+[REQ-0002](REQ-0002-room-brief-in-room-settings.md): the pin writes into the
+saved Room Brief that REQ-0001 creates, and Behavior 4 and its criterion need
+REQ-0002's Brief tab and its outdated-edit check. Released together with
+REQ-0001 and REQ-0002 (REQ-0001 Sequencing).
 
 ## Technical constraints
 
@@ -96,6 +101,12 @@ From [technical/assessment.md](../technical/assessment.md), round 1:
 ## Observability
 
 none — the timeline note records the change.
+
+## Rollout
+
+`coordinated`: released together with REQ-0001 and REQ-0002, after all three
+are on `main` — one restart of the live server (by the requester), one
+desktop repackage (C-15).
 
 ## Notes
 

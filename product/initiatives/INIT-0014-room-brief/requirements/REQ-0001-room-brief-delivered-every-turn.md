@@ -3,7 +3,7 @@ id: REQ-0001
 type: requirement
 title: Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note
 status: draft
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -42,9 +42,11 @@ goal, pins and room note become its Room Brief with nothing lost
 
 The saved Room Brief of a room and the rules every save follows, the one-time
 migration into it, its delivery in every agent prompt, the timeline note on
-every saved change, room creation outside the Create room dialog, and `/note`.
-Ends at the server: the Room Settings and Create room surfaces are
-[REQ-0002](REQ-0002-room-brief-in-room-settings.md), the pin dialog is
+every saved change, room creation outside the Create room dialog, and the
+`/note` command. Ends at the server and `/note`: the Room Settings and Create
+room surfaces, including removing the browser's 2,000-character Save gate
+(the client half of C-10), are
+[REQ-0002](REQ-0002-room-brief-in-room-settings.md); the pin dialog is
 [REQ-0003](REQ-0003-pin-to-room-brief.md).
 
 ## Non-goals
@@ -172,6 +174,14 @@ The external "brief-delivery" work it builds on has landed on local `main` as
 [REQ-0003](REQ-0003-pin-to-room-brief.md) build on this story's saved brief
 and come after it.
 
+**Released together.** This story is never released on its own: it is
+released with REQ-0002 and REQ-0003, after all three are on `main` — one
+restart of the live server, one desktop repackage. Released alone, the old
+Direction tab, Tidy, pin dialog and Room tab note field would save to the old
+direction and note, which this story stops reading, so edits would be lost
+(coherence round 1, defect 1). It is built and verified on its own, on an
+isolated port with a copy of the room store.
+
 ## Technical constraints
 
 From [technical/assessment.md](../technical/assessment.md), round 1:
@@ -197,8 +207,10 @@ change; no new events, metrics or logs are needed.
 
 ## Rollout
 
-`migration`: each room migrates the first time it is opened on the new build
-(Behavior 6), safe to repeat, with the old note and direction kept on disk as
+`migration`, released together with REQ-0002 and REQ-0003 (see Sequencing):
+the live server is restarted and the desktop app repackaged once, only after
+all three stories are on `main`. Each room migrates the first time it is
+opened on the new build (Behavior 6), safe to repeat, with the old note and direction kept on disk as
 a recovery copy. Reload open browser tabs after the restart (risk R-4).
 Repackage the desktop app (C-15). Test on an isolated port with a copy of the
 room store only; never on the live server on port 4142, never on 4141

@@ -158,9 +158,9 @@ user-visible outcome of PD-0002).
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
-| REQ-0001 | Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note | draft | CAP-0001 | none (no user-facing surface) | none — on the frontier; starts after the external "brief-delivery" work lands on main and rebases on it |
-| REQ-0002 | The user edits one Room Brief in Room Settings and sees exactly what agents receive | draft | CAP-0001 | pending (SOLUTION_EXPLORATION hero) | after REQ-0001 (edits the brief it creates) |
-| REQ-0003 | Pinning a message adds it to the Room Brief's Decisions | draft | CAP-0001 | pending (SOLUTION_EXPLORATION hero) | after REQ-0001 (writes into the brief it creates) |
+| REQ-0001 | Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note | draft | CAP-0001 | none (no user-facing surface) | first; on the frontier; starts from `main` at or after `b6591be`; released together with REQ-0002 and REQ-0003 |
+| REQ-0002 | The user edits one Room Brief in Room Settings and sees exactly what agents receive | draft | CAP-0001 | DES-0001 | after REQ-0001 (edits the brief it creates); released together with REQ-0001 and REQ-0003 |
+| REQ-0003 | Pinning a message adds it to the Room Brief's Decisions | draft | CAP-0001 | DES-0001 | after REQ-0001 and REQ-0002 (writes into the brief; joins Brief tab edits); released together with REQ-0001 and REQ-0002 |
 
 ## Readiness log
 
@@ -206,6 +206,17 @@ _Written at ENGINEERING_READY._
   (constraints #2). No requester pick: the run is pre-authorized.
   Brief-delivery landed on local `main` as `b6591be` before this phase;
   CAP-0001 updated to it.
+- 2026-11-06 — DECOMPOSITION: design branch merged (`50c8042`); `DES-0001`
+  recorded from the hero frames (PD-0004). Coherence round 1 repair pass, all
+  five defects fixed in place (REQ revision 2): defect 1 — the three stories
+  release together, one restart and one repackage after all three are on
+  `main` (PD-manager choice under §4.1: it keeps the accepted outcome intact
+  with no interim state; REQ-0001 Sequencing and Rollout, REQ-0002/0003
+  `rollout: coordinated`); defect 2 — REQ-0003 `depends_on` adds REQ-0002;
+  defect 3 — REQ-0002 Scope owns the preview's server side (C-02); defect 4 —
+  REQ-0001 Scope names `/note` and gives the client half of C-10 to REQ-0002;
+  defect 5 — REQ-0003 Behavior 4 and its criterion: the pin saves at once and
+  also joins the open edit.
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
   - `SOLUTION_EXPLORATION | ROLE-planner (architect) | claude | opus | L | af86d33a5fe245964 | technical/capability-scan.md, impact.md, assessment.md`
   - `SOLUTION_EXPLORATION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a41d9618e7db22c3c | design/heroes/* at ee1629f`

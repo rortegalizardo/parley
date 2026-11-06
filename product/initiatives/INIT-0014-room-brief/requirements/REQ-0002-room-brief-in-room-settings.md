@@ -3,7 +3,7 @@ id: REQ-0002
 type: requirement
 title: The user edits one Room Brief in Room Settings and sees exactly what agents receive
 status: draft
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -23,7 +23,7 @@ decisions: [PD-0002, PD-0003, PD-0004, PD-0005, PD-0006]
 depends_on: [REQ-0001]
 constraints: [C-02, C-10, C-11, C-14]
 observability: []
-rollout: none
+rollout: coordinated
 readiness: not-assessed
 tickets: []
 supersedes:
@@ -44,9 +44,12 @@ exact text every agent receives
 The Room settings Brief tab (replacing the Direction tab), the Room tab losing
 its room-instructions field, and the Create room dialog's brief fields, as
 drawn in `DES-0001` frames `room-brief-brief-panel` and `room-brief-dialogs`.
-Ends at the surfaces: storage, delivery, the save rules, the timeline note and
-`/note` are [REQ-0001](REQ-0001-room-brief-delivered-every-turn.md); the pin
-dialog is [REQ-0003](REQ-0003-pin-to-room-brief.md).
+Ends at the surfaces, plus the server side of "What agents see": the
+preview is built by the delivery composition run on the form's current,
+unsaved contents (C-02), and that is this story's work. Storage, delivery,
+the save rules, the timeline note and `/note` are
+[REQ-0001](REQ-0001-room-brief-delivered-every-turn.md); the pin dialog is
+[REQ-0003](REQ-0003-pin-to-room-brief.md).
 
 ## Non-goals
 
@@ -184,7 +187,9 @@ dialog is [REQ-0003](REQ-0003-pin-to-room-brief.md).
 
 After [REQ-0001](REQ-0001-room-brief-delivered-every-turn.md): this story edits
 the saved Room Brief that REQ-0001 creates, under its save rules, and its
-preview shows the block REQ-0001 delivers.
+preview shows the block REQ-0001 delivers. Released together with REQ-0001
+and REQ-0003 (REQ-0001 Sequencing). [REQ-0003](REQ-0003-pin-to-room-brief.md)
+comes after this story.
 
 ## Technical constraints
 
@@ -198,6 +203,12 @@ From [technical/assessment.md](../technical/assessment.md), round 1:
 ## Observability
 
 none — the timeline note of REQ-0001 records every saved change.
+
+## Rollout
+
+`coordinated`: released together with REQ-0001 and REQ-0003, after all three
+are on `main` — one restart of the live server (by the requester), one
+desktop repackage (C-15). Reload open browser tabs after the restart (R-4).
 
 ## Notes
 
