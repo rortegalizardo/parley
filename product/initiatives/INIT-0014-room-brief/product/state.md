@@ -178,6 +178,10 @@ appended — a prior row is never edited, withdrawn, or overwritten.
 
 | Date | Round | Verdict | Conditions | Reviewer | Story-set digest | Findings | Finding ids |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-06 | 1 (cycle 1; size rule §9d, one round) | READY | none | ROLE-product-readiness-reviewer (claude, sonnet) | REQ-0001@2, REQ-0002@2, REQ-0003@2 (all `updated` 2026-11-06); INIT-0014@3; `context_digest` 2d800d8e864d5ce6 at phase entry (a tool run now prints 9729c0e8624a32c5; the only difference is this file's `revision` 6 to 7, checked by recomputing with revision 6) | 0 | none |
+
+Round 1 criteria record (judged band; `R1`-`R12` not re-run, validator report: 0 defects, re-run at review start, still 0).
+`R13` pass. `R14` pass. `R15` pass: the Brief panel preview frame draws the block without Parley's line marks while REQ-0002 Behavior 2 and PD-0006 item 1 require them; DES-0001 "Deviations permitted" and PD-0004 item 2 settle it for the requirement, so no finding. `R16` pass. `R17` pass. `R18` pass. Flag-only `R8` pass (no contradiction with PD-0002..PD-0006 or constraints #1-#3; no open `Q-`). Flag-only `R9` pass (terminal round-2 `coherent` verdict still describes the set: the only later edit is the C-15 line added to REQ-0002 and REQ-0003, so there is no substantive mismatch). `B10`: not applicable (`DES-0001` is hero frames recorded under PD-0004, not `kind: code`).
 
 ## Readiness findings
 
