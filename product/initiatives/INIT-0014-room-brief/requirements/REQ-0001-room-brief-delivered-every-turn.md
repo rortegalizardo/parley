@@ -2,7 +2,7 @@
 id: REQ-0001
 type: requirement
 title: Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note
-status: draft
+status: accepted
 revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06

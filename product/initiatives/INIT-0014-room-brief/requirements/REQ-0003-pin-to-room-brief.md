@@ -2,7 +2,7 @@
 id: REQ-0003
 type: requirement
 title: Pinning a message adds it to the Room Brief's Decisions
-status: draft
+status: accepted
 revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
@@ -17,7 +17,7 @@ capabilities: [CAP-0001]
 design_refs: [DES-0001]
 decisions: [PD-0002, PD-0003, PD-0004, PD-0006]
 depends_on: [REQ-0001, REQ-0002]
-constraints: [C-08, C-11]
+constraints: [C-08, C-11, C-15]
 observability: []
 rollout: coordinated
 readiness: not-assessed
@@ -97,6 +97,7 @@ From [technical/assessment.md](../technical/assessment.md), round 1:
 
 - C-08 — the `Brief updated: Decisions` note comes from the server's save, not from the browser.
 - C-11 — test on an isolated port with a copy of the room store, never `~/.parley-fork`.
+- C-15 — the desktop app is repackaged with this change, once, after all three stories are on `main`.
 
 ## Observability
 

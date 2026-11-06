@@ -2,7 +2,7 @@
 id: REQ-0002
 type: requirement
 title: The user edits one Room Brief in Room Settings and sees exactly what agents receive
-status: draft
+status: accepted
 revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
@@ -21,7 +21,7 @@ capabilities: [CAP-0001]
 design_refs: [DES-0001]
 decisions: [PD-0002, PD-0003, PD-0004, PD-0005, PD-0006]
 depends_on: [REQ-0001]
-constraints: [C-02, C-10, C-11, C-14]
+constraints: [C-02, C-10, C-11, C-14, C-15]
 observability: []
 rollout: coordinated
 readiness: not-assessed
@@ -199,6 +199,7 @@ From [technical/assessment.md](../technical/assessment.md), round 1:
 - C-10 — the client's 2,000 Save gate is removed; the count follows PD-0003 item 5.
 - C-11 — test on an isolated port with a copy of the room store, never `~/.parley-fork`.
 - C-14 — existing browser and smoke checks that assert the Direction tab and room note are updated with the code; that is not a new suite.
+- C-15 — the desktop app is repackaged with this change, once, after all three stories are on `main`.
 
 ## Observability
 

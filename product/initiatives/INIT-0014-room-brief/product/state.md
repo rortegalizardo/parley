@@ -14,10 +14,10 @@ phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
 next_action: "ROLE-product-manager: merge the design branch, dispatch the DES recorder for DES-0001, then the coherence check (round 1)"
 blocked_by: []
-converged: false
+converged: true
 readiness_verdict: none
 stories: [REQ-0001, REQ-0002, REQ-0003]
-design_refs: []
+design_refs: [DES-0001]
 decisions: [PD-0001, PD-0002, PD-0003, PD-0004, PD-0005, PD-0006]
 ---
 
@@ -148,6 +148,7 @@ user-visible outcome of PD-0002).
 | 2026-11-06 | ROLE-product-designer, design author (vendor claude, model fable) | Step 1b hero frames for option B (REQ-0002, REQ-0003), approach set by PD-0004 | DONE — `ee1629f` on `design/INIT-0014-room-brief`: `design/heroes/room-brief-brief-panel` and `room-brief-dialogs` (.dc.html, .png), `approach.md` with two proposals | Options table; both proposals accepted into REQ-0002 and REQ-0003 (G8); `DES-0001` at DECOMPOSITION |
 | 2026-11-06 | ROLE-product-designer, DES recorder (vendor claude, model des-recorder declaration) | Step 11, adapted by PD-0004: record the hero frames as `DES-0001` | DONE — [DES-0001](../../../design/DES-0001-room-brief-hero-frames.md), accepted, `local_export` the four hero files plus `approach.md`; index row; counter `design: 1` | `DES-0001` on REQ-0002, REQ-0003; two bracketed titles removed inline (§9b.3) |
 | 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | Coherence check of draft REQ-0001..0003 (`story-set-technical-coherence`, full pass, round 1 of 2, terminal unless it reports a blocking defect) | `defects-open`: 2 blocking (1 release gap after REQ-0001 alone; 2 REQ-0003 hidden dependency on REQ-0002), 3 non-blocking (scope wording REQ-0002, REQ-0001; pin-save wording REQ-0003); set still matches option B, not regression-required — [technical/coherence.md](../technical/coherence.md) | Repair pass: all five fixed in place (see Session notes); delta re-check round 2 required (§9d.3) |
+| 2026-11-06 | ROLE-planner as technical architect (vendor claude, model sonnet) | Coherence delta re-check, round 2 of 2 (terminal), on REQ-0001..0003 revision 2 (repair `8315eb3`) | `coherent`: defects 1-5 fixed; new defect 6 non-blocking — REQ-0002 and REQ-0003 Rollout cite C-15 but did not list it — [technical/coherence.md](../technical/coherence.md) | Defect 6 fixed inline (C-15 added to both, §9a.2 disposition: fixed); REQ-0001..0003 accepted |
 
 ## Escalation log
 
@@ -158,9 +159,17 @@ user-visible outcome of PD-0002).
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
-| REQ-0001 | Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note | draft | CAP-0001 | none (no user-facing surface) | first; on the frontier; starts from `main` at or after `b6591be`; released together with REQ-0002 and REQ-0003 |
-| REQ-0002 | The user edits one Room Brief in Room Settings and sees exactly what agents receive | draft | CAP-0001 | DES-0001 | after REQ-0001 (edits the brief it creates); released together with REQ-0001 and REQ-0003 |
-| REQ-0003 | Pinning a message adds it to the Room Brief's Decisions | draft | CAP-0001 | DES-0001 | after REQ-0001 and REQ-0002 (writes into the brief; joins Brief tab edits); released together with REQ-0001 and REQ-0002 |
+| REQ-0001 | Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note | accepted | CAP-0001 | none (no user-facing surface) | first; on the frontier; starts from `main` at or after `b6591be`; released together with REQ-0002 and REQ-0003 |
+| REQ-0002 | The user edits one Room Brief in Room Settings and sees exactly what agents receive | accepted | CAP-0001 | DES-0001 | after REQ-0001 (edits the brief it creates); released together with REQ-0001 and REQ-0003 |
+| REQ-0003 | Pinning a message adds it to the Room Brief's Decisions | accepted | CAP-0001 | DES-0001 | after REQ-0001 and REQ-0002 (writes into the brief; joins Brief tab edits); released together with REQ-0001 and REQ-0002 |
+
+## Design coverage
+
+| `REQ-` | Coverage |
+| --- | --- |
+| REQ-0001 | needs-engineering (no `DES-`; server work) |
+| REQ-0002 | needs-engineering (`DES-0001` is hero frames, not a merged code design; PD-0004) |
+| REQ-0003 | needs-engineering (`DES-0001` is hero frames, not a merged code design; PD-0004) |
 
 ## Readiness log
 
@@ -210,7 +219,7 @@ _Written at ENGINEERING_READY._
   recorded from the hero frames (PD-0004). Coherence round 1 repair pass, all
   five defects fixed in place (REQ revision 2): defect 1 — the three stories
   release together, one restart and one repackage after all three are on
-  `main` (PD-manager choice under §4.1: it keeps the accepted outcome intact
+  `main` (PM choice under §4.1: it keeps the accepted outcome intact
   with no interim state; REQ-0001 Sequencing and Rollout, REQ-0002/0003
   `rollout: coordinated`); defect 2 — REQ-0003 `depends_on` adds REQ-0002;
   defect 3 — REQ-0002 Scope owns the preview's server side (C-02); defect 4 —
@@ -222,6 +231,7 @@ _Written at ENGINEERING_READY._
   - `SOLUTION_EXPLORATION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a41d9618e7db22c3c | design/heroes/* at ee1629f`
   - `DECOMPOSITION (step 11) | ROLE-product-designer (des-recorder) | claude | des-recorder | S | aa6c7ee8613c7051a | design/DES-0001-room-brief-hero-frames.md`
   - `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | aedcceb564e75d4e7 | technical/coherence.md`
+  - `DECOMPOSITION (coherence r2, delta) | ROLE-planner (architect) | claude | sonnet | S | a4368b1ecbe5d912a | technical/coherence.md`
 
 ## Phase log
 
