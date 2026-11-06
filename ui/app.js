@@ -1017,7 +1017,7 @@ function entryEl(e) {
     const convergence = e.meta && e.meta.convergence;
     if (convergence?.status === "agreed") div.classList.add("agreed-handoff");
     div.innerHTML = convergence && convergence.status === "agreed"
-      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Decision${convergence.participants?.length ? ` · agreed by ${esc(convergence.participants.length)}` : " · agreed"}</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div>${agreedReservationsHTML(convergence.reservations)}<div class="agreed-handoff-actions"><button type="button" class="btn pin-decision agreed-pin" title="Keep a one-line summary of this decision in the room direction">${controlIcon("pin")} Pin to room</button></div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
+      ? `<div class="agreed-handoff-heading" role="heading" aria-level="3">✓ Decision${convergence.participants?.length ? ` · agreed by ${esc(convergence.participants.length)}` : " · agreed"}</div><div class="agreed-handoff-body bubble">${renderMD(e.text)}</div>${agreedReservationsHTML(convergence.reservations)}<div class="agreed-handoff-actions"><button type="button" class="btn pin-decision agreed-pin" title="Keep a one-line summary of this decision in the room brief">${controlIcon("pin")} Pin to room</button></div><details class="agreed-handoff-proof"><summary>Approval record</summary><p>All participating agents approved draft ${esc(convergence.version || "")} · ${esc(convergence.hash || "")}.</p></details>`
       : esc(e.text);
     const recovery = e.meta && e.meta.error && recoveryForEntry(e);
     if (recovery) {
@@ -1094,7 +1094,7 @@ function entryEl(e) {
     : `<span class="avatar">${esc(seatAvatar(e.author))}</span>`;
   div.innerHTML = `<div class="meta">${av}<span class="who">${label}</span><span title="${esc(String(e.ts || "").replace("T", " "))}">${hhmm(e.ts)}${dur}${tok}</span>` +
     `<button class="ask" title="Ask about this message" aria-label="Ask about this message">${controlIcon("ask")}</button>` +
-    `<button class="pin-decision" title="Pin to room direction" aria-label="Pin to room direction">${controlIcon("pin")}</button><button class="cpy" title="Copy message" aria-label="Copy message">${controlIcon("copy")}</button></div>` +
+    `<button class="pin-decision" title="Pin to room brief" aria-label="Pin to room brief">${controlIcon("pin")}</button><button class="cpy" title="Copy message" aria-label="Copy message">${controlIcon("copy")}</button></div>` +
     entryQuoteHTML(e) +
     `<div class="bubble${statusDimmed(e) ? " dimmed" : ""}">${renderMD(e.text)}</div>` +
     statusChipHTML(e) + heardHTML(e) + whyRunHTML(e);
@@ -5262,16 +5262,25 @@ document.addEventListener("click", async (event) => {
 });
 
 let pinDraft = null;
+function resizePinText() {
+  if (!$("decisionDialog").open) return;
+  const field = $("decisionText");
+  field.style.height = "auto";
+  field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`;
+}
+$("decisionText").addEventListener("input", resizePinText);
+window.addEventListener("resize", resizePinText);
 async function openPinDialog(entryN) {
   if (!state.room || $("decisionDialog").open) return;
   const brief = briefFromSummary(state.summary);
   const draft = pinDraft = { room: state.room, entryN, opener: document.activeElement, brief };
   const field = $("decisionText");
-  $("decisionRoom").textContent = `Room: ${draft.room}. Adds one line to the room direction that every agent keeps in mind.`;
+  $("decisionRoom").textContent = `Room: ${draft.room}. Adds one decision to the room brief that every agent gets on every turn.`;
   field.value = ""; field.disabled = true; field.placeholder = "Suggesting a one-line summary…";
   field.maxLength = state.summary?.context?.decisionMax || 200;
   $("decisionError").hidden = true; $("decisionSave").disabled = true;
   openModalDialog($("decisionDialog"));
+  resizePinText();
   try {
     const { suggestion } = await api("/api/context/suggest", { room: draft.room, entryN });
     if (pinDraft !== draft) return;
@@ -5281,7 +5290,9 @@ async function openPinDialog(entryN) {
     if (pinDraft !== draft) return;
     $("decisionError").textContent = `${error.message} Write the line yourself instead.`; $("decisionError").hidden = false;
   }
-  field.disabled = false; field.placeholder = "One line for every agent"; $("decisionSave").disabled = false; field.focus();
+  if (pinDraft !== draft) return;
+  field.disabled = false; field.placeholder = "One decision for every agent"; $("decisionSave").disabled = false;
+  resizePinText(); field.focus();
 }
 $("decisionCancel").onclick = () => $("decisionDialog").close();
 $("decisionDialog").addEventListener("keydown", (event) => event.stopPropagation());
@@ -5298,24 +5309,24 @@ $("decisionForm").addEventListener("submit", async (event) => {
   try {
     const brief = draft.brief;
     const saved = await api("/api/context/brief", { room: draft.room, baseRevision: brief.revision, goal: brief.goal, rules: brief.rules, decisions: [...brief.decisions, { text, entryN: draft.entryN, status: "active" }], deleteArchivedIds: [] });
+    const nextBrief = saved.brief;
     if (state.room === draft.room) {
-      const nextBrief = saved.brief || saved.context?.brief;
-      if (nextBrief) applySummary({ ...state.summary, context: { ...state.summary.context, brief: nextBrief } });
+      applySummary({ ...state.summary, context: { ...state.summary.context, brief: nextBrief } });
     }
-    const nextBrief = saved.brief || saved.context?.brief;
     const priorIds = new Set((draft.brief.decisions || []).map((decision) => decision.id).filter(Boolean));
-    const canonical = nextBrief?.decisions?.find((decision) => decision.text === text && decision.status !== "archived" && (!decision.id || !priorIds.has(decision.id))) || { text, entryN: draft.entryN, status: "active" };
+    const canonical = nextBrief.decisions.find((decision) => decision.text === text && decision.status === "active" && !priorIds.has(decision.id));
     // An open unsaved edit replaces the whole list on Save, so it carries the pin too.
     const open = $("contextSettings")._briefDraft;
     if (open?.dirty && open.room === draft.room) {
-      open.decisions.push({ ...canonical });
-      if (nextBrief?.revision !== undefined) open.baseRevision = nextBrief.revision;
+      if (!open.decisions.some((decision) => decision.id === canonical.id)) open.decisions.push({ ...canonical });
+      open.baseRevision = nextBrief.revision;
+      open.saved = structuredClone(nextBrief);
+      open.baseline = briefContent({ ...nextBrief, deleteArchivedIds: [] });
       renderBriefCard($("contextSettings"), state.summary);
     }
     if (pinDraft === draft) $("decisionDialog").close();
-    toast(`Pinned to the room direction in ${draft.room}.`);
+    toast(`Pinned to the room brief in ${draft.room}.`);
   } catch (error) {
-    if (error.status === 409 && error.data?.brief && pinDraft === draft) draft.brief.revision = error.data.brief.revision;
     if (pinDraft === draft) { $("decisionError").textContent = error.message; $("decisionError").hidden = false; }
     else toast(error.message, true);
   } finally { if (pinDraft === draft) $("decisionSave").disabled = false; }
