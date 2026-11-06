@@ -14,7 +14,9 @@ not re-open the question.
 | PD-0005 | Chosen option — the Room Brief gets its own Brief tab in place of the Direction tab, and the Room tab loses its room-instructions field | accepted | [PD-0005-room-brief-chosen-option-brief-tab.md](PD-0005-room-brief-chosen-option-brief-tab.md) | 2026-11-06 |
 | PD-0006 | Room Brief rulings on the architect's six platform questions — framing, limits, recovery copy, stale saves, archiving, migration note | accepted | [PD-0006-room-brief-platform-rulings.md](PD-0006-room-brief-platform-rulings.md) | 2026-11-06 |
 | PD-0007 | Clone room setup — a one-time copy of a room's setup into a new room with an empty chat, from the room's menu | accepted | [PD-0007-clone-room-setup-requester-decisions.md](PD-0007-clone-room-setup-requester-decisions.md) | 2026-11-06 |
-| PD-0008 | Clone room setup behaviour the requester left open — decided by the product manager | accepted | [PD-0008-clone-room-setup-behaviour-clarifications.md](PD-0008-clone-room-setup-behaviour-clarifications.md) | 2026-11-06 |
+| PD-0008 | Clone room setup behaviour the requester left open — decided by the product manager | superseded | [PD-0008-clone-room-setup-behaviour-clarifications.md](PD-0008-clone-room-setup-behaviour-clarifications.md) | 2026-11-06 |
+| PD-0009 | Clone room setup is a server-side copy (option A); its design reference is one static frame at 1440 light | accepted | [PD-0009-clone-room-setup-chosen-option-server-side.md](PD-0009-clone-room-setup-chosen-option-server-side.md) | 2026-11-06 |
+| PD-0010 | Clone room setup behaviour — the product manager's rulings, with the architect's findings | accepted | [PD-0010-clone-room-setup-behaviour-rulings.md](PD-0010-clone-room-setup-behaviour-rulings.md) | 2026-11-06 |
 
 Empty at bootstrap. Decisions about the memory system itself
 (`owner_role: ROLE-product-architect`) and product decisions

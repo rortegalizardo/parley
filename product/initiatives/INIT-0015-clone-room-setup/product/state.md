@@ -3,22 +3,22 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 4
+revision: 5
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: SOLUTION_CONVERGENCE
+phase: DECOMPOSITION
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: record the chosen-option PD- (A) and the rulings on PC-01..PC-07, align REQ-0004, write the Solution Contract (SOLUTION_CONVERGENCE)"
+next_action: "ROLE-product-designer (design-lead, author): draw the one static reference frame of PD-0009 item 3 for REQ-0004 (DECOMPOSITION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
 stories: [REQ-0004]
 design_refs: []
-decisions: [PD-0003, PD-0007, PD-0008]
+decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 ---
 
 # Product definition state — INIT-0015
@@ -45,10 +45,10 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-manager: record the chosen-option `PD-` (option A, B rejected
-with reasons), record the rulings on the architect's PC-01..PC-07, align
-REQ-0004 with them and with C-01..C-13, and write the Solution Contract
-(SOLUTION_CONVERGENCE).
+ROLE-product-designer (design-lead, author): draw the one static reference
+frame of [PD-0009](../../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md)
+item 3 for REQ-0004 on the design branch; then the DES recorder records it,
+and the coherence check runs (DECOMPOSITION).
 
 ## Blocked by
 
@@ -67,6 +67,13 @@ Nothing.
 | 2026-11-06 | Option to also copy Decisions | out of scope by the requester; held as a non-blocking open question, default no ([raw request](sources/raw-request.md), "Out of scope") | Q-0001 (`important`, open, default no) |
 | 2026-11-06 | "Listening settings": does it include an agent's sleep state? | pm-resolvable (clarification; keeps the user's choice to stop an agent's calls) | PD-0008 item 2 |
 | 2026-11-06 | Is a Goal required in the clone dialog? | pm-resolvable (conforms to PD-0003 item 1: only Create room requires one) | PD-0008 item 5 |
+| 2026-11-06 | Architect PC-01: sleep is run state with a reason and a time; setting it writes a note | pm-resolvable (keeps the user's choice; no note keeps the chat empty) | PD-0010 item 2 |
+| 2026-11-06 | Architect PC-03: Gemini approval mode; effort and Fast mode not on every provider | pm-resolvable (the list PD-0008 expected the architect to correct) | PD-0010 item 2 |
+| 2026-11-06 | Architect PC-04: opening any room runs a local CLI sign-in check | pm-resolvable (defines "agent process" as an agent turn) | PD-0010 item 13 |
+| 2026-11-06 | Architect PC-05: no Parley dialog closes on a click outside | pm-resolvable (match Create room; same outcome, nothing created) | PD-0010 item 11 (supersedes PD-0008 item 11) |
+| 2026-11-06 | Architect PC-06: legacy accounting and hop budget values; per-tab choices | pm-resolvable (copied as is; tab choices are not room settings) | PD-0010 item 3 |
+| 2026-11-06 | Architect PC-07: the clone has no old saved brief or recovery copies | pm-resolvable (consistent with PD-0007 item 3) | PD-0010 item 13 |
+| 2026-11-06 | Architect PC-02 and C-08: Goal over 2,000 in the dialog | pm-resolvable (option A; PD-0006 item 2 rule, can't grow) | PD-0009 item 1; PD-0010 item 5 |
 | 2026-11-06 | Where the menu item sits; dialog title, fields, buttons; when the setup is read; what the new room shows | pm-resolvable (clarifications; same user outcome as PD-0007) | PD-0008 items 1, 11, 12, 13 |
 
 ## Discovery
@@ -136,7 +143,8 @@ dialog's styling, 1440 light, no canvas
 ([raw request](sources/raw-request.md), "Constraints") — and the menu item
 joins the existing Room actions menu. There is no direction to debate.
 
-**PM recommendation: A.** It meets PD-0008 items 5, 6 and 12 as written, B
+**Chosen: A** ([PD-0009](../../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md));
+B rejected with its reasons there. **PM recommendation was A.** It meets PD-0008 items 5, 6 and 12 as written, B
 does not without re-reading the original on the server anyway (C-09), and A
 leaves Create room's contract unchanged. The two differ only in internal
 shape except that B can miss a last-moment change, which A avoids: choosing
@@ -215,6 +223,13 @@ _Assembled at ENGINEERING_READY._
   DECOMPOSITION, at the depth PD-0004 set for INIT-0014. CAP-0002 corrected to
   revision 2 from the capability scan (current-state facts only, not the
   shipped change).
+- 2026-11-06 — SOLUTION_CONVERGENCE: PD-0009 (option A; design depth one
+  static frame, PD-0004 precedent) and PD-0010 (behaviour; supersedes PD-0008
+  with PC-01, PC-03..PC-07 and R-04 applied; changes items 2, 3, 4, 5, 6, 11,
+  13) accepted and indexed; PD-0008 superseded (decision and archive index
+  rows); REQ-0004 revision 2 aligned (PD-0010 items, C-01..C-08, C-12, C-13,
+  R-03); Solution Contract written inline (size rule §9d.2) and validated
+  against PD-0009, PD-0010, PD-0007 and the assessment. No requester question.
 
 ## Phase log
 
@@ -225,6 +240,7 @@ _Assembled at ENGINEERING_READY._
 | 2026-11-06 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0002 recorded as current state and CAP-0001 mapped, success signals, non-goals | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | b9db171eb1a049ab |
 | 2026-11-06 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1, non-empty out of scope, success measures, draft REQ-0004 covering O1, Product Definition Contract citing both raw sources | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1 out of scope non-empty; F2 draft coverage run, R4/R9 pending by phase, no R1) | 07c051a6ed7f80aa |
 | 2026-11-06 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: options A and B recorded, each with a feasibility verdict (both feasible-with-constraints) and a user-visible trade-off; PM recommendation A with reasoning; design 1a–1b skipped as derivative work, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 two options; X2 verdicts in set; one Consultation log row for the one delegate response) | e1586e7ff9742488 |
+| 2026-11-06 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0009 (A, feasible-with-constraints), indexed; REQ-0004 revision 2 consistent with PD-0009 and PD-0010; B rejected, none left under consideration; Solution Contract cites PD-0009 and its design concept (PD-0009 item 3) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (R1 accepted + index row in one commit; R2 PD-0010 supersedes PD-0008, both ways, PD-0008 stays in decisions/; R3 rejected options non-empty; D11 counter 10); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | 5581573a0fbaafdd |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

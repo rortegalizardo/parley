@@ -3,14 +3,14 @@ id: INIT-0015
 type: initiative
 title: Clone a room's setup into a new room with an empty chat
 status: draft
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 capabilities: [CAP-0002]
 requirements: [REQ-0004]
 tickets: []
-decisions: [PD-0003, PD-0007, PD-0008]
+decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 ---
 
 # INIT-0015 — Clone a room's setup into a new room with an empty chat
@@ -39,7 +39,9 @@ In scope:
   ([PD-0007](../../decisions/PD-0007-clone-room-setup-requester-decisions.md)).
 - Creating the new room from the original's saved setup, with an empty chat,
   fresh sessions, nothing started and nothing commissioned.
-- The details of [PD-0008](../../decisions/PD-0008-clone-room-setup-behaviour-clarifications.md).
+- The details of [PD-0010](../../decisions/PD-0010-clone-room-setup-behaviour-rulings.md)
+  (which supersedes PD-0008), built as a server-side copy
+  ([PD-0009](../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md)).
 
 Out of scope:
 
@@ -98,3 +100,4 @@ Decisions; `important`, non-blocking, default no.
 | --- | --- | --- | --- |
 | 2026-11-06 | 1 | Created at INTAKE (`new-initiative`) | Raw request from the requester |
 | 2026-11-06 | 2 | Outcome, scope, out-of-scope, success measures and one draft requirement | PRODUCT_DEFINITION |
+| 2026-11-06 | 3 | Chosen option A (PD-0009); behaviour rulings PD-0010 supersede PD-0008; scope unchanged | SOLUTION_CONVERGENCE |

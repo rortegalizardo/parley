@@ -3,7 +3,7 @@ id: REQ-0004
 type: requirement
 title: The user clones a room's setup into a new room with an empty chat, from the room's menu
 status: draft
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -11,17 +11,17 @@ initiative: INIT-0015
 outcome_element: "O1 — From any room's menu, in one short dialog, the user creates a new room with that room's agents, Goal, Rules, room settings and project folder, an empty chat and fresh agent sessions, independent of the original from then on."
 acceptance:
   - "Open Room actions on a room row → the menu lists Clone room setup… beside Archive and Rename"
-  - "Choose Clone room setup… → the dialog Clone room setup opens with From {room}, the name {room} copy (or the first free copy N), the original's Goal, the original's project folder and the one line of PD-0008 item 10"
-  - "Press Cancel, ×, Escape or click outside → no room is created and the room list is unchanged"
+  - "Choose Clone room setup… → the dialog Clone room setup opens with From {room}, the name {room} copy (or the first free copy N), the original's Goal, the original's project folder and the one line of PD-0010 item 10"
+  - "Press Cancel, × or Escape → no room is created and the room list is unchanged; a click outside leaves the dialog open"
   - "Press Create room → the new room opens; every agent setup value, the Rules and every room setting equal the original's; the Goal and folder equal the dialog's; it has no Decisions"
-  - "Press Create room → the new room's conversation is empty, no agent has a session, no agent process starts, nothing is sent, and the original room's files are byte-identical to before"
+  - "Press Create room → the new room's conversation is empty, no agent has a session, no agent turn runs, nothing is sent, and the original room's files are byte-identical to before"
   - "Change the clone's Goal, an agent's model and send it a message → the original room's setup, Room Brief and conversation are unchanged"
   - "composition: at 1440 wide, light theme, the dialog with a 40-character name, a 2,000-character Goal and a 200-character folder path shows every field and the one line in full, with no truncation, clipping or horizontal scroll"
 capabilities: [CAP-0002]
 design_refs: []
-decisions: [PD-0003, PD-0007, PD-0008]
+decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 depends_on: [none]
-constraints: []
+constraints: [C-01, C-02, C-03, C-04, C-05, C-06, C-07, C-08, C-12, C-13]
 observability: []
 rollout: none
 readiness: not-assessed
@@ -40,6 +40,8 @@ project folder — into a new room, through one short dialog. The new room
 starts with an empty chat and fresh agent sessions and is independent of the
 original from then on
 ([PD-0007](../../../decisions/PD-0007-clone-room-setup-requester-decisions.md)).
+Parley's server makes the copy from the original's saved setup
+([PD-0009](../../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md)).
 
 ## Scope
 
@@ -47,7 +49,7 @@ original from then on
 - The `Clone room setup` dialog (name, Goal, project folder, the one line,
   Cancel, Create room), in the Create room dialog's look.
 - The server side that creates the new room from the original's saved setup.
-- Every detail of [PD-0008](../../../decisions/PD-0008-clone-room-setup-behaviour-clarifications.md).
+- Every detail of [PD-0010](../../../decisions/PD-0010-clone-room-setup-behaviour-clarifications.md).
 
 ## Non-goals
 
@@ -64,16 +66,17 @@ original from then on
 ## Behavior
 
 1. Room actions on every room row (the default room too) lists
-   `Clone room setup…` beside `Archive` and `Rename` (PD-0008 item 1).
+   `Clone room setup…` beside `Archive` and `Rename` (PD-0010 item 1).
 2. It opens the dialog titled `Clone room setup`, with `From {room}` under the
    title and, in order:
    - **Room name**, pre-filled `{room} copy`, or `{room} copy 2`, `copy 3`…
-     the first free name; shortened from the end of `{room}` to fit 40
-     characters (PD-0008 item 4). Create room's name rules and duplicate
+     the first free name, ignoring case; shortened from the end of `{room}` to fit 40
+     characters (PD-0010 item 4). Create room's name rules and duplicate
      message apply.
    - **Goal**, pre-filled with the original's Goal, editable, may be empty;
-     typed text up to 2,000 characters; a longer copied Goal is kept as is
-     (item 5).
+     typed text up to 2,000 characters; a longer copied Goal is kept as is,
+     can be shortened but not made longer, and shows the PD-0006 item 2 note
+     under the field, as in Room settings' Brief tab (item 5).
    - **Project folder**, pre-filled with the original's (blank if none),
      changeable by typing or `Browse…`; blank means a new room workspace; a
      missing folder is refused with Create room's message (item 8).
@@ -82,25 +85,30 @@ original from then on
      pending work, approvals, handoffs or Desktop links.` (item 10).
    - Buttons `Cancel` and `Create room`; `Create room` is disabled while the
      name is blank (item 11).
-3. `Cancel`, `×`, Escape or a click outside closes the dialog and creates
-   nothing.
+3. `Cancel`, `×` or Escape closes the dialog and creates nothing, as in
+   Create room. A click outside does nothing (item 11).
 4. `Create room` creates the room from the original's setup as saved at that
    moment, with the dialog's name, Goal and folder (item 12):
    - every agent, with every setup value copied as is: name, provider, model,
-     effort, Codex Fast mode, permissions (Claude permission mode, Codex
-     sandbox), command, extra arguments, standing instructions, listening on
-     or off, listening style and prompt, and asleep or awake (item 2);
+     effort and Codex Fast mode where the provider has them, permissions
+     (Claude permission mode, Codex sandbox, Gemini approval mode), command,
+     extra arguments, standing instructions, listening on or off, listening
+     style and prompt (item 2);
+   - an agent asleep in the original is asleep in the clone with the same
+     reason, since the clone's creation, with no "is asleep" note (item 2);
    - every room setting: mode, hop budget, default agent, accounting, pair
-     review rounds, reply timeout (item 3);
+     review rounds, reply timeout, legacy values included (item 3);
    - the Room Brief: the dialog's Goal, the original's Rules exactly as saved
      whatever their length, no Decisions (items 6, 7).
 5. Nothing else is copied: no message, activity, native session, pending
    delivery, Converge or pair run, approval, handoff, Desktop link
    registration or `workspace/` file (items 2, 3, 8, 9).
 6. The new room opens with an empty conversation — no message, note or card.
-   No agent process starts and nothing is sent; an agent's first turn happens
-   only when the user sends a message, and starts a new session that receives
-   the clone's Room Brief (item 13).
+   No agent turn runs and nothing is sent to any provider; the local CLI
+   check Parley makes on opening any room is not an agent turn. An agent's
+   first turn happens only when the user sends a message, and starts a new
+   session that receives the clone's Room Brief. The clone has no old saved
+   brief and no recovery copy of an old room note or direction (item 13).
 7. The original room is not changed by cloning, and from then on neither
    room's settings, agents, Room Brief or conversation change the other's.
    Two rooms on the same folder still work on the same files.
@@ -114,22 +122,25 @@ original from then on
 - [ ] Choose `Clone room setup…` on room `R` → the dialog `Clone room setup`
       opens with `From R`, the name `R copy`, the Goal of `R`, the project
       folder of `R` (blank if none) and the exact line of Behavior 2.
-- [ ] With a room `R copy` already present → the name pre-fills `R copy 2`;
+- [ ] With a room `R copy` (or `r copy`) already present → the name
+      pre-fills `R copy 2`;
       for a 40-character `R` → the pre-filled name is at most 40 characters
       and ends in ` copy`.
 - [ ] Enter the name of an existing room and press `Create room` → Create
       room's duplicate-name message shows and no room is created.
-- [ ] Press `Cancel`, `×`, Escape or click outside → no room is created and
-      the room list is unchanged.
+- [ ] Press `Cancel`, `×` or Escape → no room is created and the room list
+      is unchanged; click outside the dialog → it stays open with its fields
+      as typed.
 - [ ] Press `Create room` → the new room opens; for every agent, every value
-      listed in Behavior 4 equals the original's; mode, hop budget, default
-      agent, accounting, pair review rounds and reply timeout equal the
-      original's; the Rules equal the original's character for character
+      listed in Behavior 4 equals the original's; an agent asleep in `R` is
+      asleep in the clone with the same reason and no "is asleep" note; mode,
+      hop budget, default agent, accounting, pair review rounds and reply
+      timeout equal the original's; the Rules equal the original's character for character
       (including Rules longer than 8,000 characters); the Goal equals the
       dialog's (including a copied Goal longer than 2,000 characters left
       unedited); the Decisions list is empty; the folder is the dialog's.
 - [ ] Press `Create room` → the new room's conversation shows no message,
-      note or card, no agent has a native session, no agent process starts,
+      note or card, no agent has a native session, no agent turn runs,
       nothing is sent to any provider, and the original room's `room.json`,
       `context.json`, `state.json`, `transcript.md` and `events.jsonl` are
       byte-identical to before.
@@ -158,7 +169,34 @@ Rules.
 
 ## Technical constraints
 
-_From the architect's assessment at SOLUTION_EXPLORATION._
+From [technical/assessment.md](../technical/assessment.md), round 1, for the
+chosen option A ([PD-0009](../../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md)):
+
+- C-01 — every copied value, sleep included, is in place when the room is
+  created; the paths that change an existing room write conversation notes
+  and are not used.
+- C-02 — run state is never copied between rooms; sleep is the one exception.
+- C-03 — the clone's brief is made through the new-room path (no import
+  time, no owed transition lines, no timeline note); a room folder written
+  before its first load would take the legacy import path instead.
+- C-04 — the copy is a fixed list of setup values, never a copy of files or
+  folders (risk R-01: a whole-object copy would carry the original's session,
+  a pending catch-up or the old room note).
+- C-05 — reading the original, for the dialog or at Create, neither
+  activates it nor writes to it (the read-only room summary exists).
+- C-06 — Create room's checks apply with the same messages: name rules,
+  duplicate name, folder exists, at most four agents.
+- C-07 — an already open older tab keeps working, or the runtime protocol is
+  bumped on both sides.
+- C-08 — the Goal field keeps a pre-filled Goal over 2,000 unchanged and does
+  not block Create on it.
+- C-12 — verification runs on an explicit free port with `--root` on a copy
+  of the room store; never 4142 or 4141, never `~/.parley-fork`; the desktop
+  app and `parley-link` are not launched.
+- C-13 — the "send that agent a message" check uses a scratch project folder
+  or the repo's fake provider (or both), and an awake agent.
+- R-03 — the "before" copy of the original is taken after the original has
+  been loaded once, since a first load may normalize its files.
 
 ## Observability
 
@@ -174,8 +212,8 @@ requester restarts it; engineering never restarts it
 ## Notes
 
 - Verification, as the requester set it: one check, on an isolated port with
-  a copy of the room store, covering the four done criteria of PD-0007
-  item 7 — the clone's agents, Goal and Rules match; its chat is empty and
+  a copy of the room store (C-12, C-13, R-03), covering the four done
+  criteria of PD-0007 item 7 — the clone's agents, Goal and Rules match; its chat is empty and
   sessions fresh; editing the clone leaves the original unchanged; creating
   it starts no agent and commissions no work. No new unit or smoke suites.
 - Current room creation: [CAP-0002](../../../capabilities/CAP-0002-room-creation-and-setup.md).

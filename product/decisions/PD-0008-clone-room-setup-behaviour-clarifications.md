@@ -2,7 +2,7 @@
 id: PD-0008
 type: decision
 title: Clone room setup behaviour the requester left open — decided by the product manager
-status: accepted
+status: superseded
 revision: 1
 owner_role: ROLE-product-manager
 created: 2026-11-06
@@ -10,7 +10,8 @@ updated: 2026-11-06
 decided_on: 2026-11-06
 affects: [INIT-0015, CAP-0002]
 supersedes:
-superseded_by:
+superseded_by: PD-0010
+archived_on: 2026-11-06
 ---
 
 # PD-0008 — Clone room setup behaviour the requester left open — decided by the product manager

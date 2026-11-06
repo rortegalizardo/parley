@@ -9,6 +9,7 @@ archived.
 
 | ID | Title | Type | Superseded by | Archived on | Path |
 | --- | --- | --- | --- | --- | --- |
+| PD-0008 | Clone room setup behaviour the requester left open — decided by the product manager | decision | PD-0010 | 2026-11-06 | [decisions/PD-0008-clone-room-setup-behaviour-clarifications.md](../decisions/PD-0008-clone-room-setup-behaviour-clarifications.md) |
 
 Decisions are the deliberate exception: superseded decisions stay in
 `product/decisions/` rather than moving here, because their reasoning is read
