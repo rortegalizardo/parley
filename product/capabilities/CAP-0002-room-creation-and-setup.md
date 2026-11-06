@@ -3,7 +3,7 @@ id: CAP-0002
 type: capability
 title: The user creates a room and sets up its agents, Room Brief, room settings and project folder
 status: authoritative
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -17,22 +17,24 @@ decisions: []
 Recorded at INIT-0015 DISCOVERY from the committed code on `main` at
 `704039f` (`ui/index.html`, `ui/app.js`, `parley.mjs`) and a read-only look at
 the room files under `~/.parley-fork`, because room creation shipped before
-Product Memory existed. The architect's capability scan for INIT-0015 may
-refine it.
+Product Memory existed. Revision 2 applies the corrections of the architect's
+[capability scan](../initiatives/INIT-0015-clone-room-setup/technical/capability-scan.md)
+(sleep, Gemini permissions).
 
 ## Behavior today
 
 - **Create a room** (＋ New room). One dialog with two tabs. *Agents*: up to
   four agents, each with a name, provider (Claude, Codex, Gemini), model,
-  effort, Codex Fast mode and standing instructions, with presets. *Room*: a
+  effort and Codex Fast mode (where the provider has them) and standing
+  instructions, with presets. *Room*: a
   name (at most 40 characters: letters, numbers, spaces, dashes, underscores;
   must be unused), the Room Brief Goal (required in this dialog only) and
   Rules (optional), a project folder (optional, with Browse…; blank means a
   new room workspace) and "Start in Work mode". Create opens the new room.
   The server endpoint is `POST /api/rooms`; a duplicate name is refused.
 - **Room settings** (gear in a room). *Agents*: per-agent model, effort,
-  permissions (Claude permission mode, Codex sandbox), listening (lurk on/off,
-  style, prompt) and sleep, instructions; add and remove agents. *Room*: Talk
+  permissions (Claude permission mode, Codex sandbox, Gemini approval mode),
+  listening (lurk on/off, style, prompt) and sleep, instructions; add and remove agents. *Room*: Talk
   or Work mode, automatic follow-ups (hop budget), default agent, pair review
   rounds and the other room-level values. *Brief*: Goal, Rules, Decisions
   (INIT-0014). Footer: Rename…, Clear conversation…, Archive room…, Delete
@@ -41,11 +43,13 @@ refine it.
   button that opens Archive, Rename and Delete (no Delete for the default
   room).
 - **What a room holds on disk.** `room.json` — the setup: each agent's
-  provider, command, model, effort, Fast mode, permission mode or sandbox,
-  extra arguments, listening settings and instructions; the default agent,
-  mode, hop budget, accounting, pair rounds, project folder and timeout.
-  `context.json` — the Room Brief (Goal, Rules, Decisions). `state.json` — the
-  agents' native sessions and the room's run state (convergence, pair, pending
+  provider, command, model, effort, Fast mode, permission mode, sandbox or
+  approval mode, extra arguments, listening settings and instructions; the
+  default agent, mode, hop budget, accounting, pair rounds, project folder and
+  timeout. `context.json` — the Room Brief (Goal, Rules, Decisions).
+  `state.json` — the agents' native sessions, whether each agent is asleep
+  (with a reason and a since-time; putting an agent to sleep writes a note in
+  the conversation) and the room's run state (convergence, pair, pending
   deliveries). `transcript.md` and `events.jsonl` — the conversation.
   `workspace/` — the room's own working folder.
 - **No way to copy a room's setup.** A second room set up like an existing one
@@ -71,3 +75,4 @@ None recorded beyond `project/constraints.md`.
 | Date | Revision | Change | Initiative |
 | --- | --- | --- | --- |
 | 2026-11-06 | 1 | Recorded as current state | INIT-0015 (DISCOVERY) |
+| 2026-11-06 | 2 | Corrected: sleep lives in `state.json`; Gemini approval mode is a permission; effort and Fast mode only where the provider has them | INIT-0015 (SOLUTION_EXPLORATION, architect's capability scan) |

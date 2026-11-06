@@ -3,16 +3,16 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 3
+revision: 4
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: SOLUTION_EXPLORATION
+phase: SOLUTION_CONVERGENCE
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-planner (technical architect): product-feasibility-assessment of options A and B for REQ-0004 (SOLUTION_EXPLORATION)"
+next_action: "ROLE-product-manager: record the chosen-option PD- (A) and the rulings on PC-01..PC-07, align REQ-0004, write the Solution Contract (SOLUTION_CONVERGENCE)"
 blocked_by: []
 converged: false
 readiness_verdict: none
@@ -45,7 +45,10 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-planner (technical architect): product-feasibility-assessment of options A and B for REQ-0004, writing `technical/capability-scan.md`, `impact.md` and `assessment.md` in one dispatch (size rule §9d.1).
+ROLE-product-manager: record the chosen-option `PD-` (option A, B rejected
+with reasons), record the rulings on the architect's PC-01..PC-07, align
+REQ-0004 with them and with C-01..C-13, and write the Solution Contract
+(SOLUTION_CONVERGENCE).
 
 ## Blocked by
 
@@ -116,12 +119,34 @@ to the requester, default no).
 
 ## Options
 
-_Written at SOLUTION_EXPLORATION._
+Both options give the same menu item, the same dialog and the same new room;
+they differ in where the copy is assembled. Feasibility, constraints C-01..C-13,
+risks R-01..R-05 and conflicts PC-01..PC-07:
+[technical/assessment.md](../technical/assessment.md) (evidence:
+[capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md)).
+
+| Option | User-visible difference | Feasibility verdict | Cost / risk | Trade-off |
+| --- | --- | --- | --- | --- |
+| A — Server-side clone: the dialog sends the original's name plus the dialog's name, Goal and folder; the server copies the setup | Copies the setup exactly as saved at the moment `Create room` is pressed (PD-0008 item 12); a copied Goal over 2,000 or Rules over 8,000 is kept (items 5, 6) | feasible-with-constraints (multi-component) | One new server action; Create room untouched; R-01 (copy must be the C-04 field list, not files) | Meets every PD-0008 item as written; one place lists the copied fields |
+| B — Browser-assembled clone: the dialog reads the original's setup and posts it to a widened `POST /api/rooms` | A change saved to the original between opening the dialog and `Create room` is missed (C-10); over-limit text only if the server re-reads the original anyway (C-09) | feasible-with-constraints (multi-component) | Widens Create room's contract (permissions, command, over-limit text); field list in two places (R-02); without C-09 a way around the PD-0006 limits (PC-02) | Item 12 met only approximately; more surface, no user gain |
+
+**Design.** One direction, no exploration (steps 1a–1b skipped): this is
+derivative work. The requester fixed the look — reuse the Create room
+dialog's styling, 1440 light, no canvas
+([raw request](sources/raw-request.md), "Constraints") — and the menu item
+joins the existing Room actions menu. There is no direction to debate.
+
+**PM recommendation: A.** It meets PD-0008 items 5, 6 and 12 as written, B
+does not without re-reading the original on the server anyway (C-09), and A
+leaves Create room's contract unchanged. The two differ only in internal
+shape except that B can miss a last-moment change, which A avoids: choosing
+the option that keeps the accepted outcome intact is the PM's under §4.1.
 
 ## Consultation log
 
 | Date | Delegate role | Question | Answer / verdict | Recorded as |
 | --- | --- | --- | --- | --- |
+| 2026-11-06 | ROLE-planner (technical architect, `product-feasibility-assessment`) — vendor claude, model opus | Feasibility of options A (server-side clone) and B (browser-assembled clone) for REQ-0004, with capability scan and system impact (size rule §9d.1) | A: feasible-with-constraints (multi-component); B: feasible-with-constraints (multi-component); C-01..C-13; R-01..R-05; PC-01..PC-07 all pm-resolvable; no requester question; recommends A | Consultation log; [technical/assessment.md](../technical/assessment.md), [capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md); CAP-0002 revision 2; rulings to PD-0010 at SOLUTION_CONVERGENCE |
 
 ## Escalation log
 
@@ -184,6 +209,12 @@ _Assembled at ENGINEERING_READY._
   Contract written inline (size rule §9d.2) and validated against both raw
   sources item by item. Draft coverage run: R4 (no `DES-` yet) and R9 (no
   chosen option yet) pending by phase; no other defect.
+- 2026-11-06 — Dispatch log: `SOLUTION_EXPLORATION | ROLE-planner (architect) | claude | opus | L | ae406b6d244ae3f4f | technical/capability-scan.md, impact.md, assessment.md`.
+- 2026-11-06 — SOLUTION_EXPLORATION: design steps 1a–1b skipped as derivative
+  work (see `## Options`, Design); the reference frame and `DES-` come at
+  DECOMPOSITION, at the depth PD-0004 set for INIT-0014. CAP-0002 corrected to
+  revision 2 from the capability scan (current-state facts only, not the
+  shipped change).
 
 ## Phase log
 
@@ -193,6 +224,7 @@ _Assembled at ENGINEERING_READY._
 | 2026-11-06 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | 4c42601397d4b647 |
 | 2026-11-06 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0002 recorded as current state and CAP-0001 mapped, success signals, non-goals | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | b9db171eb1a049ab |
 | 2026-11-06 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1, non-empty out of scope, success measures, draft REQ-0004 covering O1, Product Definition Contract citing both raw sources | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1 out of scope non-empty; F2 draft coverage run, R4/R9 pending by phase, no R1) | 07c051a6ed7f80aa |
+| 2026-11-06 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: options A and B recorded, each with a feasibility verdict (both feasible-with-constraints) and a user-visible trade-off; PM recommendation A with reasoning; design 1a–1b skipped as derivative work, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 two options; X2 verdicts in set; one Consultation log row for the one delegate response) | e1586e7ff9742488 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
