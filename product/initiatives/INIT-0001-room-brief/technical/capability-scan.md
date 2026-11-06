@@ -1,6 +1,6 @@
 ---
 mode: PRODUCT-DISCOVERY
-initiative: INIT-0014
+initiative: INIT-0001
 type: technical-assessment
 title: Platform capability scan — Every agent knows the room's goal, rules and decisions from one Room Brief
 status: authoritative
@@ -18,7 +18,7 @@ updated_by_role: ROLE-planner
 ---
 
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0014
+Initiative: INIT-0001
 Scanned: 2026-11-06
 Systems scanned: Parley server `parley.mjs` and browser UI `ui/index.html`, `ui/app.js` at `d07a67d` (product worktree code); the landed delivery change `b6591be` on local `main` of `/Users/ortega/Desktop/Projects/parley`; `lib/bridge-adapter.mjs`, `lib/bridge-backend.mjs`, `bin/parley-runner.mjs`, `bin/parley-mine.mjs`, `desktop/main.cjs`; `docs/ROOM-BEHAVIOR.md`, `docs/conversation.md`; the live room store `~/.parley-fork` (read-only, counts and lengths only, no content read out).
 

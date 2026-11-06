@@ -7,7 +7,7 @@ revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
-initiative: INIT-0014
+initiative: INIT-0001
 outcome_element: "The user adds a Decision to the Room Brief by pinning a message, as pinning works today."
 acceptance:
   - "Pin on a message → the dialog Pin to room brief opens with a suggested line, as today"

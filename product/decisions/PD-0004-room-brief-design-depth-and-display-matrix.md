@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0014]
+affects: [INIT-0001]
 supersedes:
 superseded_by:
 ---
@@ -24,16 +24,16 @@ assumes a React design-system package with Storybook and committed render
 scripts. Parley has none of these and must not get them
 ([constraints](../project/constraints.md) #2: plain `ui/` files, no React, no
 Storybook, no build step). Design as code in `ui/` would be the product code
-this run must not write ([run instructions](../initiatives/INIT-0014-room-brief/product/sources/run-instructions.md)).
+this run must not write ([run instructions](../initiatives/INIT-0001-room-brief/product/sources/run-instructions.md)).
 The requester set the depth: "Design at 1440, light only; one hero frame for
 the Room Brief panel (Goal/Rules/Decisions, archived decisions, length
 warning, "What agents see" preview) is enough"
-([run instructions](../initiatives/INIT-0014-room-brief/product/sources/run-instructions.md);
-[raw request](../initiatives/INIT-0014-room-brief/product/sources/raw-request.md), "Constraints").
+([run instructions](../initiatives/INIT-0001-room-brief/product/sources/run-instructions.md);
+[raw request](../initiatives/INIT-0001-room-brief/product/sources/raw-request.md), "Constraints").
 
 ## Decision
 
-1. **Design depth for INIT-0014.** Step 1a (direction briefs) is skipped: the
+1. **Design depth for INIT-0001.** Step 1a (direction briefs) is skipped: the
    requester's decisions ([PD-0002](PD-0002-room-brief-requester-decisions.md))
    fix the direction. Step 1b produces two static hero frames that link
    Parley's own `ui/styles.css`: `room-brief-brief-panel` (Room settings →

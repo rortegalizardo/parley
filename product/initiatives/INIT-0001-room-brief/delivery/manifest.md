@@ -1,19 +1,19 @@
 ---
-id: DM-INIT-0014
+id: DM-INIT-0001
 type: delivery-manifest
-title: Delivery manifest for INIT-0014
+title: Delivery manifest for INIT-0001
 status: authoritative
 revision: 1
 owner_role: ROLE-orchestrator
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
-initiative: INIT-0014
+initiative: INIT-0001
 manifest_version: 1
 band_owner: product
 issued_on: 2026-11-06
 issued_from_verdict: READY@2026-11-06
-story_set_digest: "REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0014@3"
+story_set_digest: "REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0001@3"
 accepted_on: none
 dispatch_unit: ticket
 max_parallelism: default
@@ -21,7 +21,7 @@ completion: pending
 stories: [REQ-0001, REQ-0002, REQ-0003]
 ---
 
-# Delivery manifest — INIT-0014
+# Delivery manifest — INIT-0001
 
 > Schema: `product/schemas/delivery-manifest.md`. Consumption:
 > `product/architecture/delivery-fanout.md`.
@@ -31,13 +31,13 @@ stories: [REQ-0001, REQ-0002, REQ-0003]
 
 ## Identity
 
-- Initiative: `INIT-0014`
+- Initiative: `INIT-0001`
 - Outcome: a room has one Room Brief — Goal, Rules and Decisions — written once by the user, and every agent in the room holds all of it on every turn, whatever its session remembers.
 - Handoff packet: [`../product/state.md`](../product/state.md) `## Handoff packet`
 
 ## Shared references
 
-- Design references: `DES-0001 → initiatives/INIT-0014-room-brief/design/heroes/` (`room-brief-brief-panel.dc.html`, `room-brief-brief-panel.png`, `room-brief-dialogs.dc.html`, `room-brief-dialogs.png`, `approach.md`)
+- Design references: `DES-0001 → initiatives/INIT-0001-room-brief/design/heroes/` (`room-brief-brief-panel.dc.html`, `room-brief-brief-panel.png`, `room-brief-dialogs.dc.html`, `room-brief-dialogs.png`, `approach.md`)
 - Decisions in force: `PD-0001`, `PD-0002`, `PD-0003`, `PD-0004`, `PD-0005`, `PD-0006`
 - Binding technical constraints:
   - `C-01` — `technical/assessment.md` round 1
