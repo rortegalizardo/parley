@@ -14,10 +14,10 @@ acceptance:
   - "Press Pin → the line is the last active Decision of the Room Brief and the conversation gains the note Brief updated: Decisions"
   - "composition: at 1440 wide, light theme, a 200-character line wraps in full in the dialog with no truncation"
 capabilities: [CAP-0001]
-design_refs: []
-decisions: [PD-0002, PD-0003]
+design_refs: [DES-0001]
+decisions: [PD-0002, PD-0003, PD-0004, PD-0006]
 depends_on: [REQ-0001]
-constraints: []
+constraints: [C-08, C-11]
 observability: []
 rollout: none
 readiness: not-assessed
@@ -36,9 +36,9 @@ decision card, as pinning works today
 
 ## Scope
 
-The pin action on messages and on the agreed decision card, and its dialog.
-Ends at adding one active Decision; editing the brief is
-[REQ-0002](REQ-0002-room-brief-in-room-settings.md).
+The pin action on messages and on the agreed decision card, and its dialog,
+as drawn in `DES-0001` frame `room-brief-dialogs`. Ends at adding one active
+Decision; editing the brief is [REQ-0002](REQ-0002-room-brief-in-room-settings.md).
 
 ## Non-goals
 
@@ -48,30 +48,36 @@ Ends at adding one active Decision; editing the brief is
 ## Behavior
 
 1. The pin action's tooltip and label read `Pin to room brief`.
-2. It opens the dialog titled `Pin to room brief`, naming the room as today,
-   with the field label `One decision for every agent` and today's one-line
+2. It opens the dialog titled `Pin to room brief`, with the line `Room:
+   {room}. Adds one decision to the room brief that every agent gets on every
+   turn.`, the field label `One decision for every agent` and today's one-line
    suggestion from one tool-less Claude Sonnet call, which the user accepts or
-   edits. At most 200 characters (PD-0003 item 9). The no-lasting-decision
-   message and the empty-line message stay as today.
+   edits. At most 200 characters
+   ([PD-0003](../../../decisions/PD-0003-room-brief-behaviour-clarifications.md) item 9).
+   The no-lasting-decision message and the empty-line message stay as today.
 3. `Pin` appends the line to the end of the active Decisions and saves it;
    the conversation gains the note `Brief updated: Decisions`
-   ([REQ-0001](REQ-0001-room-brief-delivered-every-turn.md) Behavior 6). The
+   ([REQ-0001](REQ-0001-room-brief-delivered-every-turn.md) Behavior 8). The
    toast reads `Pinned to the room brief in {room}.`
-4. If the Brief tab has unsaved changes for that room, the pinned line joins
-   them and is saved with them (as today).
+4. If the Brief tab of that room has unsaved changes in the same window, the
+   pinned line joins them and is saved with them (as today), with no
+   outdated-edit message ([PD-0006](../../../decisions/PD-0006-room-brief-platform-rulings.md) item 4).
 5. Every agent's next turn carries the new Decision (REQ-0001).
 
 ## Acceptance criteria
 
-- [ ] Pin on a message → the dialog `Pin to room brief` opens with a
-      suggested line, as today.
+- [ ] Pin on a message → the dialog `Pin to room brief` opens with the room
+      line of Behavior 2 and a suggested line, as today.
 - [ ] Press `Pin` → the line is the last active Decision of the Room Brief,
       the conversation gains the note `Brief updated: Decisions`, the toast
       reads `Pinned to the room brief in {room}.`, and no agent turn starts.
+- [ ] With unsaved Brief tab edits open in the same window, pin a message →
+      the line appears in the edit; `Save brief` saves both, with no
+      outdated-edit message.
 - [ ] The next agent turn after the pin → its prompt's Decisions list ends
       with the pinned line.
-- [ ] composition: at 1440 wide, light theme (the supported display matrix,
-      PD-0004), the dialog shows a 200-character line wrapped in full with no
+- [ ] composition: at 1440 wide, light theme (the display matrix of PD-0004),
+      the dialog shows a 200-character line wrapped in full with no
       truncation, clipping or ellipsis, no horizontal scroll and no unbounded
       stretch.
 
@@ -82,7 +88,10 @@ into the saved Room Brief that REQ-0001 creates. Independent of REQ-0002.
 
 ## Technical constraints
 
-_Filled at DECOMPOSITION from the architect's assessment._
+From [technical/assessment.md](../technical/assessment.md), round 1:
+
+- C-08 — the `Brief updated: Decisions` note comes from the server's save, not from the browser.
+- C-11 — test on an isolated port with a copy of the room store, never `~/.parley-fork`.
 
 ## Observability
 
@@ -92,3 +101,4 @@ none — the timeline note records the change.
 
 Current pin behaviour is
 [CAP-0001](../../../capabilities/CAP-0001-room-shared-context.md), "Pin".
+Design reference: `DES-0001`, frame `room-brief-dialogs`.

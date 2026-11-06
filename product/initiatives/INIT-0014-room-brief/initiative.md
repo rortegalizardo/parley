@@ -3,14 +3,14 @@ id: INIT-0014
 type: initiative
 title: Every agent knows the room's goal, rules and decisions from one Room Brief
 status: draft
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 capabilities: [CAP-0001]
 requirements: [REQ-0001, REQ-0002, REQ-0003]
 tickets: []
-decisions: [PD-0001, PD-0002, PD-0003]
+decisions: [PD-0001, PD-0002, PD-0003, PD-0004, PD-0005, PD-0006]
 ---
 
 # INIT-0014 — Every agent knows the room's goal, rules and decisions from one Room Brief
@@ -49,7 +49,9 @@ In scope:
   Decisions, the length guide warning, the "What agents see" preview, the merge
   suggestion, Tidy, a timeline note per edit.
 - Pinning a message into the brief's Decisions, and `/note` acting on Rules.
-- The behaviour details of [PD-0003](../../decisions/PD-0003-room-brief-behaviour-clarifications.md).
+- The behaviour details of [PD-0003](../../decisions/PD-0003-room-brief-behaviour-clarifications.md)
+  and [PD-0006](../../decisions/PD-0006-room-brief-platform-rulings.md), on the
+  Brief tab chosen in [PD-0005](../../decisions/PD-0005-room-brief-chosen-option-brief-tab.md).
 
 Out of scope:
 
@@ -63,8 +65,8 @@ Out of scope:
 - **Other widths and dark mode** as designed or reviewed surfaces
   ([constraints](../../project/constraints.md) #3).
 - **New unit or smoke test suites** ([raw request](product/sources/raw-request.md), "Done means").
-- **The separate "brief-delivery" engineering work** on `parley.mjs` — it lands
-  first, on its own; this initiative's delivery work rebases on it.
+- **The separate "brief-delivery" engineering work** on `parley.mjs` — landed
+  first on its own (`b6591be` on local `main`); this initiative builds on it.
 
 ## Success measures
 
@@ -83,8 +85,9 @@ From [the raw request](product/sources/raw-request.md), "Done means":
 - Plain `ui/index.html`, `ui/app.js`, `ui/styles.css`; no React, Storybook or
   build step (#2).
 - Designed at 1440 wide, light theme only (#3).
-- Engineering rebases on the "brief-delivery" work after it lands on `main`,
-  before touching delivery code ([raw request](product/sources/raw-request.md), "Constraints").
+- Engineering starts from `main` at or after `b6591be`, the landed
+  "brief-delivery" work ([raw request](product/sources/raw-request.md), "Constraints";
+  [assessment](technical/assessment.md) C-12).
 
 ## Requirements
 
@@ -109,3 +112,4 @@ None.
 | --- | --- | --- | --- |
 | 2026-11-06 | 1 | Created at INTAKE (`new-initiative`) | Raw request from the requester |
 | 2026-11-06 | 2 | Outcome, scope, out-of-scope, success measures and three draft requirements | PRODUCT_DEFINITION |
+| 2026-11-06 | 3 | Option B chosen (PD-0005); platform rulings (PD-0006); brief-delivery landed as `b6591be` | SOLUTION_CONVERGENCE |
