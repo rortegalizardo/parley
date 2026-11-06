@@ -3,16 +3,16 @@ id: PSTATE-INIT-0014
 type: product-state
 title: Product definition state for INIT-0014
 status: authoritative
-revision: 8
+revision: 9
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0014
-phase: ENGINEERING_READY
+phase: HANDOFF
 phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
-next_action: "ROLE-product-manager: assemble the handoff packet and compile delivery/manifest.md"
+next_action: "ROLE-product-manager: create the Ariadne tickets from REQ-0001..0003 (create-tickets-from-stories)"
 blocked_by: []
 converged: true
 readiness_verdict: READY
@@ -45,7 +45,7 @@ reliably hold either.
 
 ## Next action
 
-ROLE-product-manager: assemble the handoff packet and compile `delivery/manifest.md`.
+ROLE-product-manager: create the Ariadne tickets from REQ-0001..0003 (`create-tickets-from-stories`).
 
 ## Blocked by
 
@@ -244,6 +244,7 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
 
 | Date | Receiving role | Packet digest | Note |
 | --- | --- | --- | --- |
+| 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0014@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`; ticket codes follow from `create-tickets-from-stories` |
 
 ## Session notes
 
@@ -295,6 +296,7 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
 | 2026-11-06 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD (PD-0005, option B, verdict feasible-with-constraints), indexed; REQ-0001..0003 updated to it; option A rejected with reason; Solution Contract citing PD-0005 and the hero frames | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-phase-entry pass (one accepted chosen-option PD citing a non-infeasible verdict) | fd2a35ed17734d1b |
 | 2026-11-06 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1-O3 each map to an accepted story; REQ-0001..0003 meet §10.3; coherence round 2 of 2 (terminal) `coherent`, no open blocking defect; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-phase-entry pass (`converged: true`; traceability full mode 0 defects; terminal coherence verdict not regression-required; accepted DES-0001 with committed local_export for REQ-0002, REQ-0003). Publication push skipped: the run instructions forbid pushing (main is ahead of origin) | 2d800d8e864d5ce6 |
 | 2026-11-06 | READINESS | ENGINEERING_READY | ROLE-product-manager | Exit criteria met: readiness round 1 `READY`, no conditions, no known issues, 0 findings; no open `Q-` | Exited READINESS, entered ENGINEERING_READY. Hooks: HOOK-phase-entry pass (verdict READY; story set unchanged since the verdict — REQ-0001@2, REQ-0002@2, REQ-0003@2, INIT-0014@3, as recorded in the Readiness log) | 9729c0e8624a32c5 |
+| 2026-11-06 | ENGINEERING_READY | HANDOFF | ROLE-product-manager | Exit criteria met: handoff packet complete (H0-H12 bullets populated, `none` where empty); `delivery/manifest.md` at `band_owner: product`, M1-M8 hold (graph acyclic, waves 0/1/2, every `local_export` on disk); initiative `active`; stories `readiness: engineering-ready` | Exited ENGINEERING_READY, entered HANDOFF. Hooks: HOOK-handoff-conformance pass (packet plus manifest present; coverage full mode 0 defects; no `blocker` `Q-`). Publication push skipped: the run instructions forbid pushing | c58bdcb6c70dfcb5 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
