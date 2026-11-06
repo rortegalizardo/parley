@@ -3,16 +3,16 @@ id: PSTATE-INIT-0014
 type: product-state
 title: Product definition state for INIT-0014
 status: authoritative
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0014
-phase: INTAKE
+phase: DISCOVERY
 phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
-next_action: "ROLE-product-manager: SKILL-advance-product-phase (DISCOVERY)"
+next_action: "ROLE-product-manager: SKILL-advance-product-phase (PRODUCT_DEFINITION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
@@ -45,7 +45,7 @@ reliably hold either.
 
 ## Next action
 
-ROLE-product-manager: SKILL-advance-product-phase (DISCOVERY).
+ROLE-product-manager: SKILL-advance-product-phase (PRODUCT_DEFINITION).
 
 ## Blocked by
 
@@ -68,7 +68,57 @@ Nothing.
 
 ## Discovery
 
-_Written at DISCOVERY._
+No interview round was run: the requester's decisions are final and
+pre-authorized ([run instructions](sources/run-instructions.md)); every fact
+below is cited.
+
+**Target users.**
+- The room owner (the requester, Ricardo): writes a room's standing goal,
+  rules and decisions, and expects every agent to act on them
+  ([raw request](sources/raw-request.md), "Problem", "Done means").
+- The room's agents (Claude, Codex and Gemini seats): consume that context on
+  every turn, across edits, compaction and session restarts (same source).
+
+**Jobs and problems, with evidence.**
+1. *Write the goal once and have every agent know it.* A goal in Direction was
+   not known to agents while the same text in the room note was
+   ([raw request](sources/raw-request.md), "Problem").
+2. *One place for standing context.* Today there are two overlapping places:
+   Room settings → Room tab "Shared room instructions" (Create room placeholder
+   "Goals, shared context, or rules for every agent…") and Room settings →
+   Direction tab Goal + Decisions (`ui/index.html` at `d07a67d`;
+   [CAP-0001](../../../capabilities/CAP-0001-room-shared-context.md)).
+3. *Context must not depend on what a session still remembers.* The room note
+   is sent in full only when short (< 340 characters), fresh or changed, and the
+   direction once per session, then as a one-line reminder (`parley.mjs`
+   `roomNoteBlock`, `directionBlock` at `d07a67d`), so compaction or a resumed
+   session can lose it ([raw request](sources/raw-request.md), "Problem").
+4. *Keep everything that was saved.* Migration keeps all content as is and
+   never rejects a room ([raw request](sources/raw-request.md), "Migration").
+
+**Current-state capability mapping.**
+[CAP-0001](../../../capabilities/CAP-0001-room-shared-context.md) — room note,
+room direction, Pin, Tidy, old saved brief. Per-agent standing instructions
+are separate and stay so.
+
+**Success signals** ([raw request](sources/raw-request.md), "Done means").
+- A new and an existing agent can each repeat the current goal, decisions and
+  rules — also after an edit, and after compaction or a session restart.
+- The goal never has to be copied into Rules.
+- Verified by one quick prompt check that the full brief is in the prompt after
+  a session restart, plus one manual repeat of the user's test room. No new
+  unit or smoke suites.
+
+**Known non-goals** ([raw request](sources/raw-request.md)). Agent-suggested
+decisions (deferred); only the user edits the brief; per-agent instructions
+stay in each agent's settings.
+
+**Observed in flight.** A separate engineering session, "brief-delivery", is
+changing `parley.mjs` delivery so direction and note go in full every turn
+(uncommitted `parley.mjs` edit in the main checkout on 2026-11-06;
+[raw request](sources/raw-request.md), "Constraints"). `docs/ROOM-BEHAVIOR.md`
+at `d07a67d` already describes full-every-turn delivery while the committed
+code still sends reminders.
 
 ## Options
 
@@ -122,6 +172,8 @@ _Written at ENGINEERING_READY._
   locally); project key `PRL` registered; Ariadne project `PRL` created.
 - 2026-11-06 — Triage verdict `new-initiative`: no capability, decision,
   constraint or initiative covers the ask (all indexes empty at bootstrap).
+- 2026-11-06 — DISCOVERY: CAP-0001 recorded as current state; mission and
+  principles accepted (PD-0001).
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
 
 ## Phase log
@@ -129,6 +181,7 @@ _Written at ENGINEERING_READY._
 | Date | From | To | Role | Trigger | Outcome | `context_digest` |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-06 | BOOTSTRAP | INTAKE | ROLE-product-manager | Raw request; Product Memory bootstrapped, packet `degraded` only for the seeded draft mission/principles | Entered. Hooks: HOOK-canonical-root pass (one root), HOOK-hydrate pass | eb4558fc5acdc614 |
+| 2026-11-06 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | eb4558fc5acdc614 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

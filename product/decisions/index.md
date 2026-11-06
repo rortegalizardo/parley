@@ -7,6 +7,7 @@ not re-open the question.
 
 | ID | Title | Status | Path | Updated |
 | --- | --- | --- | --- | --- |
+| PD-0001 | Accept Parley's mission from its README and record the requester's two standing rules as principles | accepted | [PD-0001-accept-mission-and-first-principles.md](PD-0001-accept-mission-and-first-principles.md) | 2026-11-06 |
 
 Empty at bootstrap. Decisions about the memory system itself
 (`owner_role: ROLE-product-architect`) and product decisions
