@@ -2,7 +2,7 @@
 id: INIT-0014
 type: initiative
 title: Every agent knows the room's goal, rules and decisions from one Room Brief
-status: draft
+status: active
 revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
