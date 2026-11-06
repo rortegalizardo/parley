@@ -251,7 +251,8 @@ _Assembled at ENGINEERING_READY._
   PD-0003/0004/0006/0007/0009/0010 (accepted), Q-0001 (`important`, not a
   dependency); depends_on none; coherence r1 `coherent`, terminal; counters
   requirement 4, design 2, decision 10; every link in the changed records
-  resolves.
+  resolves. Story-set digest of this report: `(REQ-0004, 3,
+  2026-11-06)`; INIT-0015 revision 3.
 - 2026-11-06 — Step 12 usage (`node ~/Factory/Core/ledger/summary.mjs INIT-0015`):
   planner opus 2 runs, 76k out; author fable 1 run, 39k out; des-recorder
   sonnet 1 run, 2k out. No fix score: no design PR (PD-0009 item 3).
