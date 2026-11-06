@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>INIT-0014 hero · Create room brief fields beside Pin to room brief</title>
+<link rel="stylesheet" href="../../../../../ui/styles.css">
+<!-- INIT-0014 hero frame · 1440 wide · light. Reuses Parley's own ui/styles.css
+     and today's markup classes; new pieces are the plain CSS below. -->
+<style>
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  /* The brief tab's new pieces. */
+  .brief-decisions li { align-items: flex-start; }
+  .brief-decisions textarea { flex: 1; min-width: 0; field-sizing: content; resize: none; }
+  #overlay .modal .brief-decisions textarea { min-height: 0; padding: 8px 11px; font-size: 13.5px; line-height: 1.45; }
+  .brief-decisions .ract { margin-top: 3px; }
+  .brief-decisions .ract.del:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border2)); background: var(--danger-wash); }
+  .brief-decisions .brief-archived-text { flex: 1; min-width: 0; margin: 0; padding: 8px 11px; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); border: 1px dashed var(--border2); border-radius: 9px; overflow-wrap: anywhere; }
+  #overlay .modal .brief-card details { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
+  #overlay .modal .brief-card details > summary { font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+  #overlay .modal .brief-card details[open] > summary { margin-bottom: 6px; }
+  #overlay .modal .brief-card details > .note { margin: 0 0 8px; }
+  .brief-notice { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border2); border-radius: 10px; background: var(--panel); color: var(--text-dim); font-size: 12.5px; line-height: 1.5; }
+  .brief-notice.warn { background: var(--warn-wash); border-color: var(--warn-edge); color: var(--text); }
+  .brief-length { margin: 0 0 14px; }
+  .brief-length .direction-count { display: block; margin: 0 0 6px; font-size: 12.5px; }
+  .brief-length .brief-notice { margin: 0; }
+  .brief-preview { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg2); color: var(--text); font: inherit; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .brief-card .direction-foot { padding-top: 4px; }
+  /* Past the guide the count is a warning, not an error: Save stays enabled. */
+  .brief-length .direction-count.over { color: var(--warn); }
+  /* Create room: the brief fields. */
+  #newRoomPane .fld > label .req { color: var(--text-faint); font-weight: 400; }
+</style>
+</head>
+<body>
+<style>
+  /* Hero staging only: both dialogs open side by side on one backdrop. */
+  body { background: #d9dde4; }
+  .hero-stage { display: flex; gap: 16px; align-items: flex-start; padding: 12px; min-height: 100vh; }
+  .hero-stage dialog { position: static; margin: 0; flex: none; height: auto; max-height: none; }
+  #newRoomDialog { width: 760px; max-height: none; overflow: visible; }
+  #newRoomForm { display: block; max-height: none; overflow: visible; padding-bottom: 0; }
+  #newRoomForm > .form-actions { margin: 14px -20px 0; border-radius: 0 0 20px 20px; }
+  .new-room-body { overflow: visible; padding-bottom: 4px; }
+  #decisionDialog { width: 640px; max-height: none; }
+</style>
+<div class="hero-stage">
+<dialog id="newRoomDialog" open aria-labelledby="newRoomTitle">
+    <form id="newRoomForm">
+      <div class="form-title"><div><strong id="newRoomTitle">Create a room</strong><span>Your agents, your models, your perspectives.</span></div><button type="button" id="newRoomCancel" class="modal-close" aria-label="Close create room">×</button></div>
+      <div class="new-room-body">
+      <div class="settings-tabs create-room-tabs" role="tablist" aria-label="New room configuration"><button type="button" role="tab" id="newAgentsTab" aria-controls="newAgentsPane" aria-selected="false">Agents</button><button type="button" role="tab" id="newRoomTab" aria-controls="newRoomPane" aria-selected="true">Room</button></div>
+      <section id="newRoomPane" role="tabpanel" aria-labelledby="newRoomTab">
+      <label class="form-label" for="newRoomInput">Room name</label>
+      <input id="newRoomInput" placeholder="room name…" maxlength="40" spellcheck="false" value="Parlay Product Evolution">
+
+        <div class="fld"><label for="newRoomGoal">Goal <span class="note req">required</span></label><textarea id="newRoomGoal" rows="2" maxlength="2000" required placeholder="What should this room achieve?">Decide how Parley should evolve as a product, one Room Brief at a time.</textarea></div>
+        <div class="fld"><label for="newRoomRules">Rules <span class="note">optional</span></label><textarea id="newRoomRules" rows="5" maxlength="8000" placeholder="How agents behave and work together…">Speak as one team: build on the last message instead of restarting the thread.
+Keep each reply under 200 words unless Ricardo asks for a full write-up.
+Ricardo decides scope. Agents propose and estimate; they never commit the product to anything.</textarea><div class="note">Every agent gets the room brief on every turn. You can add decisions later by pinning messages.</div></div>
+        <div class="fld"><label for="newRoomProjectPath">Project folder <span class="note">optional</span></label><div class="project-folder-field"><input id="newRoomProjectPath" spellcheck="false" placeholder="/path/to/your/project" value="/Users/ortega/Desktop/Projects/parley"><button type="button" id="newRoomProj" class="btn"><span data-picker-label>Browse…</span></button></div><div class="note">Leave blank to use a new room workspace.</div></div>
+        <label id="newRoomReview" class="review-preset"><input type="checkbox" id="newRoomReviewChk"><span><b>Start in Work mode</b><small>Allows project edits and commands. Talk uses conservative defaults.</small></span></label>
+      </section>
+      </div>
+      <div class="form-actions"><button type="button" id="newRoomCancelBottom" class="btn">Cancel</button><button type="submit" id="newRoomCreate" class="btn primary" style="padding:8px 18px;font-size:12px">Create room</button></div>
+    </form>
+</dialog>
+
+<dialog id="decisionDialog" open aria-labelledby="decisionTitle" aria-describedby="decisionRoom">
+  <form id="decisionForm">
+    <h2 id="decisionTitle">Pin to room brief</h2>
+    <p id="decisionRoom" class="note">Room: Parlay Product Evolution. Adds one decision to the room brief that every agent gets on every turn.</p>
+    <label for="decisionText">One decision for every agent</label>
+    <textarea id="decisionText" rows="3" maxlength="200" required>Room Settings becomes one Room Brief with three parts: Goal, Rules and Decisions. Each agent now gets the whole brief in full, on every turn; edits apply on each agent's next turn and need no restart.</textarea>
+    <p id="decisionError" role="alert" hidden></p>
+    <div class="form-actions"><button type="button" class="btn" id="decisionCancel">Cancel</button><button type="submit" class="btn primary" id="decisionSave">Pin</button></div>
+  </form>
+</dialog>
+</div>
+</body>
+</html>

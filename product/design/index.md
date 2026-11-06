@@ -5,6 +5,7 @@ external design tool.
 
 | ID | Title | Status | Path | Updated | Initiative | External system | Local export |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| DES-0001 | Room Brief hero frames (Brief tab; Create room fields and Pin dialog) | accepted | DES-0001-room-brief-hero-frames.md | 2026-11-06 | INIT-0014 | none | initiatives/INIT-0014-room-brief/design/heroes/ |
 
 ## Reference docs
 

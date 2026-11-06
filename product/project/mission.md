@@ -2,8 +2,8 @@
 id: PROJECT-mission
 type: project-context
 title: Product mission
-status: draft
-revision: 1
+status: accepted
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -11,11 +11,10 @@ updated: 2026-11-06
 
 # Product mission
 
-> **Status: draft.** Not yet authoritative. Seeded at bootstrap by transcribing
-> the requester's own words, attributed to them below; nothing here is PM
-> authorship. Hardening it to `accepted` is DISCOVERY's job and stays with
-> `ROLE-product-manager`. Until it is accepted, agents must not cite it as
-> settled product intent.
+> **Status: accepted** at INIT-0014 DISCOVERY (2026-11-06) by `ROLE-product-manager`,
+> [PD-0001](../decisions/PD-0001-accept-mission-and-first-principles.md). The
+> description below is transcribed from the repository's `README.md`; nothing here
+> is new product intent.
 
 ## What this product is
 
@@ -25,8 +24,11 @@ The requester's own words, transcribed at bootstrap (2026-11-06):
 
 ## What success looks like
 
-_Not stated yet._
+The user can ask one agent, then another what it thinks of the answer, and the
+agents agree, disagree and build on each other in one thread (`README.md`). Not
+stated further yet.
 
 ## What this product is deliberately not
 
-_Not stated yet._
+A work queue — worktrees, kanban boards, parallel terminals (`README.md`). It
+never reads or stores provider credentials (`README.md`).

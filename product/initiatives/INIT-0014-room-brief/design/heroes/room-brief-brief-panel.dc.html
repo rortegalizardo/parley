@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>INIT-0014 hero · Room settings → Brief tab</title>
+<link rel="stylesheet" href="../../../../../ui/styles.css">
+<!-- INIT-0014 hero frame · 1440 wide · light. Reuses Parley's own ui/styles.css
+     and today's markup classes; new pieces are the plain CSS below. -->
+<style>
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  /* The brief tab's new pieces. */
+  .brief-decisions li { align-items: flex-start; }
+  .brief-decisions textarea { flex: 1; min-width: 0; field-sizing: content; resize: none; }
+  #overlay .modal .brief-decisions textarea { min-height: 0; padding: 8px 11px; font-size: 13.5px; line-height: 1.45; }
+  .brief-decisions .ract { margin-top: 3px; }
+  .brief-decisions .ract.del:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border2)); background: var(--danger-wash); }
+  .brief-decisions .brief-archived-text { flex: 1; min-width: 0; margin: 0; padding: 8px 11px; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); border: 1px dashed var(--border2); border-radius: 9px; overflow-wrap: anywhere; }
+  #overlay .modal .brief-card details { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
+  #overlay .modal .brief-card details > summary { font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+  #overlay .modal .brief-card details[open] > summary { margin-bottom: 6px; }
+  #overlay .modal .brief-card details > .note { margin: 0 0 8px; }
+  .brief-notice { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border2); border-radius: 10px; background: var(--panel); color: var(--text-dim); font-size: 12.5px; line-height: 1.5; }
+  .brief-notice.warn { background: var(--warn-wash); border-color: var(--warn-edge); color: var(--text); }
+  .brief-length { margin: 0 0 14px; }
+  .brief-length .direction-count { display: block; margin: 0 0 6px; font-size: 12.5px; }
+  .brief-length .brief-notice { margin: 0; }
+  .brief-preview { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg2); color: var(--text); font: inherit; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .brief-card .direction-foot { padding-top: 4px; }
+  /* Past the guide the count is a warning, not an error: Save stays enabled. */
+  .brief-length .direction-count.over { color: var(--warn); }
+  /* Create room: the brief fields. */
+  #newRoomPane .fld > label .req { color: var(--text-faint); font-weight: 400; }
+</style>
+</head>
+<body>
+<style>
+  /* Hero staging only: the dialog body is shown at its full height so the whole tab is one picture. */
+  #overlay { position: relative; inset: auto; display: flex; align-items: flex-start; min-height: 100vh; padding: 28px 0 40px; }
+  #overlay .modal { height: auto; max-height: none; overflow: visible; }
+  .settings-scroll-body { overflow: visible; }
+  #overlay .modal #briefRules { field-sizing: content; min-height: 12em; }
+</style>
+<div id="overlay" class="open">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="settings-fixed-head"><h2 id="settingsTitle">Room settings</h2>
+    <div class="sub" id="roomPath">/Users/ortega/Desktop/Projects/parley</div>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="false">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="briefSettingsTab" aria-selected="true">Brief</button></div></div>
+    <div class="settings-scroll-body">
+    <section id="briefSettingsPane" role="tabpanel" aria-labelledby="briefSettingsTab"><section id="contextSettings" aria-label="Room brief">
+      <section id="briefCard" class="context-brief-card direction-card brief-card">
+        <div class="context-section-head"><div><h3>Room brief</h3><p class="note">Every agent gets this whole brief — goal, rules and active decisions — on every turn. Edits apply on each agent's next turn.</p></div></div>
+        <div class="fld"><label for="briefGoal">Goal</label><textarea id="briefGoal" rows="3" maxlength="2000" placeholder="What should this room achieve?">Decide how Parley should evolve as a product: one Room Brief that every agent gets in full on every turn, so a goal written once is never lost.</textarea></div>
+        <div class="fld"><label for="briefRules">Rules</label><textarea id="briefRules" rows="9" maxlength="8000" placeholder="How agents behave and work together…">Speak as one team: build on the last message instead of restarting the thread, and name who you are answering.
+Decide how Parley should evolve as a product: one Room Brief that every agent gets in full on every turn, so a goal written once is never lost.
+Keep each reply under 200 words unless Ricardo asks for a full write-up; put long material in a file in the room workspace and link it.
+Never restart or touch the live Parley server on port 4142, and never use port 4141. Test on an isolated port.
+Parley's UI is plain ui/index.html, ui/app.js and ui/styles.css: no React, no Storybook, no build step.
+Design at 1440 wide, light theme only; dark mode and other widths follow from the existing CSS and are never reviewed separately.
+Ricardo decides scope. Agents propose, estimate and flag risks; they never commit the product to anything on their own.
+If a rule here conflicts with the goal or a decision, say so and ask Ricardo before acting; do not quietly pick one.</textarea></div>
+        <div class="fld"><label>Decisions</label>
+          <ul class="direction-pins brief-decisions">
+              <li><textarea class="brief-decision" rows="1" maxlength="200" aria-label="Decision 1">Room Settings becomes one Room Brief with three parts: Goal, Rules and Decisions. Each agent now gets the whole brief in full, on every turn; edits apply on each agent's next turn and need no restart.</textarea><button type="button" class="ract" aria-label="Archive decision 1">Archive</button></li>
+              <li><textarea class="brief-decision" rows="1" maxlength="200" aria-label="Decision 2">Per-agent standing instructions stay in each agent's own settings on the Agents tab; the brief never repeats them and never overrides them.</textarea><button type="button" class="ract" aria-label="Archive decision 2">Archive</button></li>
+              <li><textarea class="brief-decision" rows="1" maxlength="200" aria-label="Decision 3">2,000 characters is a guide, not a hard limit: Room Settings warns past it and suggests archiving decisions or trimming rules. Nothing is cut or deleted automatically; archived ones stay saved.</textarea><button type="button" class="ract" aria-label="Archive decision 3">Archive</button></li>
+              <li><textarea class="brief-decision" rows="1" maxlength="200" aria-label="Decision 4">Pinning a message or an agreed decision card adds one line to Decisions, as pinning works today. Agent-suggested decisions are deferred; only the user edits the brief.</textarea><button type="button" class="ract" aria-label="Archive decision 4">Archive</button></li>
+              <li><textarea class="brief-decision" rows="1" maxlength="200" aria-label="Decision 5">Migration keeps every saved word as it is: old direction goal becomes the Goal, pinned items become Decisions, the room note becomes Rules. A migrated room is never rejected for lacking a Goal.</textarea><button type="button" class="ract" aria-label="Archive decision 5">Archive</button></li>
+          </ul>
+          <div class="direction-add"><input type="text" id="briefNewDecision" maxlength="200" placeholder="Add a one-line decision…" aria-label="New decision"><button type="button" class="btn" id="briefAddDecision">Add</button></div>
+        </div>
+        <details class="brief-archived" open>
+          <summary>Archived decisions (3)</summary>
+          <p class="note">Kept, not sent to agents.</p>
+          <ul class="direction-pins brief-decisions">
+              <li><p class="brief-archived-text">Converge results are kept as decisions automatically, without a pin.</p><button type="button" class="ract" aria-label="Restore archived decision 1">Restore</button><button type="button" class="ract del" aria-label="Delete archived decision 1">Delete</button></li>
+              <li><p class="brief-archived-text">Send the room note in full only while it is under 1,500 characters; past that, send a one-line reminder instead.</p><button type="button" class="ract" aria-label="Restore archived decision 2">Restore</button><button type="button" class="ract del" aria-label="Delete archived decision 2">Delete</button></li>
+              <li><p class="brief-archived-text">Keep the Direction tab and add a Brief section underneath it, leaving the room note on the Room tab.</p><button type="button" class="ract" aria-label="Restore archived decision 3">Restore</button><button type="button" class="ract del" aria-label="Delete archived decision 3">Delete</button></li>
+          </ul>
+        </details>
+        <div class="brief-notice" role="status">Some text appears in more than one part of the brief (Goal and Rules). You may want to keep it in one place; agents get every part either way.</div>
+        <div class="brief-length">
+          <span class="direction-count over" id="briefCount">2,007 characters · guide about 2,000</span>
+          <p class="brief-notice warn" role="status">This brief is longer than the 2,000-character guide (about 500 tokens), and every agent reads all of it on every turn. Consider archiving decisions you no longer need or trimming the rules. Nothing is cut automatically.</p>
+        </div>
+        <details class="brief-preview-details" open>
+          <summary>What agents see</summary>
+          <p class="note">Includes unsaved changes.</p>
+          <pre class="brief-preview" aria-label="The exact block every agent receives">Room brief — the user's standing direction and rules for this room. Follow it on every turn. If a rule conflicts with the goal or a decision, say so and ask the user; do not quietly pick one.
+
+Goal: Decide how Parley should evolve as a product: one Room Brief that every agent gets in full on every turn, so a goal written once is never lost.
+
+Rules:
+Speak as one team: build on the last message instead of restarting the thread, and name who you are answering.
+Decide how Parley should evolve as a product: one Room Brief that every agent gets in full on every turn, so a goal written once is never lost.
+Keep each reply under 200 words unless Ricardo asks for a full write-up; put long material in a file in the room workspace and link it.
+Never restart or touch the live Parley server on port 4142, and never use port 4141. Test on an isolated port.
+Parley's UI is plain ui/index.html, ui/app.js and ui/styles.css: no React, no Storybook, no build step.
+Design at 1440 wide, light theme only; dark mode and other widths follow from the existing CSS and are never reviewed separately.
+Ricardo decides scope. Agents propose, estimate and flag risks; they never commit the product to anything on their own.
+If a rule here conflicts with the goal or a decision, say so and ask Ricardo before acting; do not quietly pick one.
+
+Decisions:
+- Room Settings becomes one Room Brief with three parts: Goal, Rules and Decisions. Each agent now gets the whole brief in full, on every turn; edits apply on each agent's next turn and need no restart.
+- Per-agent standing instructions stay in each agent's own settings on the Agents tab; the brief never repeats them and never overrides them.
+- 2,000 characters is a guide, not a hard limit: Room Settings warns past it and suggests archiving decisions or trimming rules. Nothing is cut or deleted automatically; archived ones stay saved.
+- Pinning a message or an agreed decision card adds one line to Decisions, as pinning works today. Agent-suggested decisions are deferred; only the user edits the brief.
+- Migration keeps every saved word as it is: old direction goal becomes the Goal, pinned items become Decisions, the room note becomes Rules. A migrated room is never rejected for lacking a Goal.</pre>
+        </details>
+        <details class="context-legacy">
+          <summary>Old saved brief (no longer sent to agents) · 4,812 characters</summary>
+          <p class="note">Kept on disk for the record · version 7 · 10/14/2026, 9:42:17 AM. Copy anything still useful into the room brief.</p>
+          <div class="bubble context-markdown" id="legacyBrief"><p class="note">Loading…</p></div>
+        </details>
+        <div class="direction-foot"><button type="button" class="btn" id="briefTidy">Tidy</button><button type="button" class="btn" id="briefDiscard">Discard changes</button><button type="button" class="btn primary" id="briefSave">Save brief</button></div>
+        <p id="briefStatus" class="note" role="status"></p>
+      </section>
+      <div id="contextExtras">
+        <details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p></details>
+      </div>
+    </section></section>
+    </div>
+    <div class="mrow settings-fixed-foot">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="mRename">Rename…</button>
+        <button class="btn danger" id="mNewConv">Clear conversation…</button>
+        <button class="btn" id="mArchive">Archive room…</button><button class="btn danger" id="mDelete">Delete room</button>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="mCancel">Cancel</button>
+        <button class="btn primary" id="mSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
