@@ -3,22 +3,22 @@ id: PSTATE-INIT-0014
 type: product-state
 title: Product definition state for INIT-0014
 status: authoritative
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0014
-phase: DISCOVERY
+phase: PRODUCT_DEFINITION
 phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
-next_action: "ROLE-product-manager: SKILL-advance-product-phase (PRODUCT_DEFINITION)"
+next_action: "ROLE-product-manager: SKILL-advance-product-phase (SOLUTION_EXPLORATION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
-stories: []
+stories: [REQ-0001, REQ-0002, REQ-0003]
 design_refs: []
-decisions: []
+decisions: [PD-0001, PD-0002, PD-0003]
 ---
 
 # Product definition state — INIT-0014
@@ -45,7 +45,7 @@ reliably hold either.
 
 ## Next action
 
-ROLE-product-manager: SKILL-advance-product-phase (PRODUCT_DEFINITION).
+ROLE-product-manager: SKILL-advance-product-phase (SOLUTION_EXPLORATION).
 
 ## Blocked by
 
@@ -141,6 +141,9 @@ _Recommended option and why:_
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
+| REQ-0001 | Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note | draft | CAP-0001 | none (no user-facing surface) | none — on the frontier; starts after the external "brief-delivery" work lands on main and rebases on it |
+| REQ-0002 | The user edits one Room Brief in Room Settings and sees exactly what agents receive | draft | CAP-0001 | pending (SOLUTION_EXPLORATION hero) | after REQ-0001 (edits the brief it creates) |
+| REQ-0003 | Pinning a message adds it to the Room Brief's Decisions | draft | CAP-0001 | pending (SOLUTION_EXPLORATION hero) | after REQ-0001 (writes into the brief it creates) |
 
 ## Readiness log
 
@@ -174,6 +177,11 @@ _Written at ENGINEERING_READY._
   constraint or initiative covers the ask (all indexes empty at bootstrap).
 - 2026-11-06 — DISCOVERY: CAP-0001 recorded as current state; mission and
   principles accepted (PD-0001).
+- 2026-11-06 — PRODUCT_DEFINITION: initiative populated (O1-O3, out of
+  scope, success measures); REQ-0001..0003 drafted; PD-0002 (requester's
+  decisions) and PD-0003 (ten behaviour details, all pm-resolvable under
+  §4.1) recorded; Product Definition Contract written inline (size rule
+  §9d.2) and validated against both raw sources item by item.
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
 
 ## Phase log
@@ -182,6 +190,7 @@ _Written at ENGINEERING_READY._
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-06 | BOOTSTRAP | INTAKE | ROLE-product-manager | Raw request; Product Memory bootstrapped, packet `degraded` only for the seeded draft mission/principles | Entered. Hooks: HOOK-canonical-root pass (one root), HOOK-hydrate pass | eb4558fc5acdc614 |
 | 2026-11-06 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | eb4558fc5acdc614 |
+| 2026-11-06 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0001 mapping, success signals, non-goals (S1-S3) | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | 5435e20a90e90919 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

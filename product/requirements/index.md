@@ -5,3 +5,6 @@ globally unique and are never reused. An unindexed requirement is not authoritat
 
 | ID | Title | Status | Initiative | Path | Updated |
 | --- | --- | --- | --- | --- | --- |
+| REQ-0001 | Every agent gets the whole Room Brief in full on every turn, migrated from each room's existing direction, pins and note | draft | INIT-0014 | [REQ-0001-room-brief-delivered-every-turn.md](../initiatives/INIT-0014-room-brief/requirements/REQ-0001-room-brief-delivered-every-turn.md) | 2026-11-06 |
+| REQ-0002 | The user edits one Room Brief in Room Settings and sees exactly what agents receive | draft | INIT-0014 | [REQ-0002-room-brief-in-room-settings.md](../initiatives/INIT-0014-room-brief/requirements/REQ-0002-room-brief-in-room-settings.md) | 2026-11-06 |
+| REQ-0003 | Pinning a message adds it to the Room Brief's Decisions | draft | INIT-0014 | [REQ-0003-pin-to-room-brief.md](../initiatives/INIT-0014-room-brief/requirements/REQ-0003-pin-to-room-brief.md) | 2026-11-06 |
