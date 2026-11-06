@@ -540,7 +540,6 @@ function defaultConfig(seats = DEFAULT_SEATS) {
     accounting: "automatic",
     pairRounds: 0,    // review rounds per message in pair mode (0 = until the reviewer approves)
     projectDir: null, // absolute path of a real project to work in (null = room's own sandbox workspace)
-    roomNote: null,   // standing instruction prepended to every prompt (set via Settings or /note)
     timeoutMs: 900000,
     // `provider` is written first so it reads first in room.json, and it is a
     // real persisted key rather than something derived on read — otherwise the
@@ -594,11 +593,6 @@ function defaultState(agentsCfg) {
     pair: null,     // { worker, reviewer, rounds, roundsSource } while pair mode is on
     convergence: null,
     codexLastWarned: false,
-    // Current normalized room-note state. The revision advances on both edits
-    // and clears so a linked native session can be told explicitly that an old
-    // standing note no longer applies.
-    roomNoteRevision: 0,
-    roomNoteValue: null,
     agents: Object.fromEntries(seats.map((s) => [s, {
       sessionRef: null,
       cursor: 0,
@@ -774,7 +768,7 @@ function applyAdapterSession(room, agent, res, epoch) {
 
 // Prompt delivery commits exactly where the delivery cursor does, and for the
 // same reason: a usage-limit failure or Stop must re-send the current contract
-// or room-note state. The fingerprint detects contract drift; the numeric
+// contract. The fingerprint detects contract drift; the numeric
 // version controls migration policy (inject versus retire). Keep those roles
 // distinct. A sentinel such as Codex's `--last` is not a durable identity, so
 // it is deliberately never used to prove that a native session retained text.
@@ -789,12 +783,19 @@ function stampPromptDelivery(room, agent, res, epoch, delivery) {
   // identity mismatch makes the next turn send the full update.
   const unexpected = !!delivery.expectedSessionRef && sessionRef !== delivery.expectedSessionRef;
   if (unexpected && !delivery.contractDelivered) return;
+  if (delivery.briefTransition && !unexpected) {
+    const ledger = contextLedger(room);
+    const covered = delivery.briefTransition;
+    const pending = ledger.briefMigration.sessions.find((item) => item.seat === covered.seat &&
+      item.provider === covered.provider && item.sessionRef === covered.sessionRef);
+    if (pending && !pending.acknowledgedAt) {
+      pending.acknowledgedAt = new Date().toISOString();
+      saveContext(room);
+    }
+  }
   seat.promptSessionRef = String(sessionRef);
   seat.briefingVersion = delivery.version;
   seat.briefingFingerprint = delivery.fingerprint;
-  // An unexpected identity received only what went in full this turn: a note
-  // reminder or a block reminder was written for the session that died.
-  seat.roomNoteRevision = unexpected && !delivery.noteFull ? null : delivery.roomNoteRevision;
   // Static instruction blocks this session has durably received. A different
   // session identity starts a clean ledger — stamps from a dead session must
   // not vouch for a new one.
@@ -1122,16 +1123,6 @@ function retireOutdatedSession(room, agent, turnScope = {}) {
   }
 }
 
-function normalizeRoomNote(value) {
-  const note = value == null ? "" : String(value).trim();
-  return note || null;
-}
-
-function roomNoteRevisionOf(room) {
-  const revision = Number(room.state.roomNoteRevision);
-  return Number.isSafeInteger(revision) && revision >= 0 ? revision : 0;
-}
-
 function stableSessionRef(value) {
   return typeof value === "string" && value.length > 0 && value !== "--last";
 }
@@ -1148,17 +1139,9 @@ function composePromptDelivery(room, agent, fresh, isolated = false) {
   const contractCurrent = sameSession &&
     briefingVersionOf(room, agent) === contract.version &&
     seat.briefingFingerprint === contract.fingerprint;
-  const roomNoteRevision = roomNoteRevisionOf(room);
-  const noteCurrent = sameSession && seat.roomNoteRevision === roomNoteRevision;
   let prefix = "";
   if (!fresh && !contractCurrent) {
     prefix += `[Update to your standing instructions — supersedes your earlier briefing:]\n${contract.text}\n\n`;
-  }
-  // An active note is framed in every prompt by notePrefix. A cleared note
-  // needs one explicit revocation in a linked session; contract-stale legacy
-  // sessions receive the same truthful current-state marker once.
-  if (!fresh && normalizeRoomNote(room.cfg.roomNote) === null && (!noteCurrent || !contractCurrent)) {
-    prefix += "[Current room-note state from the user: no room note is active; disregard all earlier room notes.]\n\n";
   }
   // Deliver the current identity on every invocation, before conversation
   // content so the newest message remains the last part of the prompt.
@@ -1172,17 +1155,15 @@ function composePromptDelivery(room, agent, fresh, isolated = false) {
     briefing: fresh ? freshTurnBriefing(room, agent, isolated) : null,
     version: contract.version,
     fingerprint: contract.fingerprint,
-    roomNoteRevision,
     expectedSessionRef: stableSessionRef(sessionRef) ? sessionRef : null,
     contractDelivered: fresh || !contractCurrent,
     // For the static-block dedup below: whether this turn resumes the session
-    // the stamps describe, whether the note is already in it, and a ledger of
+    // the stamps describe, and a ledger of
     // the block fingerprints this delivery carried (in full or as a reminder),
     // stamped only after durable success like everything else here.
     sameSession,
     fresh,
-    noteCurrent,
-    blocksSent: {}, blocksFull: {}, noteFull: false,
+    blocksSent: {}, blocksFull: {},
   };
 }
 
@@ -1821,7 +1802,7 @@ function cleanRoomName(name) {
 // Rooms come into existence only when explicitly created (the + button, or the
 // bootstrap of `default`). Merely naming a room must never conjure it — that's
 // how a deleted room could otherwise resurrect itself.
-function loadRoom(name, seatChoice, create = false, initialConfig = null) {
+function loadRoom(name, seatChoice, create = false, initialConfig = null, initialBrief = null) {
   if (rooms.has(name)) return rooms.get(name);
   // Client input, not a server fault — report it like the 404 two lines below.
   if (!validRoomName(name)) throw Object.assign(new Error(`invalid room name: ${name}`), { status: 400 });
@@ -1833,6 +1814,7 @@ function loadRoom(name, seatChoice, create = false, initialConfig = null) {
   fs.mkdirSync(workspace, { recursive: true });
 
   const cfgFile = path.join(dir, "room.json");
+  const existingRoom = fs.existsSync(cfgFile);
   let cfg;
   let cfgMigrated = false;
   if (fs.existsSync(cfgFile)) {
@@ -1901,6 +1883,15 @@ function loadRoom(name, seatChoice, create = false, initialConfig = null) {
   }
   else { state = defaultState(cfg.agents); writeJSON(stateFile, state); }
 
+  const loadedContext = contextLedger({ dir, cfg }, {
+    newRoom: !existingRoom, initialBrief,
+    legacySessions: Object.entries(rawState?.agents || {}).flatMap(([seat, runtime]) => {
+      const provider = cfg.agents[seat] && providerIdFor(cfg.agents[seat], seat);
+      return provider && typeof runtime.sessionRef === "string" && runtime.sessionRef
+        ? [{ seat, provider, sessionRef: runtime.sessionRef, acknowledgedAt: null }] : [];
+    }),
+  });
+
   // A prior roster may have left agent runtime records in state.json.  Keep
   // transcript/events as the historical source of truth, but never let a
   // removed seat reappear as routable runtime state after restart.
@@ -1926,27 +1917,6 @@ function loadRoom(name, seatChoice, create = false, initialConfig = null) {
   // session under a newly conservative configuration.
   let stateMigrated = !!rawState &&
     JSON.stringify(Object.keys(rawState.agents || {}).sort()) !== JSON.stringify([...liveSeatSet].sort());
-  const configuredRoomNote = normalizeRoomNote(cfg.roomNote);
-  const trackedRoomNote = !!rawState && Object.prototype.hasOwnProperty.call(rawState, "roomNoteValue");
-  if (!trackedRoomNote) {
-    state.roomNoteValue = configuredRoomNote;
-    state.roomNoteRevision = configuredRoomNote === null ? 0 : 1;
-    // A legacy live session is also missing its contract fingerprint, so its
-    // next turn receives either the active note or an explicit no-note marker.
-    stateMigrated = true; // persist initial room instructions before the first turn too
-  } else {
-    let revision = Number(state.roomNoteRevision);
-    if (!Number.isSafeInteger(revision) || revision < 0) {
-      revision = 0;
-      stateMigrated = true;
-    }
-    if (normalizeRoomNote(state.roomNoteValue) !== configuredRoomNote) {
-      revision++;
-      state.roomNoteValue = configuredRoomNote;
-      stateMigrated = true;
-    }
-    state.roomNoteRevision = revision;
-  }
   // Sleep survives restarts for free by living in state, so a hand-edited or
   // legacy value has to normalize to one of the two shapes the runtime
   // understands: null, or { since, reason }. A bare `true` still means asleep.
@@ -2115,22 +2085,21 @@ function loadRoom(name, seatChoice, create = false, initialConfig = null) {
     pairActive: null,     // { worker, reviewer } while a pair session runs
     catchUpScheduled: false,
   };
-  contextLedger(room); // initialize/import before /clear can replace conversation entries
+  room.contextLedger = loadedContext; // survives /clear and runtime state recovery
   rooms.set(name, room);
   for (const [seat, reason] of contextLoadResets) contextEvent(room, seat, "reset", reason);
   return room;
 }
 
-// Room context is deliberately outside state.json and the transcript: /clear
-// replaces both. It holds the user's short room direction (a goal plus pinned
-// one-line decisions) and the session events. Older ledgers also carry saved
-// decisions and a reviewed brief; those stay on disk for the record and are
-// never sent to agents again.
-const DIRECTION_MAX_CHARS = 2000;
+// Persistent user context is outside runtime state and conversation resets.
 const DIRECTION_PIN_MAX_CHARS = 200;
-const DIRECTION_HISTORY_MAX = 20;
+const BRIEF_TRANSITION = "[The separate room direction and room note from your earlier briefing are replaced by the room brief below. Follow the room brief.]";
+const badBrief = (message) => Object.assign(new Error(message), { status: 400 });
+function emptyBrief() {
+  return { schemaVersion: 1, revision: 0, goal: "", rules: "", decisions: [], updatedAt: null };
+}
 function contextFile(room) { return path.join(room.dir, "context.json"); }
-function contextLedger(room) {
+function contextLedger(room, { newRoom = false, initialBrief = null, legacySessions = [] } = {}) {
   if (!room.contextLedger) {
     const file = contextFile(room);
     let data;
@@ -2138,44 +2107,113 @@ function contextLedger(room) {
     catch { throw new Error(`Cannot read saved room context at ${file}; repair it before continuing.`); }
     if (!data || !Array.isArray(data.events)) throw new Error(`Room context is invalid at ${file}; repair it before continuing.`);
     if (!Array.isArray(data.decisions)) data.decisions = [];
+    let changed = false;
+    if (!data.roomBrief && data.briefMigration) throw new Error(`Room brief is missing at ${file}; repair it before continuing.`);
+    if (!data.roomBrief) {
+      const now = new Date().toISOString();
+      const ids = new Set();
+      const raw = data.direction;
+      data.roomBrief = newRoom ? (initialBrief || emptyBrief()) : {
+        ...emptyBrief(),
+        goal: typeof raw?.goal === "string" ? raw.goal : "",
+        rules: typeof room.cfg.roomNote === "string" ? room.cfg.roomNote : "",
+        decisions: (Array.isArray(raw?.pins) ? raw.pins : []).map((pin) => {
+          let id = typeof pin.id === "string" && pin.id && !ids.has(pin.id) ? pin.id : crypto.randomUUID();
+          ids.add(id);
+          return { ...pin, id, text: typeof pin.text === "string" ? pin.text : "", status: "active",
+            createdAt: pin.createdAt ?? now, archivedAt: null };
+        }),
+        updatedAt: now,
+      };
+      data.briefMigration = { schemaVersion: 1, importedAt: newRoom ? null : now,
+        sessions: newRoom ? [] : legacySessions };
+      changed = true;
+    } else if (!data.briefMigration) {
+      data.briefMigration = { schemaVersion: 1, importedAt: null, sessions: [] };
+      changed = true;
+    }
+    if (changed) writeJSON(file, data); // brief + import/transition marker commit together
     room.contextLedger = data;
   }
   return room.contextLedger;
 }
 function saveContext(room) { writeJSON(contextFile(room), contextLedger(room)); }
-function roomDirection(ledger) {
-  const d = ledger.direction;
-  return { goal: typeof d?.goal === "string" ? d.goal : "", pins: Array.isArray(d?.pins) ? d.pins : [], updatedAt: d?.updatedAt || null };
-}
-function directionBody({ goal, pins }) {
-  return [goal ? `Goal: ${goal}` : "", pins.length ? "Decisions:\n" + pins.map((p) => `- ${p.text}`).join("\n") : ""]
-    .filter(Boolean).join("\n");
-}
-const badDirection = (message) => Object.assign(new Error(message), { status: 400 });
-// A user edit of the whole direction. Pins keep their id and source message
-// when the client sends the id back; each is collapsed to one line.
-function normalizeDirection(input, previous) {
-  if (input.pins != null && !Array.isArray(input.pins)) throw badDirection("Pins must be a list.");
-  const old = new Map(previous.pins.map((p) => [p.id, p]));
+
+// Pure validation: no writes, live mutation, scheduling or notifications.
+function prepareBrief(previous, input) {
+  if (!input || !Number.isSafeInteger(input.baseRevision) || input.baseRevision < 0) throw badBrief("A valid baseRevision is required.");
+  if (input.baseRevision !== previous.revision) throw Object.assign(new Error(
+    "The brief changed since you started editing. Your edits are still here — review them and press Save brief again."),
+    { status: 409, brief: previous });
+  const field = (value, old, limit, label) => {
+    if (typeof value !== "string") throw badBrief(`${label} must be text.`);
+    if (value.length > Math.max(limit, old.length)) throw badBrief(`${label} cannot grow beyond ${Math.max(limit, old.length)} characters.`);
+    return value;
+  };
+  const goal = field(input.goal, previous.goal, 2000, "Goal");
+  const rules = field(input.rules, previous.rules, 8000, "Rules");
+  if (!Array.isArray(input.decisions)) throw badBrief("Decisions must be a list.");
+  const deleteIds = input.deleteArchivedIds ?? [];
+  if (!Array.isArray(deleteIds) || deleteIds.some((id) => typeof id !== "string") || new Set(deleteIds).size !== deleteIds.length) throw badBrief("Archived delete IDs must be unique IDs.");
+  const old = new Map(previous.decisions.map((d) => [d.id, d]));
+  for (const id of deleteIds) {
+    if (!old.has(id)) throw badBrief("Unknown decision ID.");
+    if (old.get(id).status !== "archived") throw badBrief("Archive an active decision before deleting it.");
+  }
+  const seen = new Set(), active = [], restored = [], archived = [];
   const now = new Date().toISOString();
-  const pins = (input.pins || []).map((p) => {
-    const text = String(p?.text ?? "").replace(/\s+/g, " ").trim();
-    if (!text) return null;
-    if (text.length > DIRECTION_PIN_MAX_CHARS) throw badDirection(`Each pinned line must be at most ${DIRECTION_PIN_MAX_CHARS} characters.`);
-    const kept = typeof p.id === "string" ? old.get(p.id) : null;
-    const entryN = Number.isInteger(p.entryN) ? p.entryN : kept?.entryN;
-    return { id: kept?.id || crypto.randomUUID(), text, ...(entryN ? { entryN } : {}), createdAt: kept?.createdAt || now };
-  }).filter(Boolean);
-  const direction = { goal: String(input.goal ?? "").trim(), pins, updatedAt: now };
-  const chars = directionBody(direction).length;
-  if (chars > DIRECTION_MAX_CHARS) throw badDirection(`The room direction is ${chars} characters; the limit is ${DIRECTION_MAX_CHARS.toLocaleString("en-US")}. Shorten it or use Tidy.`);
-  return direction;
+  for (const item of input.decisions) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw badBrief("Each decision must be an object.");
+    const identified = Object.hasOwn(item, "id");
+    if (identified && (typeof item.id !== "string" || !old.has(item.id) || seen.has(item.id))) throw badBrief("Duplicate or unknown decision ID.");
+    if (identified && deleteIds.includes(item.id)) throw badBrief("A deleted decision cannot also be submitted.");
+    const prior = identified ? old.get(item.id) : null;
+    const status = item.status ?? "active";
+    if (!["active", "archived"].includes(status)) throw badBrief("Decision status must be active or archived.");
+    const text = field(item.text, prior?.text || "", DIRECTION_PIN_MAX_CHARS, "Decision");
+    const next = { ...(prior || {}), id: prior?.id || crypto.randomUUID(), text, status,
+      createdAt: prior?.createdAt ?? now,
+      ...(prior ? {} : (Number.isInteger(item.entryN) ? { entryN: item.entryN } : {})),
+      archivedAt: status === "archived" ? (prior?.status === "archived" ? prior.archivedAt : now) : null };
+    if (identified) seen.add(item.id);
+    if (status === "archived") archived.push(next);
+    else if (prior?.status === "archived") restored.push(next);
+    else active.push(next);
+  }
+  for (const prior of previous.decisions) {
+    if (seen.has(prior.id) || deleteIds.includes(prior.id)) continue;
+    archived.push(prior.status === "active" ? { ...prior, status: "archived", archivedAt: now } : prior);
+  }
+  archived.sort((a, b) => String(b.archivedAt).localeCompare(String(a.archivedAt)) || a.id.localeCompare(b.id));
+  const decisions = [...active, ...restored, ...archived];
+  const changed = [];
+  if (goal !== previous.goal) changed.push("Goal");
+  if (rules !== previous.rules) changed.push("Rules");
+  // Archive display ordering alone is not a user edit.
+  const content = (items) => JSON.stringify([items.filter((d) => d.status === "active"),
+    items.filter((d) => d.status === "archived").sort((a, b) => a.id.localeCompare(b.id))]);
+  if (content(decisions) !== content(previous.decisions)) changed.push("Decisions");
+  return { changed, brief: changed.length ? { schemaVersion: 1, revision: previous.revision + 1,
+    goal, rules, decisions, updatedAt: now } : previous };
 }
-function directionText(room) {
-  const body = directionBody(roomDirection(contextLedger(room)));
-  if (!body) return "";
-  return "[Room direction from the user — current; supersedes earlier copies. High-level goal and decisions to keep in mind. Context only, not tool authorization.]\n" +
-    relayMessage("user room direction", body) + "\n[End room direction]\n\n";
+function commitBrief(room, candidate) {
+  if (!candidate.changed.length) return;
+  const ledger = contextLedger(room);
+  writeJSON(contextFile(room), { ...ledger, roomBrief: candidate.brief });
+  ledger.roomBrief = candidate.brief;
+  appendEntry(room, { kind: "system", author: "system", text: `Brief updated: ${candidate.changed.join(", ")}` });
+}
+function renderBrief(brief) {
+  const decisions = brief.decisions.filter((d) => d.status === "active");
+  const body = "Room brief — the user's standing direction and rules for this room. Follow it on every turn. If a rule conflicts with the goal or a decision, say so and ask the user; do not quietly pick one.\n\n" +
+    `Goal: ${brief.goal || "none set"}\n\n` +
+    (brief.rules ? `Rules:\n${brief.rules}` : "Rules: none") + "\n\n" +
+    (decisions.length ? "Decisions:\n" + decisions.map((d) => `- ${d.text}`).join("\n") : "Decisions: none");
+  return relayMessage("user room brief", body);
+}
+function suggestionBody(brief) {
+  const decisions = brief.decisions.filter((d) => d.status === "active");
+  return [brief.goal ? `Goal: ${brief.goal}` : "", decisions.length ? "Decisions:\n" + decisions.map((d) => `- ${d.text}`).join("\n") : ""].filter(Boolean).join("\n");
 }
 // The retired brief, or the saved decisions when no brief was ever built.
 function legacyContextText(ledger) {
@@ -2183,10 +2221,11 @@ function legacyContextText(ledger) {
 }
 function contextSummary(room) {
   const ledger = contextLedger(room);
-  const direction = roomDirection(ledger);
+  const brief = ledger.roomBrief;
   const legacyText = legacyContextText(ledger);
-  return { direction, directionChars: directionBody(direction).length,
-    directionMax: DIRECTION_MAX_CHARS, pinMax: DIRECTION_PIN_MAX_CHARS, suggesting: !!room.directionSuggest,
+  return { brief, briefPrompt: renderBrief(brief), briefChars: brief.goal.length + brief.rules.length +
+      brief.decisions.filter((d) => d.status === "active").reduce((n, d) => n + d.text.length, 0),
+    briefGuide: 2000, decisionMax: DIRECTION_PIN_MAX_CHARS, suggesting: !!room.directionSuggest,
     events: ledger.events, observations: room.contextObservations || {},
     legacy: legacyText ? { chars: legacyText.length, version: ledger.activeBrief?.version || null,
       savedAt: ledger.activeBrief?.createdAt || null, decisionCount: ledger.decisions.length } : null,
@@ -2196,21 +2235,14 @@ function contextSummary(room) {
       gemini: "Gemini does not report internal compaction to Parley. Session resets are recorded.",
     } };
 }
-function publishContext(room) {
-  saveContext(room);
-  broadcast(room, { type: "room", room: roomSummary(room) });
-}
 function contextEvent(room, seat, type, reason, details = {}) {
   const ledger = contextLedger(room);
   if (details.providerEventId && ledger.events.some((e) => e.seat === seat && e.type === type && e.providerEventId === details.providerEventId)) return null;
   const event = { id: crypto.randomUUID(), seat, type, at: new Date().toISOString(), reason, ...details };
   ledger.events.push(event);
   saveContext(room);
-  // A compacted session may have summarised the direction away: send it in
-  // full again. A reset session is fresh and gets it in full anyway.
-  if (room.state.agents[seat]?.staticBlocks) delete room.state.agents[seat].staticBlocks.direction;
   appendEntry(room, { kind: "system", author: "system",
-    text: `Context ${type} — @${seat}: ${reason}. The room direction is sent in full on its next turn.`,
+    text: `Context ${type} — @${seat}: ${reason}. The room brief is sent in full on every turn.`,
     meta: { contextEvent: event } });
   broadcast(room, { type: "room", room: roomSummary(room) });
   return event;
@@ -2226,29 +2258,31 @@ function resetNativeSession(room, seat, reason, force = false) {
 // Pin and Tidy each make one cheap suggestion call; the user accepts or edits
 // the result before anything is saved. No agent reviews it.
 function pinPrompt(room, entry) {
-  const body = directionBody(roomDirection(contextLedger(room)));
+  const body = suggestionBody(contextLedger(room).roomBrief);
   return "You condense one chat message into a single line for a team's room direction: the high-level goal, decisions and direction that should guide future work.\n" +
     "Reply with ONE line of at most 160 characters that states the lasting decision or direction in plain words. No preamble, quotes or markdown.\n" +
     "If the message holds nothing that should guide future work (a one-off answer, a status update, a question for the user), reply exactly: NONE\n\n" +
     `Current room direction, for context (do not repeat it):\n${body || "(empty)"}\n\n` +
     `Message from ${entry.author}:\n<<<\n${String(entry.text).slice(0, 12000)}\n>>>`;
 }
-function tidyPrompt(direction) {
+function tidyPrompt(brief) {
   return "Tidy the room direction: a goal plus one-line decisions that guide a team's future work.\n" +
     "Merge duplicates, drop items that later items supersede, and keep the wording short and plain. Never add new decisions. Keep the total under 1,500 characters.\n" +
     'Reply with JSON only: {"goal": "...", "pins": ["...", "..."]}, each pin one line of at most 160 characters.\n\n' +
-    `Current direction (decisions oldest first):\n${directionBody(direction)}`;
+    `Current direction (decisions oldest first):\n${suggestionBody(brief)}`;
 }
 function parsePinSuggestion(text) {
   const line = text.split(/\r?\n/).map((l) => l.trim()).find(Boolean) || "";
   const clean = line.replace(/^[-*•]\s*/, "").replace(/^["'`]+|["'`]+$/g, "").trim();
-  return /^NONE\b/i.test(clean) ? "" : clean.slice(0, DIRECTION_PIN_MAX_CHARS);
+  if (clean.length > DIRECTION_PIN_MAX_CHARS) throw new Error("The suggested decision exceeds 200 characters.");
+  return /^NONE\b/i.test(clean) ? "" : clean;
 }
 function parseTidySuggestion(text) {
   const match = /\{[\s\S]*\}/.exec(text);
   let data;
   try { data = JSON.parse(match?.[0] || ""); } catch { throw new Error("The Tidy suggestion was not valid JSON. Try again."); }
-  const pins = (Array.isArray(data.pins) ? data.pins : []).map((p) => String(p ?? "").replace(/\s+/g, " ").trim().slice(0, DIRECTION_PIN_MAX_CHARS)).filter(Boolean);
+  const pins = (Array.isArray(data.pins) ? data.pins : []).map((p) => String(p ?? "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (pins.some((p) => p.length > DIRECTION_PIN_MAX_CHARS)) throw new Error("A suggested decision exceeds 200 characters.");
   return { goal: String(data.goal ?? "").trim(), pins };
 }
 // One tool-less Sonnet call in an empty temp folder: no session, no project
@@ -2772,7 +2806,7 @@ function roomSummary(room) {
   return {
     name: room.name,
     context: contextSummary(room),
-    cfg: room.cfg,
+    cfg: Object.fromEntries(Object.entries(room.cfg).filter(([key]) => key !== "roomNote")),
     dir: room.dir,
     workspace: workDir(room),
     git: gitIdentity(workDir(room)),
@@ -3156,14 +3190,6 @@ function buildDelta(room, agent, excludeTurn, entries = deltaEntries(room, agent
   return lines;
 }
 
-// Standing per-room instruction; included in every prompt so it survives
-// session resets and reaches both agents regardless of when they joined.
-function notePrefix(room) {
-  const note = normalizeRoomNote(room.cfg.roomNote);
-  if (note === null) return "";
-  return `[Current room note from the user — supersedes earlier room notes]\n${relayMessage("user room note", note)}\n[End current room note]\n\n`;
-}
-
 // ---- session-scoped static blocks ----
 // The lurk criteria, the hop ground rules and the @both discussion note are
 // byte-identical on every turn of a resumed session — measured at
@@ -3199,38 +3225,15 @@ function staticBlock(room, agent, delivery, key, fullText, dedupAllowed = true, 
   if (!current && delivery.blocksFull) delivery.blocksFull[key] = fp;
   return current ? reminder : fullText;
 }
-// The room note and the room direction are the user's standing brief. Both go
-// in full on every turn: a reminder line depended on the native session still
-// holding the earlier text, which compaction and session restarts break.
-function noteBlock(room, agent, delivery) {
-  return roomNoteBlock(room, agent, delivery) + directionBlock(room, agent, delivery);
-}
-function roomNoteBlock(room, agent, delivery) {
-  delivery.noteFull = true;
-  return notePrefix(room);
-}
-// A cleared direction is revoked once in a session that held one. Sessions
-// that may still hold the retired "Saved room decisions" block are told once
-// that it no longer applies; a fresh session never saw it, so it is only
-// stamped.
-const DIRECTION_CLEARED = "[Room direction from the user: none is set now; disregard earlier room direction.]\n\n";
-const BRIEF_RETIRED = "[Parley update: the earlier \"Saved room decisions\" block is retired and no longer current. Do not rely on it; the room direction, when set, replaces it.]\n\n";
-function directionBlock(room, agent, delivery) {
+// One complete snapshot per provider attempt, including retries.
+function briefBlock(room, agent, delivery) {
   const ledger = contextLedger(room);
-  let out = "";
-  if (ledger.activeBrief || ledger.decisions.length) {
-    if (!delivery.fresh) out += staticBlock(room, agent, delivery, "briefRetired", BRIEF_RETIRED, true, "");
-    else if (delivery.blocksSent) delivery.blocksSent.briefRetired = delivery.blocksFull.briefRetired = blockFp(BRIEF_RETIRED);
-  }
-  const text = directionText(room);
-  if (text) {
-    // Always in full; the stamp only lets a later clear be revoked once.
-    if (delivery.blocksSent) delivery.blocksSent.direction = delivery.blocksFull.direction = blockFp(text);
-    out += text;
-  } else if (!delivery.fresh && room.state.agents[agent].staticBlocks?.direction) {
-    out += staticBlock(room, agent, delivery, "direction", DIRECTION_CLEARED, true, "");
-  }
-  return out;
+  const sessionRef = room.state.agents[agent].sessionRef;
+  const pending = !delivery.fresh && ledger.briefMigration.sessions.find((item) =>
+    item.seat === agent && item.provider === providerIdOf(room, agent) &&
+    item.sessionRef === sessionRef && !item.acknowledgedAt);
+  delivery.briefTransition = pending ? { ...pending } : null;
+  return (pending ? BRIEF_TRANSITION + "\n" : "") + renderBrief(ledger.roomBrief) + "\n\n";
 }
 // Whether a protected turn's read-only boundary is enforced by the provider
 // (flags/modes) or only by the prose of the discussion note. Where it is only
@@ -3245,8 +3248,8 @@ function discussionBlock(room, agent, delivery) {
 // delta at its real position. Said for a single held message too — staleness
 // comes from the elapsed gap, not the count, and sleep here is quota-shaped, so
 // it is measured in hours.
-function buildPrompt(room, deltaLines, userTurn, attachmentContext = null, heldCount = 0, askBlock = "", noteText = null, heldReason = "sleep", agent = null) {
-  const head = noteText !== null ? noteText : notePrefix(room);
+function buildPrompt(room, deltaLines, userTurn, attachmentContext = null, heldCount = 0, askBlock = "", briefText = null, heldReason = "sleep", agent = null) {
+  const head = briefText !== null ? briefText : renderBrief(contextLedger(room).roomBrief) + "\n\n";
   const many = heldCount > 1;
   // Two ways messages pile up for one seat: held while it slept (hours), or
   // queued while it was busy (minutes). The framing differs — a busy burst is
@@ -3464,7 +3467,7 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
     // Scope, prompt note and Claude isolation are all derived together, per
     // attempt: the recovery retry below launches a second process that may
     // start under a mode the first one never saw. The prompt is assembled per
-    // attempt too, because the static blocks (note, discussion) depend on the
+    // attempt too, because the static discussion blocks depend on the
     // delivery — a retry runs against a fresh session and must get full text
     // where the first attempt was allowed a reminder.
     const scopeNow = () => {
@@ -3477,7 +3480,7 @@ async function runAgentTurn(room, agent, userTurn, scope = NO_SCOPE, opts = {}) 
     const noted = (p) => opts.instruction ? `${p}\n\n${opts.instruction}` : p;
     const attemptPrompt = (dlv, ts) => {
       const base = buildPrompt(room, delta, userTurn, providerInputs,
-        opts.heldCount || 0, askBlock, noteBlock(room, agent, dlv), opts.heldReason || "sleep", agent);
+        opts.heldCount || 0, askBlock, briefBlock(room, agent, dlv), opts.heldReason || "sleep", agent);
       const allowance = opts.convergence ? "" : rootAllowanceNote(room, userTurn, { root: true });
       const recipientNote = !opts.convergence && multiTarget(userTurn.target) ? `\n\n(Parley routing: this task addresses ${targetLabel(userTurn.target)}. You are an addressed participant: answer the task within your standing role; the other recipients are not a request to hand off or pass.)` : "";
       return dlv.prefix + recipientNote + noted(ts.discussion
@@ -3721,7 +3724,7 @@ async function runListenerTurn(room, agent, userTurnN, scope = NO_SCOPE, opts = 
     const attemptPrompt = (dlv, ts) => {
       const rootEntry = !opts.catchUp && room.entries.find((entry) => entry.n === userTurnN && entry.kind === "user");
       const allowance = rootEntry ? rootAllowanceNote(room, rootEntry, { delivery: "enabled listening" }) : null;
-      const head = `${noteBlock(room, agent, dlv)}[Room activity since your last turn]\n${delta.join("\n")}\n[End of room activity]\n\n` +
+      const head = `${briefBlock(room, agent, dlv)}[Room activity since your last turn]\n${delta.join("\n")}\n[End of room activity]\n\n` +
         `${staticBlock(room, agent, dlv, "lurk", lurkFull)}${catchUp}${workHint}` +
         (allowance ? `\n\n(${allowance})` : "");
       return dlv.prefix + head + (ts.discussion ? `\n${discussionBlock(room, agent, dlv)}` : "");
@@ -4121,7 +4124,7 @@ async function runHopTurn(room, agent, triggerEntry, rootN, scope = NO_SCOPE, op
         ? staticBlock(room, agent, dlv, legKey, LEG_INSTRUCTIONS[legKey])
         : opts.instruction;
       const listenerGate = listeningAssessment ? `\n\n${lurkInstruction(room.cfg.agents[agent])}` : "";
-      const body = `${noteBlock(room, agent, dlv)}${head}${trigger}${rootAttachmentContext}\n\n${instruction}${listenerGate}` +
+      const body = `${briefBlock(room, agent, dlv)}${head}${trigger}${rootAttachmentContext}\n\n${instruction}${listenerGate}` +
         (budgetNote ? `\n\n(Continuation allowance: ${budgetNote})` : "");
       return dlv.prefix + body + (ts.discussion ? `\n${discussionBlock(room, agent, dlv)}` : "");
     };
@@ -7596,8 +7599,6 @@ function handleNewConversation(room) {
   const stillAsleep = Object.fromEntries(seatIds(room).map((a) => [a, sleepState(room, a)]));
   room.state = defaultState(room.cfg.agents);
   for (const a of seatIds(room)) room.state.agents[a].asleep = stillAsleep[a];
-  room.state.roomNoteValue = normalizeRoomNote(room.cfg.roomNote);
-  room.state.roomNoteRevision = room.state.roomNoteValue === null ? 0 : 1;
   // The fresh state starts with no session, so the provenance it records must
   // be the one the next session will be created under.
   for (const a of seatIds(room)) {
@@ -7787,14 +7788,14 @@ const server = http.createServer(async (req, res) => {
     if (route === "GET /api/rooms") return json(res, 200, { rooms: roomsWithModes(), providers: providerCatalog(), maxSeats: MAX_ROOM_SEATS, archivedRooms: archivedRooms() });
 
     if (route === "POST /api/rooms") {
-      const { name, seats, projectDir, roomNote, mode } = await readBody(req);
+      const { name, seats, projectDir, goal = "", rules = "", decisions = [], mode } = await readBody(req);
       const roomName = cleanRoomName(name);
       if (!validRoomName(roomName)) return json(res, 400, { error: "Room names: letters, numbers, dashes, underscores (max 40)." });
       if (rooms.has(roomName) || fs.existsSync(path.join(ROOT, roomName))) {
         return json(res, 409, { error: `a room called "${roomName}" already exists` });
       }
       if (mode !== undefined && !["talk", "work"].includes(mode)) return json(res, 400, { error: "mode must be talk or work." });
-      const initialRoomNote = agentText(roomNote, "Room instructions", MAX_AGENT_INSTRUCTIONS);
+      const initialBrief = prepareBrief(emptyBrief(), { baseRevision: 0, goal, rules, decisions }).brief;
       let linked = null;
       if (projectDir) {
         linked = path.resolve(String(projectDir).trim());
@@ -7836,7 +7837,7 @@ const server = http.createServer(async (req, res) => {
           return json(res, 400, { error: "Pick at least one agent with unique names." });
         }
       }
-      loadRoom(roomName, picked, true, { projectDir: linked, roomNote: initialRoomNote, mode: mode || "talk" });
+      loadRoom(roomName, picked, true, { projectDir: linked, mode: mode || "talk" }, initialBrief);
       return json(res, 200, { ok: true, rooms: roomsWithModes() });
     }
 
@@ -7969,15 +7970,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (route === "POST /api/context/direction") {
+    if (route === "POST /api/context/brief") {
       const body = await readBody(req);
       const room = loadRoom(body.room || "default");
-      const ledger = contextLedger(room);
-      const direction = normalizeDirection(body, roomDirection(ledger));
-      if (ledger.direction) ledger.directionHistory = [...(ledger.directionHistory || []), ledger.direction].slice(-DIRECTION_HISTORY_MAX);
-      ledger.direction = direction;
-      publishContext(room);
-      return json(res, 200, { ok: true, context: contextSummary(room) });
+      commitBrief(room, prepareBrief(contextLedger(room).roomBrief, body));
+      broadcast(room, { type: "room", room: roomSummary(room) });
+      return json(res, 200, { ok: true, brief: contextLedger(room).roomBrief, context: contextSummary(room) });
     }
 
     // The retired brief is kept on disk but out of every room broadcast.
@@ -7993,11 +7991,11 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const room = loadRoom(body.room || "default");
       if (room.directionSuggest) return json(res, 409, { error: "A suggestion is already running." });
-      const direction = roomDirection(contextLedger(room));
+      const brief = contextLedger(room).roomBrief;
       let prompt;
       if (body.tidy) {
-        if (!directionBody(direction)) return json(res, 400, { error: "The room direction is empty; there is nothing to tidy." });
-        prompt = tidyPrompt(direction);
+        if (!suggestionBody(brief)) return json(res, 400, { error: "The room direction is empty; there is nothing to tidy." });
+        prompt = tidyPrompt(brief);
       } else {
         const entry = room.entries.find((e) => e.n === Number(body.entryN));
         if (!entry || typeof entry.text !== "string" || !entry.text.trim()) return json(res, 404, { error: "Message not found." });
@@ -8201,6 +8199,9 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const { room: name, config, seats: requestedSeats, expectedRosterVersion } = body;
       const room = loadRoom(name || "default");
+      if (config && Object.hasOwn(config, "roomNote")) throw badBrief("config.roomNote is retired; save the room brief instead.");
+      const briefCandidate = Object.hasOwn(body, "brief")
+        ? prepareBrief(contextLedger(room).roomBrief, body.brief) : null;
       const rosterInput = requestedSeats !== undefined
         ? requestedSeats
         : (config && Object.hasOwn(config, "seats") ? config.seats : undefined);
@@ -8262,7 +8263,6 @@ const server = http.createServer(async (req, res) => {
       }
       const prevMode = room.cfg.mode || "talk";
       const prevProjectDir = room.cfg.projectDir || null;
-      const prevRoomNote = normalizeRoomNote(room.cfg.roomNote);
       const prevLurk = Object.fromEntries(seatIds(room).map((id) => [id, !!room.cfg.agents[id].lurk]));
       // The permission provenance each seat's session was created under, for
       // every provider whose sessions carry one — a change means that seat has
@@ -8480,12 +8480,7 @@ const server = http.createServer(async (req, res) => {
           cancelLurkCatchUp(room, id, "disabled");
         }
       }
-      const nextRoomNote = normalizeRoomNote(next.roomNote);
-      const roomNoteChanged = prevRoomNote !== nextRoomNote;
-      if (roomNoteChanged) {
-        room.state.roomNoteRevision = roomNoteRevisionOf(room) + 1;
-        room.state.roomNoteValue = nextRoomNote;
-      }
+      if (briefCandidate) commitBrief(room, briefCandidate);
       cmdCache.clear();
       saveConfig(room);
       for (const id of resetRequiredSeats) {
@@ -8506,7 +8501,7 @@ const server = http.createServer(async (req, res) => {
           room.state.agents[id][capsOf(room, id).sessionScope.field] = nextScopes[id];
         }
       }
-      if (resetRequiredSeats.size || scopeSeats.length || roomNoteChanged) saveState(room);
+      if (resetRequiredSeats.size || scopeSeats.length) saveState(room);
       // A room-sourced mode follows Settings for its next cycle. An in-flight
       // cycle keeps the snapshot exposed as `workingPair`; explicit
       // `/pair start 2 ...` overrides remain pinned to their command value.
@@ -8662,7 +8657,7 @@ if ($w) { $h = [IntPtr]$w.HWND; [void]$W::ShowWindow($h, 9); [void]$W::SetForegr
 
     json(res, 404, { error: "not found" });
   } catch (e) {
-    if (!res.headersSent) json(res, e.status || 500, { error: e.message, ...(e.code ? { code: e.code } : {}) });
+    if (!res.headersSent) json(res, e.status || 500, { error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.brief ? { brief: e.brief } : {}) });
   }
 });
 

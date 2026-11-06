@@ -1,4 +1,12 @@
-## Current checkpoint — room direction and note sent in full every turn (2026-11-06)
+## Current checkpoint — PRL-1 Room Brief implementation (2026-11-06)
+
+PRL-1 replaces active room direction/note delivery with one persistent Room Brief in `context.json`: Goal, Rules, and ordered Decisions. Existing rooms import the old goal, pinned text/order/provenance, and raw room note exactly once; the old direction, note, history, and retired brief/decision fields remain recoverable. The marker and canonical brief are written together, lazy per room, and migration adds no timeline note. New rooms accept optional Goal, Rules, and Decisions, including an empty Goal.
+
+Every provider attempt receives the full current brief in Parley's per-line framing across direct, listener, hop, fresh, resumed, compacted, and lost-session retry paths. Archived Decisions are excluded. A pre-migration native session receives one transition line; acknowledgment is persisted only after a successful delivery for the exact seat/provider/session identity. Brief saves use `{baseRevision, goal, rules, decisions, deleteArchivedIds}`; stale revisions return 409 without mutation, omitted active Decisions archive, and explicit archived IDs delete. New text limits are Goal 2,000, Rules 8,000, and each Decision 200 characters; existing over-limit text is preserved.
+
+Verification: copied-store migration and prompt exercise on isolated port 4197 passed. Raw goal/rules (1,253 Rules characters), seven pins, recovery fields, marker persistence, exact framed prompts, archived exclusion, one-time transition, restart persistence, and `/note Keep replies short` server-only Rules update were observed. Six prompt echoes covered initial, edited, and restarted sessions for existing and new fake seats. Syntax and diff checks passed; no suites, typecheck, lint, build, preview, live ports, or desktop packaging were run. Release remains gated until PRL-1, PRL-2, and PRL-3 are merged, followed by the requester's single restart and repackage.
+
+## Historical checkpoint — room direction and note sent in full every turn (2026-11-06)
 
 Cause confirmed: the room direction went in full once per session, then only "[The room direction from your earlier briefing still applies.]"; room notes of 340+ characters did the same. After compaction or a session restart the agent no longer held the text. Now `noteBlock` sends both in full on every agent turn; both reminder lines are gone. A cleared direction is still revoked once. Edits apply on the next turn, no restart.
 

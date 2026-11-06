@@ -98,13 +98,13 @@ Attachment-only messages work too, Retry reuses the same stored bytes, and a fai
 |---|---|
 | `/pair start [rounds] @agent [task]` | Start a pair session — see [conversation.md](conversation.md#pair-mode-) |
 | `/pair end` | End pair mode |
-| `/note <text>` | Set the room note; no text clears it |
+| `/note <text>` | Replace the Room Brief Rules; no text clears Rules without starting an agent turn |
 | `/sleep @agent [reason]` | Stop launching that seat — see [conversation.md](conversation.md#sleeping-a-seat-) |
 | `/wake @agent` | Bring it back; nothing is replayed |
 | `/summarize` | Recap of decisions and open questions |
 | `/help` | List commands |
 
-**Room note** (`/note <text>`, or Settings) is a standing instruction every agent sees at the top of every prompt — project context, conventions, tone. It survives session resets and reaches every seat regardless of when its session started. Each seat also has its own standing instructions, model and (where supported) reasoning effort; these can be set when creating a room and changed later in Settings.
+**Room Brief** (Settings or `/note <text>`) is the single standing context every agent receives in full on every prompt. It contains Goal, Rules, and active Decisions; archived Decisions stay saved but are excluded from delivery. `/note` sends an ordinary whole-brief settings save with the current base revision, so the server writes one `Brief updated: Rules` timeline entry and starts no provider turn. Brief saves use `{baseRevision, goal, rules, decisions, deleteArchivedIds}`; stale revisions return `409` without mutation, and omitted active Decisions are archived. New Goal, Rules, and Decision text is limited to 2,000, 8,000, and 200 characters respectively, with no aggregate or decision-count cap. Existing over-limit saved text is preserved and is never clipped. Each seat also has its own standing instructions, model and (where supported) reasoning effort; these can be set when creating a room and changed later in Settings.
 
 ## Elsewhere in the UI
 
