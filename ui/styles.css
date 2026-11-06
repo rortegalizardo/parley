@@ -1115,7 +1115,7 @@ header .pills { min-width:0; }
 #decisionDialog::backdrop { background:rgba(0,0,0,.55); }
 #decisionDialog h2 { font-size:20px; margin:0 0 12px; }
 #decisionDialog label { display:block; margin:14px 0 8px; font-size:13px; }
-#decisionText { display:block; box-sizing:border-box; width:100%; min-height:220px; max-height:50dvh; resize:vertical; padding:10px; color:var(--text); background:var(--bg); border:1px solid var(--border2); border-radius:8px; font:inherit; font-size:14px; line-height:1.5; }
+#decisionText { display:block; box-sizing:border-box; width:100%; min-height:0; height:auto; max-height:50dvh; overflow-wrap:anywhere; resize:vertical; padding:10px; color:var(--text); background:var(--bg); border:1px solid var(--border2); border-radius:8px; font:inherit; font-size:14px; line-height:1.5; }
 #decisionError { color:var(--danger-fg); font-size:13px; }
 #contextSettings .saved-decisions { max-height:360px; overflow:auto; }
 #contextSettings > details { max-height:300px; overflow:auto; margin-top:12px; }
@@ -1801,7 +1801,6 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.
 #chat .agreed-pin { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; padding: 4px 10px; }
 #chat .agreed-pin svg { width: 13px; height: 13px; }
 .direction-foot .btn:disabled { opacity: .45; cursor: default; }
-#decisionDialog #decisionText { min-height: 0; height: auto; }
 
 /* Room Brief: wrapped decisions and advisory notices inside the bounded dialog. */
 .brief-decisions li { align-items: flex-start; min-width: 0; }
