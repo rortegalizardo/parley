@@ -3,7 +3,7 @@ id: PSTATE-INIT-0014
 type: product-state
 title: Product definition state for INIT-0014
 status: authoritative
-revision: 9
+revision: 10
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -12,7 +12,7 @@ initiative: INIT-0014
 phase: HANDOFF
 phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
-next_action: "ROLE-product-manager: create the Ariadne tickets from REQ-0001..0003 (create-tickets-from-stories)"
+next_action: "ROLE-orchestrator: deliver PRL-1, then PRL-2, then PRL-3 (released together after all three are on main); product side done"
 blocked_by: []
 converged: true
 readiness_verdict: READY
@@ -45,7 +45,7 @@ reliably hold either.
 
 ## Next action
 
-ROLE-product-manager: create the Ariadne tickets from REQ-0001..0003 (`create-tickets-from-stories`).
+ROLE-orchestrator: deliver PRL-1, then PRL-2, then PRL-3; release all three together once they are on `main`. The product side is done; it waits for nothing.
 
 ## Blocked by
 
@@ -238,13 +238,14 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
 - **Open questions (non-blocking):** none. The reviewer's minor observations
   (not conditions) are in the Readiness log, round 1.
 - **Delivery manifest:** `initiatives/INIT-0014-room-brief/delivery/manifest.md`.
-- **Tickets:** written at HANDOFF from `delivery/tickets.md`.
+- **Tickets:** PRL-1 (REQ-0001), PRL-2 (REQ-0002, blocked by PRL-1), PRL-3 (REQ-0003, blocked by PRL-1 and PRL-2), per `delivery/tickets.md`; Ariadne project PRL, initiative INIT-0014. Design capture for PRL-2 and PRL-3 at `~/Factory/Artifacts/projects/PRL/tickets/<code>/design/`.
 
 ## Handoff log
 
 | Date | Receiving role | Packet digest | Note |
 | --- | --- | --- | --- |
 | 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0014@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`; ticket codes follow from `create-tickets-from-stories` |
+| 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0014@3 | Tickets created: PRL-1, PRL-2, PRL-3 (3 created, 0 updated; initiative INIT-0014 set on each; X12 lint 0 matches; criteria 15/14/5 one for one). Translations (X14): REQ-0001 AC4 — PD-0003 item 4 → the brief wording quoted; REQ-0001 AC10 — Behavior 5 → the transition line quoted; REQ-0002 AC7 — exact copy → the length warning quoted; REQ-0002 AC14, REQ-0003 AC5 — PD-0004 display matrix → 1440 wide, light only; REQ-0003 AC1 — Behavior 2 → the room line quoted. PM additions in Scope/Dependencies: the story-wins-over-frame rule (PD-0004 item 2) and the coordinated release (REQ-0001 Sequencing) |
 
 ## Session notes
 
@@ -277,12 +278,18 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
   REQ-0001 Scope names `/note` and gives the client half of C-10 to REQ-0002;
   defect 5 — REQ-0003 Behavior 4 and its criterion: the pin saves at once and
   also joins the open edit.
+- 2026-11-06 — READINESS round 1 `READY`, 0 findings. ENGINEERING_READY:
+  packet and manifest. HANDOFF: Ariadne initiative INIT-0014 created in PRL;
+  tickets PRL-1, PRL-2, PRL-3 created; hero frames copied to the PRL-2 and
+  PRL-3 design capture. Nothing pushed: the run instructions forbid it.
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
   - `SOLUTION_EXPLORATION | ROLE-planner (architect) | claude | opus | L | af86d33a5fe245964 | technical/capability-scan.md, impact.md, assessment.md`
   - `SOLUTION_EXPLORATION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a41d9618e7db22c3c | design/heroes/* at ee1629f`
   - `DECOMPOSITION (step 11) | ROLE-product-designer (des-recorder) | claude | des-recorder | S | aa6c7ee8613c7051a | design/DES-0001-room-brief-hero-frames.md`
   - `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | aedcceb564e75d4e7 | technical/coherence.md`
   - `DECOMPOSITION (coherence r2, delta) | ROLE-planner (architect) | claude | sonnet | S | a4368b1ecbe5d912a | technical/coherence.md`
+  - `READINESS (round 1) | ROLE-product-readiness-reviewer | claude | sonnet | L | a067fde0934fd65b2 | Readiness log row`
+  - `HANDOFF (transcription) | ticket-transcriber | claude | sonnet | M | aec327061b689a781 | scratchpad INIT-0014-tickets.json (ticket bodies)`
 
 ## Phase log
 

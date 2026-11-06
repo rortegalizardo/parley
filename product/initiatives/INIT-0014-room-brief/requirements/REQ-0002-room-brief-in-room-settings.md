@@ -25,7 +25,7 @@ constraints: [C-02, C-10, C-11, C-14, C-15]
 observability: []
 rollout: coordinated
 readiness: engineering-ready
-tickets: []
+tickets: [PRL-2]
 supersedes:
 superseded_by:
 ---
