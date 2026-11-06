@@ -146,6 +146,8 @@ user-visible outcome of PD-0002).
 | --- | --- | --- | --- | --- |
 | 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | INIT-0014 options A and B for REQ-0001..0003: feasibility, constraints, risks, band, platform conflicts (`product-feasibility-assessment`, size rule: one dispatch) | A and B both feasible-with-constraints, multi-component; recommends B; 15 constraints, 7 risks, 13 conflicts, RQ-1..RQ-6; brief-delivery already landed as `b6591be` — [technical/assessment.md](../technical/assessment.md), [impact.md](../technical/impact.md), [capability-scan.md](../technical/capability-scan.md) | Options table; CAP-0001 revision 2; PD-0005 (option B); PD-0006 (RQ-1..RQ-6); constraints C-01..C-15 into REQ-0001..0003 |
 | 2026-11-06 | ROLE-product-designer, design author (vendor claude, model fable) | Step 1b hero frames for option B (REQ-0002, REQ-0003), approach set by PD-0004 | DONE — `ee1629f` on `design/INIT-0014-room-brief`: `design/heroes/room-brief-brief-panel` and `room-brief-dialogs` (.dc.html, .png), `approach.md` with two proposals | Options table; both proposals accepted into REQ-0002 and REQ-0003 (G8); `DES-0001` at DECOMPOSITION |
+| 2026-11-06 | ROLE-product-designer, DES recorder (vendor claude, model des-recorder declaration) | Step 11, adapted by PD-0004: record the hero frames as `DES-0001` | DONE — [DES-0001](../../../design/DES-0001-room-brief-hero-frames.md), accepted, `local_export` the four hero files plus `approach.md`; index row; counter `design: 1` | `DES-0001` on REQ-0002, REQ-0003; two bracketed titles removed inline (§9b.3) |
+| 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | Coherence check of draft REQ-0001..0003 (`story-set-technical-coherence`, full pass, round 1 of 2, terminal unless it reports a blocking defect) | `defects-open`: 2 blocking (1 release gap after REQ-0001 alone; 2 REQ-0003 hidden dependency on REQ-0002), 3 non-blocking (scope wording REQ-0002, REQ-0001; pin-save wording REQ-0003); set still matches option B, not regression-required — [technical/coherence.md](../technical/coherence.md) | Repair pass: all five fixed in place (see Session notes); delta re-check round 2 required (§9d.3) |
 
 ## Escalation log
 
@@ -207,6 +209,8 @@ _Written at ENGINEERING_READY._
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
   - `SOLUTION_EXPLORATION | ROLE-planner (architect) | claude | opus | L | af86d33a5fe245964 | technical/capability-scan.md, impact.md, assessment.md`
   - `SOLUTION_EXPLORATION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a41d9618e7db22c3c | design/heroes/* at ee1629f`
+  - `DECOMPOSITION (step 11) | ROLE-product-designer (des-recorder) | claude | des-recorder | S | aa6c7ee8613c7051a | design/DES-0001-room-brief-hero-frames.md`
+  - `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | aedcceb564e75d4e7 | technical/coherence.md`
 
 ## Phase log
 

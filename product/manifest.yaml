@@ -183,7 +183,7 @@ id_counters:
   decision: 6
   initiative: 14
   requirement: 3
-  design: 0
+  design: 1
   question: 0
 
 # Deterministic discovery entry points.
