@@ -192,7 +192,53 @@ Written by `ROLE-product-readiness-reviewer` only.
 
 ## Handoff packet
 
-_Written at ENGINEERING_READY._
+Assembled at ENGINEERING_READY on 2026-11-06 against readiness round 1 `READY`
+(story set REQ-0001@2, REQ-0002@2, REQ-0003@2, all `updated` 2026-11-06;
+INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
+
+- **Outcome:** a room has one Room Brief — Goal, Rules and Decisions — written
+  once by the user, and every agent in the room holds all of it on every turn,
+  whatever its session remembers ([initiative](../initiative.md) `## Outcome`).
+- **Stories, in suggested sequence:** REQ-0001 → REQ-0002 → REQ-0003 (from
+  `depends_on`). The three are released together: one live-server restart (by
+  the requester) and one desktop repackage, only after all three are on
+  `main` (REQ-0001 `## Sequencing` and `## Rollout`).
+- **Design references and export paths:** `DES-0001` (hero frames, PD-0004) →
+  `initiatives/INIT-0014-room-brief/design/heroes/room-brief-brief-panel.dc.html`,
+  `room-brief-brief-panel.png` (Room settings, Brief tab — REQ-0002),
+  `room-brief-dialogs.dc.html`, `room-brief-dialogs.png` (Create room brief
+  fields — REQ-0002; Pin to room brief dialog — REQ-0003), notes in
+  `approach.md`. Where a frame and a story differ, the story wins (PD-0004
+  item 2). REQ-0001 has no user-facing surface.
+- **Decisions in force:** PD-0001, PD-0002, PD-0003, PD-0004, PD-0005 (chosen
+  option B), PD-0006.
+- **Binding technical constraints:**
+  - C-01 — the brief's user text stays inside Parley's per-line relay framing in every prompt (technical/assessment.md, round 1).
+  - C-02 — "What agents see" shows the block made by the same composition delivery uses, framing included (technical/assessment.md, round 1).
+  - C-03 — the brief replaces note and direction in direct, listener and hop turns and their retries; the "no room note is active" marker goes too (technical/assessment.md, round 1).
+  - C-04 — old note and direction stay recoverable on disk after migration, unread (technical/assessment.md, round 1).
+  - C-05 — migration runs per room on first load; the migrated mark survives `/clear` and `state.json` recovery (technical/assessment.md, round 1).
+  - C-06 — stored content is never rejected, trimmed or left unloaded for its length; limits apply to new input only (technical/assessment.md, round 1).
+  - C-07 — the room-creation endpoint shared by the dialog and API callers accepts an empty Goal (technical/assessment.md, round 1).
+  - C-08 — the timeline note comes from the server, by comparing parts, for every write path (technical/assessment.md, round 1).
+  - C-09 — every save that leaves out an active Decision archives it (technical/assessment.md, round 1).
+  - C-10 — the 2,000 total cap is removed on server and client; the guide count follows PD-0003 item 5 (technical/assessment.md, round 1).
+  - C-11 — test servers on an isolated port use a copy of the room store, never `~/.parley-fork`; never touch port 4142, never use 4141 (technical/assessment.md, round 1); [constraints](../../../project/constraints.md) #1.
+  - C-12 — engineering starts from `main` at or after `b6591be` (technical/assessment.md, round 1).
+  - C-14 — existing suites asserting note and direction behaviour are updated with the code; that is not a new suite (technical/assessment.md, round 1).
+  - C-15 — the desktop app is repackaged with this change (technical/assessment.md, round 1).
+  - C-13 applies to option A only and is not binding.
+- **Explicitly out of scope:** agent-suggested decisions; per-agent standing
+  instructions (unchanged); any automatic cutting, shortening or deleting of
+  brief text; a hard length limit on the brief (2,000 is a guide); other
+  widths and dark mode as designed or reviewed surfaces; new unit or smoke
+  test suites; the separate "brief-delivery" work on `parley.mjs`, already
+  landed as `b6591be` ([initiative](../initiative.md) `## Scope`, "Out of
+  scope").
+- **Open questions (non-blocking):** none. The reviewer's minor observations
+  (not conditions) are in the Readiness log, round 1.
+- **Delivery manifest:** `initiatives/INIT-0014-room-brief/delivery/manifest.md`.
+- **Tickets:** written at HANDOFF from `delivery/tickets.md`.
 
 ## Handoff log
 

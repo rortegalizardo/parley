@@ -24,7 +24,7 @@ depends_on: [REQ-0001]
 constraints: [C-02, C-10, C-11, C-14, C-15]
 observability: []
 rollout: coordinated
-readiness: not-assessed
+readiness: engineering-ready
 tickets: []
 supersedes:
 superseded_by:
