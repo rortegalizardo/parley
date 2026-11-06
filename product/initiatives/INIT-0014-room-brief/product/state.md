@@ -18,7 +18,7 @@ converged: false
 readiness_verdict: none
 stories: [REQ-0001, REQ-0002, REQ-0003]
 design_refs: []
-decisions: [PD-0001, PD-0002, PD-0003]
+decisions: [PD-0001, PD-0002, PD-0003, PD-0004]
 ---
 
 # Product definition state — INIT-0014
@@ -64,7 +64,13 @@ Nothing.
 | 2026-11-06 | What `/note` (today: sets the room note) does after the change | pm-resolvable (keep the shortcut, mapped to Rules) | Decided at PRODUCT_DEFINITION, recorded as a `PD-` |
 | 2026-11-06 | Where the Room Brief sits in Room Settings (Direction tab, Room tab note field) | pm-resolvable (internal shape; same user outcome) | Chosen at SOLUTION_CONVERGENCE, recorded as the chosen-option `PD-` |
 | 2026-11-06 | Ordering against the separate engineering session "brief-delivery", which is changing `parley.mjs` delivery now | pm-resolvable (sequencing; the requester already set the order: product first, engineering rebases after it lands) | Recorded as a sequencing constraint on the stories |
-| 2026-11-06 | Design depth for one settings-surface change in a plain HTML/JS app | pm-resolvable (the requester set it: one hero frame at 1440, light) | Recorded as a `PD-` at SOLUTION_EXPLORATION |
+| 2026-11-06 | Design depth for one settings-surface change in a plain HTML/JS app | pm-resolvable (the requester set it: one hero frame at 1440, light) | PD-0004 |
+| 2026-11-06 | RQ-1 (technical/assessment.md): PD-0003 item 4 copy and a byte-for-byte preview vs Parley's per-line framing of user text | pm-resolvable (keeps "What agents see" exact; framing is a binding constraint, C-01) | Settled at SOLUTION_CONVERGENCE, recorded as a `PD-` |
+| 2026-11-06 | RQ-2: the 8,000 Rules limit is enforced today only in Create room; stored text may exceed it | pm-resolvable (conforms to "never cut"; limits stop new input only) | Settled at SOLUTION_CONVERGENCE, recorded as a `PD-` |
+| 2026-11-06 | RQ-3: keep the old note and direction on disk after migration as an unread recovery copy | pm-resolvable (conforms to "keep all content" and "never delete automatically"; PD-0002 item 3 is about fields, not a hidden copy) | Settled at SOLUTION_CONVERGENCE, recorded as a `PD-` |
+| 2026-11-06 | RQ-4: a save built on an older brief can overwrite a newer change | pm-resolvable (conforms to "nothing lost") | Settled at SOLUTION_CONVERGENCE, recorded as a `PD-` |
+| 2026-11-06 | RQ-5: every save sends the whole brief; Tidy saves look like hand edits | pm-resolvable (one rule: any save that leaves out an active Decision archives it) | Settled at SOLUTION_CONVERGENCE, recorded as a `PD-` |
+| 2026-11-06 | RQ-6: does the migration add a timeline note | pm-resolvable (no note; agents get the transition line) | Settled at SOLUTION_CONVERGENCE, recorded as a `PD-` |
 
 ## Discovery
 
@@ -124,6 +130,14 @@ code still sends reminders.
 
 | Option | User-visible difference | Feasibility verdict | Cost / risk | Trade-off |
 | --- | --- | --- | --- | --- |
+| A — Room Brief on the Room tab; Direction tab removed | Goal, Rules and Decisions sit on the Room tab and save with the dialog-wide Save, which closes the dialog and may reset sessions | feasible-with-constraints, multi-component ([assessment](../technical/assessment.md)) | C-01..C-15 incl. C-13 (footer Save must never write a stale brief or drop brief edits); R-6 two save models on one tab | One tab fewer; brief edits mixed with session-resetting settings |
+| B — a Brief tab replaces the Direction tab; the Room tab loses its room-instructions field | Goal, Rules and Decisions sit on their own Brief tab with Save brief, Discard changes and Tidy; the hero frames draw it (design branch, `ee1629f`) | feasible-with-constraints, multi-component ([assessment](../technical/assessment.md)) | C-01..C-12, C-14, C-15; reuses the Direction tab's own save and protected draft | Keeps three tabs; brief saving stays separate from settings that reset sessions |
+
+_Recommended option and why:_ **B.** Same delivery, migration and band as A,
+fewer constraints and risks (no C-13, no R-6), and it reuses the Direction
+tab's draft that already survives live pins. The architect recommends B too;
+the choice is the PM's (§4.1: options differ in internal shape, not in the
+user-visible outcome of PD-0002).
 
 _Recommended option and why:_
 
@@ -131,6 +145,8 @@ _Recommended option and why:_
 
 | Date | Delegate role | Question | Answer / verdict | Recorded as |
 | --- | --- | --- | --- | --- |
+| 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | INIT-0014 options A and B for REQ-0001..0003: feasibility, constraints, risks, band, platform conflicts (`product-feasibility-assessment`, size rule: one dispatch) | A and B both feasible-with-constraints, multi-component; recommends B; 15 constraints, 7 risks, 13 conflicts, RQ-1..RQ-6; brief-delivery already landed as `b6591be` — [technical/assessment.md](../technical/assessment.md), [impact.md](../technical/impact.md), [capability-scan.md](../technical/capability-scan.md) | Options table; CAP-0001 revision 2; chosen-option and RQ `PD-`s at SOLUTION_CONVERGENCE; constraints into REQs at DECOMPOSITION |
+| 2026-11-06 | ROLE-product-designer, design author (vendor claude, model fable) | Step 1b hero frames for option B (REQ-0002, REQ-0003), approach set by PD-0004 | DONE — `ee1629f` on `design/INIT-0014-room-brief`: `design/heroes/room-brief-brief-panel` and `room-brief-dialogs` (.dc.html, .png), `approach.md` with two proposals | Options table; both proposals accepted into REQ-0002 and REQ-0003 (G8); `DES-0001` at DECOMPOSITION |
 
 ## Escalation log
 
@@ -182,7 +198,16 @@ _Written at ENGINEERING_READY._
   decisions) and PD-0003 (ten behaviour details, all pm-resolvable under
   §4.1) recorded; Product Definition Contract written inline (size rule
   §9d.2) and validated against both raw sources item by item.
+- 2026-11-06 — SOLUTION_EXPLORATION: design approach per PD-0004 — step 1a
+  skipped (PD-0002 fixes the direction), step 1b drew option B only (the
+  requester asked for one hero; option A has a text description and a
+  feasibility verdict); production steps 2a-9 and the design PR do not run
+  (constraints #2). No requester pick: the run is pre-authorized.
+  Brief-delivery landed on local `main` as `b6591be` before this phase;
+  CAP-0001 updated to it.
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
+  - `SOLUTION_EXPLORATION | ROLE-planner (architect) | claude | opus | L | af86d33a5fe245964 | technical/capability-scan.md, impact.md, assessment.md`
+  - `SOLUTION_EXPLORATION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a41d9618e7db22c3c | design/heroes/* at ee1629f`
 
 ## Phase log
 
