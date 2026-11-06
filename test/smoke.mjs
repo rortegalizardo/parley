@@ -86,7 +86,27 @@ function rawStatus(route, { method = "GET", host, origin, token = TOKEN, protoco
 }
 const room = (name) => api("GET", `/api/room?name=${encodeURIComponent(name)}`).then((r) => r.data);
 const roomStatus = (name) => api("GET", `/api/room?name=${encodeURIComponent(name)}`).then((r) => r.status);
-const cfg = (name, config) => api("POST", "/api/config", { room: name, config: { accounting: "exchanges", ...config } });
+const savedContext = (name) => JSON.parse(fs.readFileSync(path.join(ROOT, name, "context.json"), "utf8"));
+const briefTransition = "[The separate room direction and room note from your earlier briefing are replaced by the room brief below. Follow the room brief.]";
+
+const cfg = async (name, config) => {
+  const next = { accounting: "exchanges", ...config };
+  let brief;
+  if (Object.prototype.hasOwnProperty.call(next, "rules")) {
+    const current = (await room(name)).room?.context?.brief ||
+      { revision: 0, goal: "", rules: "", decisions: [] };
+    const rules = next.rules == null ? "" : String(next.rules);
+    delete next.rules;
+    brief = {
+      baseRevision: Number(current.revision) || 0,
+      goal: String(current.goal || ""),
+      rules,
+      decisions: Array.isArray(current.decisions) ? current.decisions : [],
+      deleteArchivedIds: [],
+    };
+  }
+  return api("POST", "/api/config", { room: name, config: next, ...(brief ? { brief } : {}) });
+};
 const say = (name, text, target = "auto", relay = {}) =>
   api("POST", "/api/message", { room: name, text, target, ...relay });
 
@@ -2592,24 +2612,24 @@ async function main() {
     /\(Continuation allowance: /.test(hopDumps[1].text),
     (hopDumps[1] || { text: "" }).text.slice(-400));
 
-  // The room note rides in full in EVERY prompt of every turn type, long or
-  // short: a reminder line relied on the session still holding the text,
-  // which compaction and session restarts break.
+  // The Room Brief rides in full in EVERY prompt of every turn type, long or
+  // short. Rules are carried as supplied rather than replaced by reminders.
   await api("POST", "/api/rooms", { name: "notediet" });
   await useFakes("notediet");
   const longNote = "Project context: " + "the answer must stay grounded in the shipped API surface. ".repeat(8);
-  await cfg("notediet", { roomNote: longNote, agents: { claude: {}, codex: {} } });
+  await cfg("notediet", { rules: longNote, agents: { claude: {}, codex: {} } });
   await say("notediet", "@claude SAWWHAT");
   await idle("notediet", 30000);
   await say("notediet", "@claude SAWWHAT");
   const noteDietRoom = await idle("notediet", 30000);
   const noteEchoes = noteDietRoom.entries.filter((e) => e.author === "claude" && /^SAWJSON /.test(e.text || ""));
-  ok("a long room note goes in full on the session's first turn",
-    noteEchoes.length >= 2 && /Current room note from the user/.test(noteEchoes[0].text),
+  ok("a long Room Brief Rules value goes in full on the session's first turn",
+    noteEchoes.length >= 2 && /Room brief/.test(noteEchoes[0].text) &&
+      noteEchoes[0].text.includes(longNote),
     (noteEchoes[0] || { text: "" }).text.slice(0, 200));
   ok("…and in full again on the next turn of the same session",
-    noteEchoes.length >= 2 && /Current room note from the user/.test(noteEchoes[1].text) &&
-    !/earlier briefing still applies/.test(noteEchoes[1].text),
+    noteEchoes.length >= 2 && /Room brief/.test(noteEchoes[1].text) &&
+    noteEchoes[1].text.includes(longNote),
     (noteEchoes[1] || { text: "" }).text.slice(0, 300));
 
   // Stop on a MERGED turn. The older messages' coordinators used to carry on
@@ -6937,10 +6957,10 @@ async function main() {
     reboundState.nextTurn === 5, String(reboundState.nextTurn));
 
   await useFakes("swapped");
-  await cfg("swapped", { roomNote: "The room codeword is TANGERINE." });
+  await cfg("swapped", { rules: "The room codeword is TANGERINE." });
   await say("swapped", "@claude RECALL");
   d = await idle("swapped");
-  ok("room note reaches the agent", lastAgent(d, "claude").text.includes("TANGERINE"), lastAgent(d, "claude").text);
+  ok("Room Brief Rules reaches the agent", lastAgent(d, "claude").text.includes("TANGERINE"), lastAgent(d, "claude").text);
 
   const bad = await cfg("default", { projectDir: path.join(ROOT, "nope-not-here") });
   ok("bad project folder rejected", bad.status === 400);
@@ -7506,6 +7526,7 @@ async function main() {
   await idle("promptver", 30000);
   let verState = JSON.parse(fs.readFileSync(path.join(verDir, "state.json"), "utf8"));
   ok("a failed turn does not advance the delivered-contract stamp",
+    !savedContext("promptver").briefMigration.sessions.find((s) => s.seat === "codex").acknowledgedAt &&
     verState.agents.codex.briefingVersion === 3 &&
     verState.agents.codex.briefingFingerprint === undefined &&
     verState.agents.codex.promptSessionRef === "fake-thread-stale" &&
@@ -7519,18 +7540,18 @@ async function main() {
     seenStale.prompt.includes("later physical lines begin with |") &&
     seenStale.prompt.includes("Addressing is delivery") &&
     seenStale.prompt.includes("Style: you are a chat participant") &&
-    seenStale.prompt.includes("no room note is active") &&
+    seenStale.prompt.includes(briefTransition + "\nuser room brief:") &&
     !seenStale.prompt.includes("{{") &&
     !seenStale.briefing, JSON.stringify(seenStale.prompt.slice(0, 120)));
   verState = JSON.parse(fs.readFileSync(path.join(verDir, "state.json"), "utf8"));
   {
     const src = fs.readFileSync(SERVER, "utf8");
     const promptVersion = Number((/const PROMPT_VERSION = (\d+);/.exec(src) || [])[1]);
-    ok("success stamps the exact contract, session, and note revision together",
+    ok("success stamps the exact contract and session together",
       promptVersion === 5 && verState.agents.codex.briefingVersion === promptVersion &&
       /^[a-f0-9]{64}$/.test(verState.agents.codex.briefingFingerprint) &&
       verState.agents.codex.promptSessionRef === "fake-thread-stale" &&
-      verState.agents.codex.roomNoteRevision === verState.roomNoteRevision,
+      verState.agents.codex.sessionRef === verState.agents.codex.promptSessionRef,
       JSON.stringify(verState.agents.codex));
   }
   await say("promptver", "@codex SAWWHAT");
@@ -7538,7 +7559,7 @@ async function main() {
   const seenCurrent = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   ok("the update note is sent exactly once",
     !seenCurrent.prompt.includes("[Update to your standing instructions") &&
-    !seenCurrent.prompt.includes("no room note is active"), seenCurrent.prompt.slice(0, 120));
+    seenCurrent.prompt.includes("user room brief:") && !seenCurrent.prompt.includes(briefTransition), seenCurrent.prompt.slice(0, 120));
   verState = JSON.parse(fs.readFileSync(path.join(verDir, "state.json"), "utf8"));
   ok("an additive prompt update preserves the resumed native session",
     verState.agents.codex.sessionRef === "fake-thread-stale", JSON.stringify(verState.agents.codex));
@@ -7568,7 +7589,7 @@ async function main() {
     codex: {
       sessionRef: "fake-thread-no-fingerprint", cursor: 0,
       promptSessionRef: "fake-thread-no-fingerprint",
-      briefingVersion: currentPromptVersion, roomNoteRevision: 0,
+      briefingVersion: currentPromptVersion,
     },
   });
   await say("promptfingerprint", "@codex SAWWHAT");
@@ -7618,14 +7639,14 @@ async function main() {
     sentinelPrompts.push(JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length)).prompt);
   }
   let sentinelState = readState("promptsentinel");
-  ok("an unpinned --last session re-receives contract and note state every turn",
+  ok("an unpinned --last session re-receives contract and Room Brief every turn",
     sentinelPrompts.every((p) => p.startsWith("[Update to your standing instructions") &&
-      p.includes("no room note is active")) &&
+      p.includes("Room brief")) &&
     sentinelState.agents.codex.sessionRef === "--last" &&
     sentinelState.agents.codex.promptSessionRef === undefined &&
     sentinelState.agents.codex.briefingVersion === undefined &&
     sentinelState.agents.codex.briefingFingerprint === undefined &&
-    sentinelState.agents.codex.roomNoteRevision === undefined,
+    !savedContext("promptsentinel").briefMigration.sessions.find((s) => s.seat === "codex").acknowledgedAt,
     JSON.stringify(sentinelState.agents.codex));
   await say("promptsentinel", "@codex SAWWHAT");
   d = await idle("promptsentinel", 30000);
@@ -7643,60 +7664,62 @@ async function main() {
   const graduatedAgain = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length)).prompt;
   ok("the graduated concrete session receives neither one-time marker again",
     !graduatedAgain.includes("[Update to your standing instructions") &&
-    !graduatedAgain.includes("no room note is active"), graduatedAgain.slice(0, 180));
+    graduatedAgain.includes("user room brief:") && !graduatedAgain.includes(briefTransition), graduatedAgain.slice(0, 180));
 
-  // Room-note delivery is revisioned independently from the standing contract.
-  // Edits and clears commit only after a successful turn, and the exact
-  // revision composed for that turn wins even if Settings changes mid-flight.
+  // Room Brief delivery stays stable for an in-flight attempt and updates on
+  // the following successful turn.
   const noteDir = seedPromptRoom("promptnote", {}, {
     claude: { sessionRef: null, cursor: 0 },
     codex: { sessionRef: "fake-thread-note", cursor: 0 },
   });
   await say("promptnote", "@codex SAWWHAT");
   await idle("promptnote", 30000);
-  const noteBaseline = readState("promptnote").agents.codex.roomNoteRevision;
-  await cfg("promptnote", { roomNote: "NOTE-A" });
+  const noteBaseline = readState("promptnote").agents.codex.promptSessionRef;
+  await cfg("promptnote", { rules: "NOTE-A" });
+  const noteARevision = savedContext("promptnote").roomBrief.revision;
+  const noteVersionBaseline = readState("promptnote").agents.codex.briefingVersion;
   await say("promptnote", "@codex FAIL");
   await idle("promptnote", 30000);
   let noteState = readState("promptnote");
-  ok("a failed note-delivery turn does not consume the new revision",
-    noteState.roomNoteValue === "NOTE-A" &&
-    noteState.roomNoteRevision > noteBaseline &&
-    noteState.agents.codex.roomNoteRevision === noteBaseline,
+  ok("a failed Rules delivery does not stamp the attempted brief",
+    noteState.agents.codex.promptSessionRef === noteBaseline &&
+    noteState.agents.codex.briefingVersion === noteVersionBaseline &&
+    savedContext("promptnote").roomBrief.rules === "NOTE-A" &&
+    savedContext("promptnote").roomBrief.revision === noteARevision,
     JSON.stringify(noteState));
   await say("promptnote", "@codex SAWWHAT");
   d = await idle("promptnote", 30000);
   const noteASaw = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   noteState = readState("promptnote");
-  ok("the next success delivers and stamps the active room note",
-    noteASaw.prompt.includes("Current room note from the user") &&
-    noteASaw.prompt.includes("user room note: NOTE-A") &&
-    noteState.agents.codex.roomNoteRevision === noteState.roomNoteRevision,
+  ok("the next success delivers and stamps the active Rules",
+    noteASaw.prompt.includes("Room brief") &&
+    noteASaw.prompt.includes("NOTE-A") &&
+    noteState.agents.codex.promptSessionRef === noteBaseline,
     JSON.stringify(noteState.agents.codex));
 
-  await cfg("promptnote", { roomNote: "NOTE-B" });
-  const noteBRevision = readState("promptnote").roomNoteRevision;
+  await cfg("promptnote", { rules: "NOTE-B" });
+  const noteBRevision = savedContext("promptnote").roomBrief.revision;
   const noteGapReady = path.join(noteDir, "workspace", ".fake-cli-ready-notegap");
   await say("promptnote", "@codex READY:notegap SLEEP:2400 SAWWHAT");
   await waitFile(noteGapReady, "NOTE-B prompt to reach the running fake CLI");
-  await cfg("promptnote", { roomNote: "NOTE-C" });
+  await cfg("promptnote", { rules: "NOTE-C" });
   d = await idle("promptnote", 30000);
   const noteBSaw = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   noteState = readState("promptnote");
-  ok("a mid-flight note edit stamps only the revision actually delivered",
-    noteBSaw.prompt.includes("user room note: NOTE-B") &&
-    !noteBSaw.prompt.includes("user room note: NOTE-C") &&
-    noteState.roomNoteValue === "NOTE-C" &&
-    noteState.agents.codex.roomNoteRevision === noteBRevision &&
-    noteState.agents.codex.roomNoteRevision < noteState.roomNoteRevision,
+  ok("a mid-flight Rules edit keeps the prompt snapshot stable",
+    noteBSaw.prompt.includes("NOTE-B") &&
+    !noteBSaw.prompt.includes("NOTE-C") &&
+    savedContext("promptnote").roomBrief.revision > noteBRevision &&
+    savedContext("promptnote").roomBrief.rules === "NOTE-C",
     JSON.stringify(noteState));
   await say("promptnote", "@codex SAWWHAT");
   d = await idle("promptnote", 30000);
   const noteCSaw = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   noteState = readState("promptnote");
-  ok("the following turn delivers and stamps the newer note",
-    noteCSaw.prompt.includes("user room note: NOTE-C") &&
-    noteState.agents.codex.roomNoteRevision === noteState.roomNoteRevision,
+  ok("the following turn delivers the newer Rules",
+    noteCSaw.prompt.includes("NOTE-C") &&
+    savedContext("promptnote").roomBrief.revision > noteBRevision &&
+    savedContext("promptnote").roomBrief.rules === "NOTE-C",
     JSON.stringify(noteState.agents.codex));
 
   const beforeNoteResetRef = noteState.agents.codex.sessionRef;
@@ -7705,17 +7728,16 @@ async function main() {
   d = await idle("promptnote", 30000);
   const noteFreshSaw = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   noteState = readState("promptnote");
-  ok("a reset session binds the current note revision to its new identity",
+  ok("a reset session binds the current Rules to its new identity",
     noteFreshSaw.briefing.includes("Treat the other agent as a peer") &&
-    noteFreshSaw.prompt.includes("user room note: NOTE-C") &&
+    noteFreshSaw.prompt.includes("NOTE-C") &&
     noteState.agents.codex.sessionRef !== beforeNoteResetRef &&
-    noteState.agents.codex.promptSessionRef === noteState.agents.codex.sessionRef &&
-    noteState.agents.codex.roomNoteRevision === noteState.roomNoteRevision,
+    noteState.agents.codex.promptSessionRef === noteState.agents.codex.sessionRef,
     JSON.stringify(noteState.agents.codex));
 
-  const deliveredCRevision = noteState.agents.codex.roomNoteRevision;
-  await cfg("promptnote", { roomNote: null });
-  const clearedRevision = readState("promptnote").roomNoteRevision;
+  const deliveredCRevision = savedContext("promptnote").roomBrief.revision;
+  await cfg("promptnote", { rules: null });
+  const clearedRevision = savedContext("promptnote").roomBrief.revision;
   const noteClearReady = path.join(noteDir, "workspace", ".fake-cli-ready-noteclear");
   await say("promptnote", "@codex READY:noteclear SLEEP:15000 SAWWHAT");
   await waitFile(noteClearReady, "cleared-note marker to reach the running fake CLI");
@@ -7724,23 +7746,24 @@ async function main() {
   await api("POST", "/api/stop", { room: "promptnote", agent: "codex", runId: clearRun.runId });
   await idle("promptnote", 30000);
   noteState = readState("promptnote");
-  ok("Stop does not consume a cleared-note revocation",
-    noteState.agents.codex.roomNoteRevision === deliveredCRevision &&
+  ok("Stop keeps cleared Rules saved for the next attempt",
+    savedContext("promptnote").roomBrief.rules === "" &&
+    savedContext("promptnote").roomBrief.revision === clearedRevision &&
     clearedRevision > deliveredCRevision, JSON.stringify(noteState));
   await say("promptnote", "@codex SAWWHAT");
   d = await idle("promptnote", 30000);
   const clearSaw = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   noteState = readState("promptnote");
-  ok("the successful retry explicitly revokes the old room note and stamps the clear",
-    clearSaw.prompt.includes("no room note is active; disregard all earlier room notes") &&
-    !clearSaw.prompt.includes("user room note: NOTE-C") &&
-    noteState.agents.codex.roomNoteRevision === clearedRevision,
+  ok("the successful retry delivers the cleared Rules state",
+    clearSaw.prompt.includes("Room brief") &&
+    !clearSaw.prompt.includes("NOTE-C") &&
+    savedContext("promptnote").roomBrief.revision === clearedRevision,
     JSON.stringify(noteState.agents.codex));
   await say("promptnote", "@codex SAWWHAT");
   d = await idle("promptnote", 30000);
   const clearAgain = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length)).prompt;
-  ok("the cleared-note revocation is delivered exactly once per concrete session",
-    !clearAgain.includes("no room note is active"), clearAgain.slice(0, 180));
+  ok("the cleared Rules state remains current on the next turn",
+    clearAgain.includes("Room brief") && !clearAgain.includes("NOTE-C"), clearAgain.slice(0, 180));
 
   // A stopped turn must not administratively consume an update its native
   // session never retained. The next successful turn receives it again.
@@ -7762,13 +7785,15 @@ async function main() {
     stopVerState.agents.codex.briefingVersion === undefined &&
     stopVerState.agents.codex.briefingFingerprint === undefined &&
     stopVerState.agents.codex.promptSessionRef === undefined &&
-    stopVerState.agents.codex.roomNoteRevision === undefined &&
+    !savedContext("promptstop").briefMigration.sessions.find((s) => s.seat === "codex").acknowledgedAt &&
     stopVerState.agents.codex.sessionRef === "fake-thread-stop-stale", JSON.stringify(stopVerState.agents.codex));
   await say("promptstop", "@codex SAWWHAT");
   d = await idle("promptstop", 30000);
   const afterPromptStop = JSON.parse(lastAgent(d, "codex").text.slice("SAWJSON ".length));
   ok("the prompt update is retried after Stop",
-    afterPromptStop.prompt.startsWith("[Update to your standing instructions"), afterPromptStop.prompt.slice(0, 140));
+    afterPromptStop.prompt.startsWith("[Update to your standing instructions") &&
+    afterPromptStop.prompt.includes(briefTransition + "\nuser room brief:") &&
+    !!savedContext("promptstop").briefMigration.sessions.find((s) => s.seat === "codex").acknowledgedAt, afterPromptStop.prompt.slice(0, 140));
 
   // Listener and hop calls have separate adapter commit paths. Both must use
   // the same update/stamp invariant as an ordinary addressed turn.
@@ -7786,7 +7811,6 @@ async function main() {
     listenerState.agents.claude.briefingVersion === Number((/const PROMPT_VERSION = (\d+);/.exec(fs.readFileSync(SERVER, "utf8")) || [])[1]) &&
     /^[a-f0-9]{64}$/.test(listenerState.agents.claude.briefingFingerprint) &&
     listenerState.agents.claude.promptSessionRef === "fake-session-listener-stale" &&
-    listenerState.agents.claude.roomNoteRevision === listenerState.roomNoteRevision &&
     listenerState.agents.claude.sessionRef === "fake-session-listener-stale",
     JSON.stringify({ replies: texts(d, "agent"), state: listenerState.agents.claude }));
 
@@ -7802,7 +7826,6 @@ async function main() {
     hopState.agents.codex.briefingVersion === Number((/const PROMPT_VERSION = (\d+);/.exec(fs.readFileSync(SERVER, "utf8")) || [])[1]) &&
     /^[a-f0-9]{64}$/.test(hopState.agents.codex.briefingFingerprint) &&
     hopState.agents.codex.promptSessionRef === "fake-thread-hop-stale" &&
-    hopState.agents.codex.roomNoteRevision === hopState.roomNoteRevision &&
     hopState.agents.codex.sessionRef === "fake-thread-hop-stale",
     JSON.stringify({ replies: texts(d, "agent"), state: hopState.agents.codex }));
 
@@ -7817,7 +7840,6 @@ async function main() {
     hopFailState.agents.codex.briefingVersion === undefined &&
     hopFailState.agents.codex.briefingFingerprint === undefined &&
     hopFailState.agents.codex.promptSessionRef === undefined &&
-    hopFailState.agents.codex.roomNoteRevision === undefined &&
     hopFailState.agents.codex.sessionRef === "fake-thread-hop-fail" &&
     d.entries.some((e) => e.kind === "system" && e.meta && e.meta.error && /failed replying to a mention/.test(e.text)),
     JSON.stringify({ state: hopFailState.agents.codex, system: texts(d, "system") }));
@@ -7831,7 +7853,6 @@ async function main() {
       sessionRef: "fake-thread-retire", cursor: 0,
       promptSessionRef: "fake-thread-retire", briefingVersion: -1,
       briefingFingerprint: verState.agents.codex.briefingFingerprint,
-      roomNoteRevision: 0,
     },
   });
   const retireReady = path.join(retireDir, "workspace", ".fake-cli-ready-promptretire");
@@ -7861,8 +7882,7 @@ async function main() {
     retiredState.agents.codex.sessionRef !== "fake-thread-retire" &&
     retiredState.agents.codex.briefingVersion === Number((/const PROMPT_VERSION = (\d+);/.exec(fs.readFileSync(SERVER, "utf8")) || [])[1]) &&
     /^[a-f0-9]{64}$/.test(retiredState.agents.codex.briefingFingerprint) &&
-    retiredState.agents.codex.promptSessionRef === retiredState.agents.codex.sessionRef &&
-    retiredState.agents.codex.roomNoteRevision === retiredState.roomNoteRevision,
+    retiredState.agents.codex.promptSessionRef === retiredState.agents.codex.sessionRef,
     JSON.stringify({ briefing: retiredSaw.briefing.slice(0, 120), state: retiredState.agents.codex }));
 
   // Recovery briefing: a fresh session in a paused pair room is told the pair

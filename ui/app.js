@@ -146,7 +146,12 @@ async function api(path, body, method = "POST") {
     throw new Error("Restart Parley to finish applying the update.");
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  if (!res.ok) {
+    const error = new Error(data.error || res.statusText);
+    error.status = res.status;
+    error.data = data;
+    throw error;
+  }
   return data;
 }
 
@@ -3907,9 +3912,20 @@ async function handleSlash(text) {
   if (cmd === "/pair") return false; // server handles
   if (cmd === "/note") {
     try {
-      await api("/api/config", { room: state.room, config: { roomNote: rest || null } });
-      toast(rest ? `📌 Room note set — all ${state.summary?.seats?.length || 0} agents will see it on every turn.` : "📌 Room note cleared.");
-    } catch (e) { toast(e.message, true); }
+      const brief = state.summary?.context?.brief || { revision: 0, goal: "", rules: "", decisions: [] };
+      await api("/api/config", { room: state.room, brief: {
+        baseRevision: brief.revision,
+        goal: brief.goal || "",
+        rules: rest,
+        decisions: (brief.decisions || []).map((decision) => ({ ...decision })),
+        deleteArchivedIds: [],
+      }, config: {} });
+      toast(rest ? `📌 Room rules set — all ${state.summary?.seats?.length || 0} agents will see them on every turn.` : "📌 Room rules cleared.");
+    } catch (e) {
+      if (e.status === 409 && e.data?.brief) applySummary({ ...state.summary,
+        context: { ...state.summary.context, brief: e.data.brief } });
+      toast(e.message, true);
+    }
     return true;
   }
   // The 😴 pill toggles with one click, which is what the motivating case (you
@@ -3954,7 +3970,7 @@ async function handleSlash(text) {
       "<b>Listening:</b> @all respects listening: active seats answer; listeners assess within role, or review only in convergence. Name a listener explicitly to request a direct response.<br>" +
       "<b>/pair start @agent [task]</b> — pair mode: that agent works, the other reviews every message you send<br>" +
       "<b>/pair end</b> — leave pair mode (also the End button in the banner)<br>" +
-      "<b>/note [text]</b> — standing room note every agent sees every turn (empty clears)<br>" +
+      "<b>/note [text]</b> — standing room rules every agent sees every turn (empty clears)<br>" +
       "<b>/sleep @agent [reason]</b> — stop launching that seat (rate limited?); <b>/wake @agent</b> brings it back<br>" +
       "<b>/clear</b> — save the conversation in history and reset agent sessions (asks first)<br>" +
       "<b>/archive</b> — move this room to Archived rooms (asks first)<br>" +
@@ -4362,7 +4378,7 @@ $("newRoomForm").onsubmit = async (e) => {
   if (seats.length > 4) return toast("Rooms support up to four agents.", true);
   const names = new Set();
   for (const seat of seats) { if (names.has(seat.id)) return toast("Give each agent a different name.", true); names.add(seat.id); const issue = seatNameIssue(seat.id); if (issue) return toast(issue, true); }
-  const body = { name, roomNote: $("newRoomNote").value.trim(), mode: $("newRoomReviewChk").checked ? "work" : "talk" };
+  const body = { name, rules: $("newRoomNote").value, mode: $("newRoomReviewChk").checked ? "work" : "talk" };
   body.seats = seats;
   const projectDir = $("newRoomProjectPath").value.trim();
   if (projectDir) body.projectDir = projectDir;
@@ -4612,6 +4628,7 @@ $("roomSettingsTab").onclick = () => showSettingsPane("room");
 $("contextSettingsTab").onclick = () => showSettingsPane("context");
 let settingsRosterDraft = null;
 let settingsRosterVersion = null;
+let settingsBriefDraft = null;
 function rosterDraftFromSummary(s) {
   return s.seats.map((id) => {
     const p = (s.seatInfo && s.seatInfo[id]) || s.providers[id] || {};
@@ -4710,6 +4727,7 @@ function closeSettings() {
   syncToastHost();
   settingsRosterDraft = null;
   settingsRosterVersion = null;
+  settingsBriefDraft = null;
   // Closing a dialog used to leave focus on nothing at all.
   if (settingsOpener && document.contains(settingsOpener)) settingsOpener.focus();
   settingsOpener = null;
@@ -4725,12 +4743,21 @@ function openSettings() {
   selectedSettingsAgent = 0;
   settingsRosterDraft = rosterDraftFromSummary(s);
   settingsRosterVersion = s.rosterVersion;
+  const brief = s.context?.brief || { revision: 0, goal: "", rules: "", decisions: [] };
+  settingsBriefDraft = {
+    baseRevision: brief.revision,
+    goal: brief.goal || "",
+    rules: brief.rules ?? "",
+    decisions: (brief.decisions || []).map((decision) => ({ ...decision })),
+    deleteArchivedIds: [],
+  };
   $("roomPath").textContent = s.dir;
   $("mDelete").hidden = s.name === "default"; // the fallback room can't be removed
   renderSeatCards(s);
   $("s_notify").checked = notifyEnabled();
   $("s_projdir").value = s.cfg.projectDir || "";
-  $("s_roomnote").value = s.cfg.roomNote || "";
+  $("s_roomnote").value = settingsBriefDraft.rules;
+  settingsBriefDraft.rulesControlValue = $("s_roomnote").value;
   $("s_default").innerHTML = settingsRosterDraft.map((x) => `<option>${esc(x.id)}</option>`).join("");
   $("s_default").value = s.cfg.defaultAgent || settingsRosterDraft[0].id;
   $("s_timeout").value = Math.round((s.cfg.timeoutMs || 300000) / 1000);
@@ -4838,7 +4865,6 @@ $("mSave").onclick = async () => {
     accounting: $("s_accounting").value,
     pairRounds: Math.min(99, Math.max(0, Number($("s_pairrounds").value) || 0)),
     projectDir: $("s_projdir").value.trim() || null,
-    roomNote: $("s_roomnote").value.trim() || null,
     agents,
   };
   retireSettingsPick();
@@ -4847,7 +4873,10 @@ $("mSave").onclick = async () => {
       const values = agents[seat.id] || {};
       return { id: seat.id, provider: seat.provider, model: values.model || null, effort: values.effort || null, instructions: values.instructions || null };
     });
-    const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config });
+    const briefDraft = settingsBriefDraft || { baseRevision: s.context?.brief?.revision || 0, goal: s.context?.brief?.goal || "", rules: "", decisions: [], deleteArchivedIds: [] };
+    const currentRules = $("s_roomnote").value;
+    briefDraft.rules = currentRules === briefDraft.rulesControlValue ? (settingsBriefDraft?.rules ?? currentRules) : currentRules;
+    const saved = await api("/api/config", { room: state.room, expectedRosterVersion: settingsRosterVersion, seats, config, brief: briefDraft });
     closeSettings();
     // The panel above already shows the new permission, but a CLI process that
     // has launched cannot be changed. Say what the user is actually watching —
@@ -4857,7 +4886,12 @@ $("mSave").onclick = async () => {
     toast(late.length
       ? `Saved — ${late.join(" and ")} ${late.length > 1 ? "are" : "is"} mid-answer, and the ${late.length > 1 ? "runs" : "run"} already in progress ${late.length > 1 ? "keep" : "keeps"} the previous permissions.`
       : "Settings saved.");
-  } catch (e) { toast(e.message, true); }
+  } catch (e) {
+    if (e.status === 409 && e.data?.brief) {
+      settingsBriefDraft = { ...settingsBriefDraft, baseRevision: e.data.brief.revision };
+    }
+    toast(e.message, true);
+  }
 };
 function showNoRoom() {
   state.navigationVersion++; state.resyncVersion++; state.eventVersion++;
@@ -4980,22 +5014,26 @@ input.focus();
 function contextDate(value) {
   return value && Number.isFinite(new Date(value).getTime()) ? new Date(value).toLocaleString() : "";
 }
-// Mirrors the server's directionBody, so the counter matches what is saved.
-function directionChars(goal, pins) {
-  const lines = pins.map((p) => p.text.replace(/\s+/g, " ").trim()).filter(Boolean);
-  return [goal.trim() ? `Goal: ${goal.trim()}` : "", lines.length ? "Decisions:\n" + lines.map((t) => `- ${t}`).join("\n") : ""]
-    .filter(Boolean).join("\n").length;
+function briefFromSummary(s) {
+  const brief = s?.context?.brief || {};
+  return { revision: brief.revision || 0, goal: brief.goal || "", rules: brief.rules ?? "", decisions: (brief.decisions || []).map((decision) => ({ ...decision })) };
+}
+function briefChars(goal, rules, decisions) {
+  return String(goal || "").length + String(rules || "").length + (decisions || [])
+    .filter((decision) => decision.status !== "archived")
+    .reduce((total, decision) => total + String(decision.text || "").length, 0);
 }
 function directionDraft(host, s) {
   const room = s.name || state.room;
-  if (host._directionDraft?.room === room) return host._directionDraft;
-  const direction = s.context?.direction || { goal: "", pins: [] };
-  return { room, dirty: false, goal: direction.goal || "", pins: (direction.pins || []).map((p) => ({ ...p })) };
+  if (host._directionDraft?.room === room && host._directionDraft.dirty) return host._directionDraft;
+  const brief = briefFromSummary(s);
+  return { room, dirty: false, baseRevision: brief.revision, goal: brief.goal, rules: brief.rules, decisions: brief.decisions };
 }
 function updateDirectionCount() {
   const host = $("contextSettings"), draft = host?._directionDraft, count = $("directionCount");
   if (!draft || !count) return;
-  const max = state.summary?.context?.directionMax || 2000, used = directionChars(draft.goal, draft.pins);
+  const max = state.summary?.context?.briefGuide || 2000;
+  const used = briefChars(draft.goal, draft.rules, draft.decisions);
   count.textContent = `${used.toLocaleString()} / ${max.toLocaleString()} characters`;
   count.classList.toggle("over", used > max);
   $("directionSave").disabled = !draft.dirty || used > max;
@@ -5005,10 +5043,11 @@ function renderDirectionCard(host, s) {
   const card = host.querySelector("#directionCard"), context = s.context || {};
   const draft = directionDraft(host, s);
   host._directionDraft = draft;
-  const pinMax = context.pinMax || 200;
+  const pinMax = context.decisionMax || 200;
+  const active = draft.decisions.filter((decision) => decision.status !== "archived");
   card.innerHTML = `<div class="context-section-head"><div><h3>Room direction</h3><p class="note">A short goal and the key decisions every agent should keep in mind. Each agent session gets it once, then a one-line reminder until it changes.</p></div></div>
     <div class="fld"><label for="directionGoal">Goal</label><textarea id="directionGoal" rows="3" placeholder="What this room is working toward…">${esc(draft.goal)}</textarea></div>
-    <div class="fld"><label>Decisions</label><ul class="direction-pins">${draft.pins.map((pin, i) => `<li><input type="text" data-pin-index="${i}" maxlength="${pinMax}" value="${esc(pin.text)}" aria-label="Decision ${i + 1}"><button type="button" class="ract" data-pin-remove="${i}" aria-label="Remove decision ${i + 1}">Remove</button></li>`).join("") || '<li class="note direction-empty">No decisions pinned yet.</li>'}</ul>
+    <div class="fld"><label>Decisions</label><ul class="direction-pins">${active.map((pin, i) => `<li><input type="text" data-pin-index="${i}" maxlength="${pinMax}" value="${esc(pin.text)}" aria-label="Decision ${i + 1}"><button type="button" class="ract" data-pin-remove="${i}" aria-label="Remove decision ${i + 1}">Remove</button></li>`).join("") || '<li class="note direction-empty">No decisions pinned yet.</li>'}</ul>
     <div class="direction-add"><input type="text" id="directionNewPin" maxlength="${pinMax}" placeholder="Add a one-line decision…"><button type="button" class="btn" id="directionAddPin">Add</button></div>
     <p class="note">Use the pin on a message or on an agreed decision to add one from the chat. Converge results are not kept unless you pin them.</p></div>
     <div class="direction-foot"><span id="directionCount" class="direction-count"></span><button type="button" class="btn" id="directionTidy" ${context.suggesting ? "disabled" : ""}>Tidy</button><button type="button" class="btn" id="directionDiscard" hidden>Discard changes</button><button type="button" class="btn primary" id="directionSave">Save direction</button></div>
@@ -5029,7 +5068,7 @@ function renderContextSettings(s) {
   const room = s.name || state.room, context = s.context || {};
   if (host._directionDraft && host._directionDraft.room !== room) { host._directionDraft = null; host._directionStatus = ""; }
   // An unsaved edit is never overwritten by a broadcast; only the busy state of Tidy follows it.
-  const cardSignature = JSON.stringify([room, context.direction, context.directionMax, context.suggesting]);
+  const cardSignature = JSON.stringify([room, context.brief, context.suggesting]);
   if (host._cardSignature !== cardSignature) {
     host._cardSignature = cardSignature;
     if (host._directionDraft?.dirty) { const tidy = $("directionTidy"); if (tidy) tidy.disabled = !!context.suggesting; }
@@ -5054,9 +5093,21 @@ function markDirectionDirty(status = "") {
   if ($("directionStatus")) $("directionStatus").textContent = status;
   updateDirectionCount();
 }
-async function saveDirection(room, goal, pins) {
-  const result = await api("/api/context/direction", { room, goal, pins });
-  if (state.room === room && result.context) applySummary({ ...state.summary, context: result.context });
+async function saveDirection(room, goal, pins, sourceDraft = null) {
+  const draft = sourceDraft || $("contextSettings")?._directionDraft;
+  const brief = draft && draft.room === room ? draft : briefFromSummary(state.summary);
+  const result = await api("/api/context/brief", {
+    room,
+    baseRevision: brief.baseRevision ?? brief.revision,
+    goal,
+    rules: brief.rules ?? "",
+    decisions: pins,
+    deleteArchivedIds: [],
+  });
+  if (state.room === room) {
+    const nextBrief = result.brief || result.context?.brief;
+    if (nextBrief) applySummary({ ...state.summary, context: { ...state.summary.context, brief: nextBrief } });
+  }
   return result;
 }
 document.addEventListener("input", (event) => {
@@ -5064,7 +5115,9 @@ document.addEventListener("input", (event) => {
   if (!draft) return;
   if (event.target.id === "directionGoal") { draft.goal = event.target.value; markDirectionDirty(); }
   else if (event.target.dataset?.pinIndex !== undefined && event.target.closest("#directionCard")) {
-    draft.pins[Number(event.target.dataset.pinIndex)].text = event.target.value; markDirectionDirty();
+    const active = draft.decisions.filter((decision) => decision.status !== "archived");
+    if (active[Number(event.target.dataset.pinIndex)]) active[Number(event.target.dataset.pinIndex)].text = event.target.value;
+    markDirectionDirty();
   }
 });
 document.addEventListener("keydown", (event) => {
@@ -5081,11 +5134,16 @@ document.addEventListener("click", async (event) => {
     if (!event.target.closest("#directionCard")) return;
     const draft = host._directionDraft;
     const remove = event.target.closest("[data-pin-remove]");
-    if (remove) { draft.pins.splice(Number(remove.dataset.pinRemove), 1); markDirectionDirty(); renderDirectionCard(host, state.summary); return; }
+    if (remove) {
+      const active = draft.decisions.filter((decision) => decision.status !== "archived");
+      const decision = active[Number(remove.dataset.pinRemove)];
+      if (decision) decision.status = "archived";
+      markDirectionDirty(); renderDirectionCard(host, state.summary); return;
+    }
     if (event.target.closest("#directionAddPin")) {
       const text = $("directionNewPin").value.replace(/\s+/g, " ").trim();
       if (!text) return;
-      draft.pins.push({ text }); markDirectionDirty(); renderDirectionCard(host, state.summary); $("directionNewPin").focus();
+      draft.decisions.push({ text, status: "active" }); markDirectionDirty(); renderDirectionCard(host, state.summary); $("directionNewPin").focus();
       return;
     }
     if (event.target.closest("#directionDiscard")) {
@@ -5096,9 +5154,12 @@ document.addEventListener("click", async (event) => {
       button.disabled = true;
       try {
         host._directionDraft = null; host._directionStatus = "Saved. Each agent gets the new direction on its next turn.";
-        await saveDirection(room, draft.goal, draft.pins);
+        await saveDirection(room, draft.goal, draft.decisions, draft);
         renderDirectionCard(host, state.summary);
-      } catch (error) { host._directionDraft = draft; host._directionStatus = ""; renderDirectionCard(host, state.summary); throw error; }
+      } catch (error) {
+        if (error.status === 409 && error.data?.brief) draft.baseRevision = error.data.brief.revision;
+        host._directionDraft = draft; host._directionStatus = ""; renderDirectionCard(host, state.summary); throw error;
+      }
       return;
     }
     if (event.target.closest("#directionTidy")) {
@@ -5108,7 +5169,16 @@ document.addEventListener("click", async (event) => {
       try {
         const { suggestion } = await api("/api/context/suggest", { room, tidy: true });
         if (state.room !== room) return;
-        host._directionDraft = { room, dirty: true, goal: suggestion.goal, pins: suggestion.pins.map((text) => ({ text })) };
+        const suggested = suggestion.decisions || suggestion.pins || [];
+        const existing = draft.decisions.filter((decision) => decision.status !== "archived");
+        const remaining = [...existing];
+        const decisions = suggested.map((value) => {
+          const text = typeof value === "string" ? value : value.text;
+          const index = remaining.findIndex((decision) => decision.text === text);
+          const match = index >= 0 ? remaining.splice(index, 1)[0] : null;
+          return match ? { ...match } : { text, status: "active" };
+        }).concat(draft.decisions.filter((decision) => decision.status === "archived").map((decision) => ({ ...decision })));
+        host._directionDraft = { ...draft, dirty: true, goal: suggestion.goal ?? draft.goal, decisions };
         host._directionStatus = "Tidy suggestion loaded. Review it, then Save direction or Discard changes.";
         renderDirectionCard(host, state.summary);
       } catch (error) { button.disabled = false; $("directionStatus").textContent = ""; throw error; }
@@ -5119,11 +5189,12 @@ document.addEventListener("click", async (event) => {
 let pinDraft = null;
 async function openPinDialog(entryN) {
   if (!state.room || $("decisionDialog").open) return;
-  const draft = pinDraft = { room: state.room, entryN, opener: document.activeElement };
+  const brief = briefFromSummary(state.summary);
+  const draft = pinDraft = { room: state.room, entryN, opener: document.activeElement, brief };
   const field = $("decisionText");
   $("decisionRoom").textContent = `Room: ${draft.room}. Adds one line to the room direction that every agent keeps in mind.`;
   field.value = ""; field.disabled = true; field.placeholder = "Suggesting a one-line summary…";
-  field.maxLength = state.summary?.context?.pinMax || 200;
+  field.maxLength = state.summary?.context?.decisionMax || 200;
   $("decisionError").hidden = true; $("decisionSave").disabled = true;
   openModalDialog($("decisionDialog"));
   try {
@@ -5150,15 +5221,30 @@ $("decisionForm").addEventListener("submit", async (event) => {
   if (!text) { $("decisionError").textContent = "Enter a line before pinning."; $("decisionError").hidden = false; return; }
   $("decisionSave").disabled = true; $("decisionError").hidden = true;
   try {
-    const { room } = await api("/api/room?name=" + encodeURIComponent(draft.room));
-    const direction = room.context?.direction || { goal: "", pins: [] };
-    await saveDirection(draft.room, direction.goal, [...direction.pins, { text, entryN: draft.entryN }]);
+    const brief = draft.brief;
+    const saved = await api("/api/context/brief", { room: draft.room, baseRevision: brief.revision, goal: brief.goal, rules: brief.rules, decisions: [...brief.decisions, { text, entryN: draft.entryN, status: "active" }], deleteArchivedIds: [] });
+    if (state.room === draft.room) {
+      const nextBrief = saved.brief || saved.context?.brief;
+      if (nextBrief) applySummary({ ...state.summary, context: { ...state.summary.context, brief: nextBrief } });
+    }
+    const nextBrief = saved.brief || saved.context?.brief;
+    const priorIds = new Set((draft.brief.decisions || []).map((decision) => decision.id).filter(Boolean));
+    const canonical = nextBrief?.decisions?.find((decision) => decision.text === text && decision.status !== "archived" && (!decision.id || !priorIds.has(decision.id))) || { text, entryN: draft.entryN, status: "active" };
     // An open unsaved edit replaces the whole list on Save, so it carries the pin too.
     const open = $("contextSettings")._directionDraft;
-    if (open?.dirty && open.room === draft.room) { open.pins.push({ text, entryN: draft.entryN }); renderDirectionCard($("contextSettings"), state.summary); }
+    if (open?.dirty && open.room === draft.room) {
+      open.decisions.push({ ...canonical });
+      if (nextBrief?.revision !== undefined) open.baseRevision = nextBrief.revision;
+      renderDirectionCard($("contextSettings"), state.summary);
+    }
+    if (settingsBriefDraft && state.room === draft.room) {
+      settingsBriefDraft.decisions.push({ ...canonical });
+      if (nextBrief?.revision !== undefined) settingsBriefDraft.baseRevision = nextBrief.revision;
+    }
     if (pinDraft === draft) $("decisionDialog").close();
     toast(`Pinned to the room direction in ${draft.room}.`);
   } catch (error) {
+    if (error.status === 409 && error.data?.brief && pinDraft === draft) draft.brief.revision = error.data.brief.revision;
     if (pinDraft === draft) { $("decisionError").textContent = error.message; $("decisionError").hidden = false; }
     else toast(error.message, true);
   } finally { if (pinDraft === draft) $("decisionSave").disabled = false; }
