@@ -6,6 +6,7 @@ here and remain in place on disk.
 
 | ID | Title | Status | Path | Updated |
 | --- | --- | --- | --- | --- |
+| INIT-0014 | Every agent knows the room's goal, rules and decisions from one Room Brief | draft | [INIT-0014-room-brief/initiative.md](INIT-0014-room-brief/initiative.md) | 2026-11-06 |
 
 To create one: allocate `INIT-nnnn` from `../manifest.yaml`, copy
 `../templates/initiative.md` into `INIT-nnnn-<slug>/initiative.md`, create
