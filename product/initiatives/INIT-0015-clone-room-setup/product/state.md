@@ -3,19 +3,19 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 7
+revision: 8
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: READINESS
+phase: ENGINEERING_READY
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-readiness-reviewer: readiness review round 1 of the story set REQ-0004 (READINESS)"
+next_action: "ROLE-product-manager: assemble the handoff packet, compile delivery/manifest.md, create the Ariadne ticket for REQ-0004 (ENGINEERING_READY → HANDOFF)"
 blocked_by: []
 converged: true
-readiness_verdict: none
+readiness_verdict: READY
 stories: [REQ-0004]
 design_refs: [DES-0002]
 decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
@@ -45,9 +45,9 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-readiness-reviewer: readiness review round 1 of the story set
-(REQ-0004), after the PM's full-mode coverage run returns zero defects
-(READINESS).
+ROLE-product-manager: assemble the handoff packet, compile
+`delivery/manifest.md`, and create the Ariadne ticket for REQ-0004
+(ENGINEERING_READY → HANDOFF).
 
 ## Blocked by
 
@@ -157,6 +157,7 @@ the option that keeps the accepted outcome intact is the PM's under §4.1.
 | 2026-11-06 | ROLE-product-designer, design author (`design-lead`) — vendor claude, model fable | Step 1b reference frame of PD-0009 item 3 for REQ-0004: Room actions menu with `Clone room setup…` and the `Clone room setup` dialog, 1440 light | DONE — `cba8cfe` on `design/INIT-0015-clone-room-setup`: `design/heroes/clone-room-setup` (.dc.html, .png), `approach.md` with two proposals (folder note, optional markers) | Merged into the product branch at `a5cc3ee`; both proposals dropped (not in REQ-0004; the requester asked for a short dialog); `DES-0002` |
 | 2026-11-06 | ROLE-planner (technical architect, `story-set-technical-coherence`) — vendor claude, model opus | Coherence of the draft set (REQ-0004 rev 2) for option A; round 1 of 2, full pass, terminal unless blocking (§9d.3) | `coherent`; 0 blocking, 3 non-blocking (1: verification setup for test rooms; 2: message check needs the fake provider; 3: broken PD-0010 link) | [technical/coherence.md](../technical/coherence.md); all three fixed inline in REQ-0004 rev 3 (Notes, Scope link); terminal round, no round 2 |
 | 2026-11-06 | ROLE-product-designer, DES recorder (`des-recorder`) — vendor claude, model sonnet | Step 11, adapted by PD-0009 item 3: record the reference frame | DONE — [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md), accepted, `local_export` the three hero files; index row; counter `design: 2` | `DES-0002` on REQ-0004 |
+| 2026-11-06 | ROLE-product-readiness-reviewer — vendor claude, model sonnet | Readiness of REQ-0004 (rev 3) on R13–R18 plus R8/R9 flag-only clauses, cycle 1 round 1 | READY, 0 findings | Readiness log row (round 1, cycle 1); no Q- needed |
 
 ## Escalation log
 
@@ -182,6 +183,7 @@ appended — a prior row is never edited, withdrawn, or overwritten.
 
 | Date | Round | Verdict | Conditions | Reviewer | Story-set digest | Findings | Finding ids |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-06 | 1 (cycle 1) | READY | none | ROLE-product-readiness-reviewer (claude, claude-sonnet-5-5) | (REQ-0004, 3, 2026-11-06); INIT-0015 revision 3 — matches the validator report | 0 (0 blocking). R13–R18 pass; R8 contradiction clause: none (PD-0010 vs REQ-0004 and constraints #1–#3 agree); R9 currency clause: coherence r1 certified REQ-0004 rev 2, the story is rev 3 same date, date gap flagged only, no substantive mismatch (its three non-blocking defects were fixed in rev 3); B10: not applicable (DES-0002 is not `kind: code`). Q-0001 stays a non-blocking open question | none |
 
 ## Readiness findings
 
@@ -233,7 +235,7 @@ _Assembled at ENGINEERING_READY._
   rows); REQ-0004 revision 2 aligned (PD-0010 items, C-01..C-08, C-12, C-13,
   R-03); Solution Contract written inline (size rule §9d.2) and validated
   against PD-0009, PD-0010, PD-0007 and the assessment. No requester question.
-- 2026-11-06 — Dispatch log: `DECOMPOSITION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a4805c6fd4fa638e0 | design/heroes/* at cba8cfe`; `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | af601cbad2d260c31 | technical/coherence.md`; `DECOMPOSITION (step 11) | ROLE-product-designer (des-recorder) | claude | sonnet | S | a377e0bf6e11a5048 | design/DES-0002-clone-room-setup-reference-frame.md`.
+- 2026-11-06 — Dispatch log: `DECOMPOSITION (step 1b) | ROLE-product-designer (design-lead) | claude | fable | M | a4805c6fd4fa638e0 | design/heroes/* at cba8cfe`; `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | af601cbad2d260c31 | technical/coherence.md`; `DECOMPOSITION (step 11) | ROLE-product-designer (des-recorder) | claude | sonnet | S | a377e0bf6e11a5048 | design/DES-0002-clone-room-setup-reference-frame.md`. `READINESS (round 1) | ROLE-product-readiness-reviewer | claude | sonnet | M | a2d516b942a711b7e | Readiness log row`.
 - 2026-11-06 — DECOMPOSITION: design worktree
   `~/Factory/Artifacts/projects/PRL/initiatives/INIT-0015/design-worktree` on
   `design/INIT-0015-clone-room-setup` (from `d520504`); design steps per
@@ -268,6 +270,7 @@ _Assembled at ENGINEERING_READY._
 | 2026-11-06 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: options A and B recorded, each with a feasibility verdict (both feasible-with-constraints) and a user-visible trade-off; PM recommendation A with reasoning; design 1a–1b skipped as derivative work, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 two options; X2 verdicts in set; one Consultation log row for the one delegate response) | e1586e7ff9742488 |
 | 2026-11-06 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0009 (A, feasible-with-constraints), indexed; REQ-0004 revision 2 consistent with PD-0009 and PD-0010; B rejected, none left under consideration; Solution Contract cites PD-0009 and its design concept (PD-0009 item 3) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (R1 accepted + index row in one commit; R2 PD-0010 supersedes PD-0008, both ways, PD-0008 stays in decisions/; R3 rejected options non-empty; D11 counter 10); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | 5581573a0fbaafdd |
 | 2026-11-06 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1 maps to accepted REQ-0004; REQ-0004 meets §10.3 (accepted, one testable outcome, pass/fail AC, CAP-0002, DES-0002 with exports on disk, depends_on none, no blocker Q-, no PD- or constraint contradicted, indexed); coherence round 1 of 2 (terminal, §9d.3) `coherent`, no open blocking defect; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-design-coverage pass (DES-0002 accepted, exports on disk, names REQ-0004); HOOK-dependency-graph pass (one node, acyclic); HOOK-phase-entry pass (`converged: true`; traceability full mode 0 defects; terminal coherence not regression-required; accepted DES-0002 for the user-facing story). Publication push skipped: the run instructions forbid pushing outside the release step | 94e15b3ace8ae733 |
+| 2026-11-06 | READINESS | ENGINEERING_READY | ROLE-product-manager | Exit criteria met: readiness cycle 1 round 1 `READY`, 0 findings, no conditions; terminal under §9d.4 (no blocking finding) | Exited READINESS, entered ENGINEERING_READY. Hooks: HOOK-readiness pass (verdict READY, not void; story-set digest (REQ-0004, 3, 2026-11-06), INIT-0015@3 matches disk); HOOK-phase-entry pass | 1dba333bc580f2a0 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
