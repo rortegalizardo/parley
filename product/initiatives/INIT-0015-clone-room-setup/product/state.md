@@ -3,7 +3,7 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 10
+revision: 11
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -12,7 +12,7 @@ initiative: INIT-0015
 phase: HANDOFF
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-orchestrator: deliver PRL-4 (plan, implement, review, merge to local main; nothing pushed); product side done"
+next_action: "ROLE-product-manager: close INIT-0015 (SKILL-close-initiative, CAP-0002 update) — PRL-4 merged on local main at da85420"
 blocked_by: []
 converged: true
 readiness_verdict: READY
@@ -45,8 +45,8 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-orchestrator: deliver PRL-4 (plan, implement, review, merge to local
-`main`; nothing pushed). The product side is done; it waits for nothing.
+ROLE-product-manager: close INIT-0015 (`SKILL-close-initiative`, CAP-0002
+update). PRL-4 is merged on local `main` at `da85420`; nothing pushed.
 
 ## Blocked by
 
@@ -312,6 +312,17 @@ inline by the PM (size rule §9d.2).
   initiative was created and was cancelled before any further write; INIT-0015
   kept as instructed. Nothing pushed: the run instructions forbid it.
 - 2026-11-06 — Dispatch log: `HANDOFF (transcription) | ticket-transcriber | claude | sonnet | M | ae5d8c75ec6bc881a | scratchpad INIT-0015-tickets.json (ticket body)`.
+- 2026-11-06 — Delivery (requester-asked, §5 after HANDOFF): `orchestrator` dispatched
+  for PRL-4 (agent a948af25129cafbdf). Result: review-001 APPROVED, AC gate 11/11
+  PASS, merged on local `main` with --no-ff at `da85420` (PRL-4 commit
+  `3579c03`), Ariadne PRL-4 Done, release record
+  `~/Factory/Artifacts/projects/PRL/tickets/PRL-4/release/release.md`. One
+  isolated check on a copied root (port 4196, fake provider), 4142 untouched,
+  4141 unused, runtime protocol unchanged (16). Leftover: local branch `PRL-4`
+  (merged; `git branch -d` refuses from this checkout's branch). This product
+  branch is not merged to `main`: `main` renumbered INIT-0014 to INIT-0001
+  (`ff616aa`), which conflicts in five indexes and the initiative counter; left
+  for the renumbering owner.
 
 ## Phase log
 
