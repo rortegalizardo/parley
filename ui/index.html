@@ -193,6 +193,20 @@
     </form>
 </dialog>
 
+<dialog id="cloneRoomDialog" aria-labelledby="cloneRoomTitle" aria-describedby="cloneRoomFrom">
+  <form id="cloneRoomForm">
+    <div class="form-title"><div><strong id="cloneRoomTitle">Clone room setup</strong><span id="cloneRoomFrom"></span></div><button type="button" id="cloneRoomCancel" class="modal-close" aria-label="Close clone room setup">×</button></div>
+    <div class="clone-room-body">
+      <div class="fld"><label for="cloneRoomInput">Room name</label><input id="cloneRoomInput" maxlength="40" spellcheck="false" autocomplete="off"></div>
+      <div class="fld"><label for="cloneRoomGoal">Goal</label><textarea id="cloneRoomGoal" rows="4" aria-describedby="cloneRoomGoalNotice"></textarea><div id="cloneRoomGoalNotice"></div></div>
+      <div class="fld"><label for="cloneRoomProjectPath">Project folder</label><div class="project-folder-field"><input id="cloneRoomProjectPath" spellcheck="false" placeholder="/path/to/your/project"><button type="button" id="cloneRoomProj" class="btn"><span data-picker-label>Browse…</span></button></div></div>
+      <p class="clone-summary">Copies the agents with their permissions, the Goal, Rules and room settings — not the chat, agent sessions, Decisions, pending work, approvals, handoffs or Desktop links.</p>
+      <p id="cloneRoomError" class="clone-error" role="alert"></p>
+    </div>
+    <div class="form-actions"><button type="button" id="cloneRoomCancelBottom" class="btn">Cancel</button><button type="submit" id="cloneRoomCreate" class="btn primary">Create room</button></div>
+  </form>
+</dialog>
+
 <div id="wakeMenu" role="menu"></div>
 <div id="askMenu" role="menu"></div>
 
