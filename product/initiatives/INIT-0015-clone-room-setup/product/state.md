@@ -3,16 +3,16 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 8
+revision: 9
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
 initiative: INIT-0015
-phase: ENGINEERING_READY
+phase: HANDOFF
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: assemble the handoff packet, compile delivery/manifest.md, create the Ariadne ticket for REQ-0004 (ENGINEERING_READY → HANDOFF)"
+next_action: "ROLE-product-manager: create the Ariadne ticket for REQ-0004 (create-tickets-from-stories) and hand its ticket_code to ROLE-orchestrator"
 blocked_by: []
 converged: true
 readiness_verdict: READY
@@ -45,9 +45,9 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-manager: assemble the handoff packet, compile
-`delivery/manifest.md`, and create the Ariadne ticket for REQ-0004
-(ENGINEERING_READY → HANDOFF).
+ROLE-product-manager: create the Ariadne ticket for REQ-0004
+(`create-tickets-from-stories`) and hand its ticket_code to
+ROLE-orchestrator.
 
 ## Blocked by
 
@@ -194,12 +194,59 @@ Written by `ROLE-product-readiness-reviewer` only.
 
 ## Handoff packet
 
-_Assembled at ENGINEERING_READY._
+Assembled at ENGINEERING_READY on 2026-11-06 against readiness cycle 1 round 1
+`READY` (story set REQ-0004@3, `updated` 2026-11-06; INIT-0015@3). Drafted
+inline by the PM (size rule §9d.2).
+
+- **Outcome:** from any room's menu, in one short dialog, the user creates a
+  new room with that room's agents (with their permissions), Room Brief Goal
+  and Rules, room settings and project folder, an empty chat and fresh agent
+  sessions, independent of the original from then on
+  ([initiative](../initiative.md) `## Outcome`, O1).
+- **Stories, in suggested sequence:** REQ-0004 (one story; `depends_on:
+  none`; starts from `main` at or after `704039f`, REQ-0004 `## Sequencing`).
+- **Design references and export paths:** `DES-0002` (one static reference
+  frame, PD-0009 item 3) →
+  `initiatives/INIT-0015-clone-room-setup/design/heroes/clone-room-setup.dc.html`,
+  `clone-room-setup.png` (room list Room actions menu with `Clone room
+  setup…`; the `Clone room setup` dialog — REQ-0004), notes in `approach.md`
+  (its two Proposals were dropped). Where the frame and the story differ, the
+  story wins (PD-0009 item 3).
+- **Decisions in force:** PD-0003, PD-0004, PD-0006, PD-0007, PD-0009 (chosen
+  option A, server-side clone), PD-0010 (behaviour; supersedes PD-0008).
+- **Binding technical constraints** ([technical/assessment.md](../technical/assessment.md), round 1):
+  - C-01 — every copied value, sleep included, is in place when the room is created; no conversation note.
+  - C-02 — run state is never copied between rooms; sleep is the one exception (PD-0010 item 2).
+  - C-03 — the clone's brief is made through the new-room path, not by writing room files before the first load.
+  - C-04 — the copy is a fixed list of setup values, never a copy of files or folders (risk R-01).
+  - C-05 — reading the original, for the dialog or at Create, neither activates it nor writes to it.
+  - C-06 — Create room's checks and messages apply: name rules, duplicate name, folder exists, at most four agents.
+  - C-07 — an already open older tab keeps working, or the runtime protocol is bumped on both sides.
+  - C-08 — the Goal field keeps a pre-filled Goal over 2,000 unchanged and does not block Create on it.
+  - C-12 — verification on an explicit free port with `--root` on a copy of the room store; never 4142 or 4141, never `~/.parley-fork`; no desktop app or `parley-link` ([constraints](../../../project/constraints.md) #1).
+  - C-13 — the message check uses the repo's fake provider and an awake agent (REQ-0004 Notes).
+  - R-03 — the original's "before" copy is taken after its first load.
+  - C-09 to C-11 apply to option B only and are not binding.
+- **Explicitly out of scope:** templates; syncing between rooms; copying
+  Decisions or an option to (Q-0001); copying the conversation, activity,
+  agent sessions, pending work, approvals, handoffs, Desktop links or
+  `workspace/` files; separate project memory; a clone action in Room
+  settings or for archived rooms; other widths and dark mode as designed or
+  reviewed surfaces; new unit or smoke test suites
+  ([initiative](../initiative.md) `## Scope`, "Out of scope").
+- **Open questions (non-blocking):** [Q-0001](../../../questions/Q-0001-copy-decisions-option.md)
+  — option to copy Decisions; `important`, default no; nothing waits on it.
+- **Verification (requester's):** one check on an isolated port with a copy
+  of the room store, covering the four done criteria; no new unit or smoke
+  suites (REQ-0004 Notes).
+- **Delivery manifest:** `initiatives/INIT-0015-clone-room-setup/delivery/manifest.md`.
+- **Tickets:** written at HANDOFF, `delivery/tickets.md`.
 
 ## Handoff log
 
 | Date | Receiving role | Packet digest | Note |
 | --- | --- | --- | --- |
+| 2026-11-06 | ROLE-orchestrator | REQ-0004@3@2026-11-06; INIT-0015@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`; ticket code follows from `create-tickets-from-stories` |
 
 ## Session notes
 
@@ -271,6 +318,7 @@ _Assembled at ENGINEERING_READY._
 | 2026-11-06 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0009 (A, feasible-with-constraints), indexed; REQ-0004 revision 2 consistent with PD-0009 and PD-0010; B rejected, none left under consideration; Solution Contract cites PD-0009 and its design concept (PD-0009 item 3) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (R1 accepted + index row in one commit; R2 PD-0010 supersedes PD-0008, both ways, PD-0008 stays in decisions/; R3 rejected options non-empty; D11 counter 10); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | 5581573a0fbaafdd |
 | 2026-11-06 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1 maps to accepted REQ-0004; REQ-0004 meets §10.3 (accepted, one testable outcome, pass/fail AC, CAP-0002, DES-0002 with exports on disk, depends_on none, no blocker Q-, no PD- or constraint contradicted, indexed); coherence round 1 of 2 (terminal, §9d.3) `coherent`, no open blocking defect; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-design-coverage pass (DES-0002 accepted, exports on disk, names REQ-0004); HOOK-dependency-graph pass (one node, acyclic); HOOK-phase-entry pass (`converged: true`; traceability full mode 0 defects; terminal coherence not regression-required; accepted DES-0002 for the user-facing story). Publication push skipped: the run instructions forbid pushing outside the release step | 94e15b3ace8ae733 |
 | 2026-11-06 | READINESS | ENGINEERING_READY | ROLE-product-manager | Exit criteria met: readiness cycle 1 round 1 `READY`, 0 findings, no conditions; terminal under §9d.4 (no blocking finding) | Exited READINESS, entered ENGINEERING_READY. Hooks: HOOK-readiness pass (verdict READY, not void; story-set digest (REQ-0004, 3, 2026-11-06), INIT-0015@3 matches disk); HOOK-phase-entry pass | 1dba333bc580f2a0 |
+| 2026-11-06 | ENGINEERING_READY | HANDOFF | ROLE-product-manager | Exit criteria met: handoff packet complete (H0-H12 bullets populated, `none` where empty); `delivery/manifest.md` at `band_owner: product`, M1-M8 hold (one node, wave 0, `local_export` on disk); initiative `active`; REQ-0004 `readiness: engineering-ready` | Exited ENGINEERING_READY, entered HANDOFF. Hooks: HOOK-handoff-conformance pass (packet plus manifest present; coverage full mode 0 defects; no `blocker` `Q-`). Publication push skipped: the run instructions forbid pushing | 2cf1b1147293a0b3 |
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

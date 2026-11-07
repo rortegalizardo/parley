@@ -2,7 +2,7 @@
 id: INIT-0015
 type: initiative
 title: Clone a room's setup into a new room with an empty chat
-status: draft
+status: active
 revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
