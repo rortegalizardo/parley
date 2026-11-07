@@ -1807,12 +1807,26 @@ function readCloneSetup(name) {
     throw Object.assign(new Error(`no such room: ${name}`), { status: 404 });
   }
   const cfg = readJSON(path.join(dir, "room.json"));
-  const context = fs.existsSync(path.join(dir, "context.json")) ? readJSON(path.join(dir, "context.json")) : {};
-  const state = fs.existsSync(path.join(dir, "state.json")) ? readJSON(path.join(dir, "state.json")) : {};
-  const brief = context.roomBrief;
-  if (!brief || typeof brief.goal !== "string" || typeof brief.rules !== "string") {
-    throw badBrief("Saved room brief is invalid; repair it before cloning.");
+  const briefError = () => badBrief("This room's saved brief can't be read. Open the room, check Room settings → Brief, then try cloning again.");
+  let brief;
+  if (rooms.has(name)) {
+    brief = rooms.get(name).contextLedger?.roomBrief;
+  } else {
+    let context;
+    try {
+      context = readJSON(path.join(dir, "context.json"));
+      if (!context || typeof context !== "object" || Array.isArray(context) || !Array.isArray(context.events)) throw briefError();
+    }
+    catch (error) {
+      if (error.code !== "ENOENT") throw briefError();
+      context = {};
+    }
+    if (Object.hasOwn(context, "roomBrief")) brief = context.roomBrief;
+    else if (Object.hasOwn(context, "briefMigration")) throw briefError();
+    else brief = legacyBriefText(context, cfg);
   }
+  if (!brief || typeof brief.goal !== "string" || typeof brief.rules !== "string") throw briefError();
+  const state = fs.existsSync(path.join(dir, "state.json")) ? readJSON(path.join(dir, "state.json")) : {};
   const setup = {};
   for (const key of ["mode", "hopBudget", "defaultAgent", "accounting", "pairRounds", "timeoutMs"]) {
     if (Object.hasOwn(cfg, key)) setup[key] = cfg[key];
@@ -2149,6 +2163,12 @@ const badBrief = (message) => Object.assign(new Error(message), { status: 400 })
 function emptyBrief() {
   return { schemaVersion: 1, revision: 0, goal: "", rules: "", decisions: [], updatedAt: null };
 }
+function legacyBriefText(context, cfg) {
+  return {
+    goal: typeof context.direction?.goal === "string" ? context.direction.goal : "",
+    rules: typeof cfg.roomNote === "string" ? cfg.roomNote : "",
+  };
+}
 function contextFile(room) { return path.join(room.dir, "context.json"); }
 function contextLedger(room, { newRoom = false, initialBrief = null, legacySessions = [] } = {}) {
   if (!room.contextLedger) {
@@ -2166,8 +2186,7 @@ function contextLedger(room, { newRoom = false, initialBrief = null, legacySessi
       const raw = data.direction;
       data.roomBrief = newRoom ? (initialBrief || emptyBrief()) : {
         ...emptyBrief(),
-        goal: typeof raw?.goal === "string" ? raw.goal : "",
-        rules: typeof room.cfg.roomNote === "string" ? room.cfg.roomNote : "",
+        ...legacyBriefText(data, room.cfg),
         decisions: (Array.isArray(raw?.pins) ? raw.pins : []).map((pin) => {
           let id = typeof pin.id === "string" && pin.id && !ids.has(pin.id) ? pin.id : crypto.randomUUID();
           ids.add(id);
