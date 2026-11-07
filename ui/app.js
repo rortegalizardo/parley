@@ -3597,6 +3597,7 @@ async function refreshRooms() {
       // with the actions, which open as a labelled strip under the row.
       `<button type="button" class="rmore" title="Room actions" aria-label="Actions for ${esc(name)}" aria-expanded="false">${controlIcon("more")}</button>` +
       `<span class="racts"><button type="button" class="ract" data-act="archive" title="Archive room" aria-label="Archive ${esc(name)}">${controlIcon("archive")}Archive</button><button type="button" class="ract" data-act="rename" title="Rename room" aria-label="Rename ${esc(name)}">${controlIcon("rename")}Rename</button>` +
+      `<button type="button" class="ract" data-act="clone" title="Clone room setup" aria-label="Clone room setup of ${esc(name)}">${controlIcon("copy")}Clone room setup…</button>` +
       // the default room is the app's fallback; it can be emptied, not removed
       (name === "default" ? "" : `<button type="button" class="ract del" data-act="delete" title="Delete room" aria-label="Delete ${esc(name)}">${controlIcon("trash")}Delete</button>`) +
       `</span>`;
@@ -3614,7 +3615,7 @@ async function refreshRooms() {
       if (act) closeRoomMenus();
       if (!act) { setNavOpen(false); return loadRoom(name); }
       e.stopPropagation();
-      if (act.dataset.act === "rename") renameFlow(name); else if (act.dataset.act === "archive") archiveRoom(name); else deleteFlow(name);
+      if (act.dataset.act === "rename") renameFlow(name); else if (act.dataset.act === "archive") archiveRoom(name); else if (act.dataset.act === "clone") openCloneRoom(name); else deleteFlow(name);
     };
     list.appendChild(row);
   }
@@ -4327,6 +4328,77 @@ function applyRoomTemplate(kind) {
   $("fourAgentTemplate").setAttribute("aria-pressed", String(kind === "team"));
   renderRoster();
 }
+let cloneRoomGeneration = 0, cloneRoomPick = 0, cloneRoomSource = null, cloneRoomSaving = false;
+let cloneRoomTouched = new Set();
+function updateCloneRoomCreate() {
+  $("cloneRoomCreate").disabled = cloneRoomSaving || !cloneRoomSource || !$("cloneRoomInput").value.trim();
+}
+function closeCloneRoom() {
+  cloneRoomGeneration++; cloneRoomPick++;
+  cloneRoomSource = null; cloneRoomSaving = false;
+  $("cloneRoomDialog").close();
+  $("cloneRoomForm").reset();
+  $("cloneRoomError").textContent = "";
+  $("cloneRoomGoalNotice").innerHTML = "";
+  updateCloneRoomCreate();
+}
+async function openCloneRoom(name) {
+  const generation = ++cloneRoomGeneration;
+  cloneRoomPick++; cloneRoomSource = null; cloneRoomSaving = false;
+  cloneRoomTouched = new Set();
+  $("cloneRoomForm").reset();
+  $("cloneRoomFrom").textContent = `From ${name}`;
+  $("cloneRoomError").textContent = "";
+  $("cloneRoomGoalNotice").innerHTML = "";
+  updateCloneRoomCreate(); setNavOpen(false);
+  openModalDialog($("cloneRoomDialog"));
+  try {
+    const setup = await api(`/api/room/clone-setup?name=${encodeURIComponent(name)}`);
+    if (generation !== cloneRoomGeneration) return;
+    cloneRoomSource = setup.name;
+    // Preserve anything entered while the saved setup was being fetched.
+    if (!cloneRoomTouched.has("cloneRoomInput")) $("cloneRoomInput").value = setup.suggestedName;
+    if (!cloneRoomTouched.has("cloneRoomGoal")) $("cloneRoomGoal").value = setup.goal;
+    if (!cloneRoomTouched.has("cloneRoomProjectPath")) $("cloneRoomProjectPath").value = setup.projectDir;
+    $("cloneRoomGoal").maxLength = Math.max(2000, setup.goal.length);
+    $("cloneRoomGoalNotice").innerHTML = briefOverLimit({ saved: { goal: setup.goal } }, "goal");
+    updateCloneRoomCreate(); $("cloneRoomInput").focus();
+  } catch (error) {
+    if (generation === cloneRoomGeneration) $("cloneRoomError").textContent = error.message;
+  }
+}
+for (const id of ["cloneRoomInput", "cloneRoomGoal", "cloneRoomProjectPath"]) $(id).oninput = () => {
+  cloneRoomTouched.add(id); updateCloneRoomCreate();
+};
+$("cloneRoomCancel").onclick = closeCloneRoom;
+$("cloneRoomCancelBottom").onclick = closeCloneRoom;
+$("cloneRoomDialog").addEventListener("cancel", (e) => { e.preventDefault(); closeCloneRoom(); });
+$("cloneRoomProj").onclick = async () => {
+  const pick = ++cloneRoomPick, generation = cloneRoomGeneration;
+  const before = $("cloneRoomProjectPath").value;
+  const result = await browseFolder(before.trim() || null, $("cloneRoomProj"));
+  if (generation === cloneRoomGeneration && pick === cloneRoomPick && result && $("cloneRoomProjectPath").value === before) {
+    cloneRoomTouched.add("cloneRoomProjectPath"); $("cloneRoomProjectPath").value = result;
+  }
+};
+$("cloneRoomForm").onsubmit = async (e) => {
+  e.preventDefault();
+  if (cloneRoomSaving || !cloneRoomSource || !$("cloneRoomInput").value.trim()) return;
+  const generation = cloneRoomGeneration;
+  cloneRoomPick++; cloneRoomSaving = true; updateCloneRoomCreate();
+  $("cloneRoomError").textContent = "";
+  try {
+    const result = await api("/api/room/clone", { room: cloneRoomSource, name: $("cloneRoomInput").value,
+      goal: $("cloneRoomGoal").value, projectDir: $("cloneRoomProjectPath").value.trim() });
+    if (generation !== cloneRoomGeneration) return;
+    closeCloneRoom(); await loadRoom(result.name);
+  } catch (error) {
+    if (generation === cloneRoomGeneration) $("cloneRoomError").textContent = error.message;
+  } finally {
+    if (generation === cloneRoomGeneration) { cloneRoomSaving = false; updateCloneRoomCreate(); }
+  }
+};
+
 function updateNewRoomCreate() {
   $("newRoomCreate").disabled = !$("newRoomGoal").value.trim();
 }
