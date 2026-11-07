@@ -3,7 +3,7 @@ id: PSTATE-INIT-0015
 type: product-state
 title: Product definition state for INIT-0015
 status: authoritative
-revision: 9
+revision: 10
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -12,7 +12,7 @@ initiative: INIT-0015
 phase: HANDOFF
 phase_entered: 2026-11-06
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: create the Ariadne ticket for REQ-0004 (create-tickets-from-stories) and hand its ticket_code to ROLE-orchestrator"
+next_action: "ROLE-orchestrator: deliver PRL-4 (plan, implement, review, merge to local main; nothing pushed); product side done"
 blocked_by: []
 converged: true
 readiness_verdict: READY
@@ -45,9 +45,8 @@ through one short dialog, with nothing synced afterwards
 
 ## Next action
 
-ROLE-product-manager: create the Ariadne ticket for REQ-0004
-(`create-tickets-from-stories`) and hand its ticket_code to
-ROLE-orchestrator.
+ROLE-orchestrator: deliver PRL-4 (plan, implement, review, merge to local
+`main`; nothing pushed). The product side is done; it waits for nothing.
 
 ## Blocked by
 
@@ -158,6 +157,7 @@ the option that keeps the accepted outcome intact is the PM's under §4.1.
 | 2026-11-06 | ROLE-planner (technical architect, `story-set-technical-coherence`) — vendor claude, model opus | Coherence of the draft set (REQ-0004 rev 2) for option A; round 1 of 2, full pass, terminal unless blocking (§9d.3) | `coherent`; 0 blocking, 3 non-blocking (1: verification setup for test rooms; 2: message check needs the fake provider; 3: broken PD-0010 link) | [technical/coherence.md](../technical/coherence.md); all three fixed inline in REQ-0004 rev 3 (Notes, Scope link); terminal round, no round 2 |
 | 2026-11-06 | ROLE-product-designer, DES recorder (`des-recorder`) — vendor claude, model sonnet | Step 11, adapted by PD-0009 item 3: record the reference frame | DONE — [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md), accepted, `local_export` the three hero files; index row; counter `design: 2` | `DES-0002` on REQ-0004 |
 | 2026-11-06 | ROLE-product-readiness-reviewer — vendor claude, model sonnet | Readiness of REQ-0004 (rev 3) on R13–R18 plus R8/R9 flag-only clauses, cycle 1 round 1 | READY, 0 findings | Readiness log row (round 1, cycle 1); no Q- needed |
+| 2026-11-06 | ticket-transcriber (`create-tickets-from-stories` §2) — vendor claude, model sonnet | Transcribe REQ-0004 onto the ticket template for project PRL | DONE — one body, 11 criteria, identifier lint 0 | PRL-4 (after PM verification of X5, X12, X13 and one inline repair); `delivery/tickets.md` |
 
 ## Escalation log
 
@@ -240,13 +240,13 @@ inline by the PM (size rule §9d.2).
   of the room store, covering the four done criteria; no new unit or smoke
   suites (REQ-0004 Notes).
 - **Delivery manifest:** `initiatives/INIT-0015-clone-room-setup/delivery/manifest.md`.
-- **Tickets:** written at HANDOFF, `delivery/tickets.md`.
+- **Tickets:** PRL-4 (REQ-0004), per `delivery/tickets.md`; Ariadne project PRL, initiative INIT-0015. Design capture at `~/Factory/Artifacts/projects/PRL/tickets/PRL-4/design/`.
 
 ## Handoff log
 
 | Date | Receiving role | Packet digest | Note |
 | --- | --- | --- | --- |
-| 2026-11-06 | ROLE-orchestrator | REQ-0004@3@2026-11-06; INIT-0015@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`; ticket code follows from `create-tickets-from-stories` |
+| 2026-11-06 | ROLE-orchestrator | REQ-0004@3@2026-11-06; INIT-0015@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`. Ticket created: PRL-4 (1 created, 0 updated; initiative INIT-0015 set; X12 lint 0 matches; criteria 11/11 one for one). Translations (X14): AC2 — Behavior 2 → the exact line quoted; AC6 — Behavior 4 → the agent setup values listed; AC11 — PD-0004 display matrix → 1440 wide, light only. Scope inlines Behavior 1–8 for "every detail of PD-0010"; Dependencies carry the binding constraints, the base commit, and the verification notes of REQ-0004 Notes (PM inline repair) |
 
 ## Session notes
 
@@ -305,6 +305,13 @@ inline by the PM (size rule §9d.2).
 - 2026-11-06 — Step 12 usage (`node ~/Factory/Core/ledger/summary.mjs INIT-0015`):
   planner opus 2 runs, 76k out; author fable 1 run, 39k out; des-recorder
   sonnet 1 run, 2k out. No fix score: no design PR (PD-0009 item 3).
+- 2026-11-06 — ENGINEERING_READY → HANDOFF: packet and manifest committed
+  (`7b6c9ad`). HANDOFF: Ariadne initiative INIT-0015 created in PRL; ticket
+  PRL-4 created; reference frame copied to the PRL-4 design capture. A
+  coordinator HOLD (initiative renumbering) arrived after the Ariadne
+  initiative was created and was cancelled before any further write; INIT-0015
+  kept as instructed. Nothing pushed: the run instructions forbid it.
+- 2026-11-06 — Dispatch log: `HANDOFF (transcription) | ticket-transcriber | claude | sonnet | M | ae5d8c75ec6bc881a | scratchpad INIT-0015-tickets.json (ticket body)`.
 
 ## Phase log
 

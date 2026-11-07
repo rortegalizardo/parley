@@ -9,7 +9,7 @@ created: 2026-11-06
 updated: 2026-11-06
 capabilities: [CAP-0002]
 requirements: [REQ-0004]
-tickets: []
+tickets: [PRL-4]
 decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 ---
 
