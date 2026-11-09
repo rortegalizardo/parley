@@ -7,6 +7,7 @@ external design tool.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | DES-0001 | Room Brief hero frames (Brief tab; Create room fields and Pin dialog) | accepted | DES-0001-room-brief-hero-frames.md | 2026-11-06 | INIT-0001 | none | initiatives/INIT-0001-room-brief/design/heroes/ |
 | DES-0002 | Clone room setup reference frame (room menu item and dialog) | accepted | DES-0002-clone-room-setup-reference-frame.md | 2026-11-06 | INIT-0002 | none | initiatives/INIT-0002-clone-room-setup/design/heroes/ |
+| DES-0003 | Live Markdown editor reference frames (Room settings Brief and Agents, chat bar) | accepted | DES-0003-markdown-editor-reference-frames.md | 2026-11-08 | INIT-0003 | none | initiatives/INIT-0003-live-markdown-editor/design/heroes/ |
 
 ## Reference docs
 
