@@ -6,7 +6,7 @@ Source: `/Users/ortega/Library/Application Support/Claude/side-session-notes/loc
 
 # Clone room setup — product brief for the PM
 
-Project: Parley, `/Users/ortega/Desktop/Projects/parley` (product/ tree exists; INIT-0014 Room Brief delivered as PRL-1..PRL-3, merged on local main at 704039f, verified).
+Project: Parley, `/Users/ortega/Desktop/Projects/parley` (product/ tree exists; INIT-0001 Room Brief delivered as PRL-1..PRL-3, merged on local main at 704039f, verified).
 Requester: Ricardo. Decision ALREADY MADE in room "Parlay Product Evolution". Do not re-ask. No approval stops: plan, edit, commit, merge without asking. Only a genuinely new blocking product question may be escalated, as one plain-English question.
 
 ## Decision to build

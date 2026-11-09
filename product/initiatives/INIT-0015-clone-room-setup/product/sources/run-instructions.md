@@ -2,7 +2,7 @@
 
 Source: the launching session's prompt for this product run (requester Ricardo, relayed by his side session). Copied verbatim; not edited.
 
-> Raw product request for project Parley at /Users/ortega/Desktop/Projects/parley (product memory exists under product/; previous initiative INIT-0014 Room Brief, tickets PRL-1..PRL-3, is merged on local main at 704039f and verified).
+> Raw product request for project Parley at /Users/ortega/Desktop/Projects/parley (product memory exists under product/; previous initiative INIT-0001 Room Brief, tickets PRL-1..PRL-3, is merged on local main at 704039f and verified).
 >
 > Read the full brief first: "/Users/ortega/Library/Application Support/Claude/side-session-notes/local_6612077f-8cd8-4ce0-ab4f-0870d2383ad1/clone-room-pm-brief.md". Also read the repo's CHECKPOINT.md.
 >

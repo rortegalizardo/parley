@@ -7,7 +7,7 @@ revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
-initiative: INIT-0014
+initiative: INIT-0001
 outcome_element: "Every agent receives the room's whole Room Brief — Goal, Rules and active Decisions, migrated from each room's existing direction, pins and room note with nothing lost — in full on every turn."
 acceptance:
   - "A room opened for the first time on the new build that had a direction goal, pins and a room note → its Room Brief holds that goal as Goal, those pins in the same order as active Decisions and that note as Rules, each character for character, and the old note and direction are still on disk"

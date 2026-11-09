@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0014, REQ-0002, REQ-0003]
+affects: [INIT-0001, REQ-0002, REQ-0003]
 supersedes:
 superseded_by:
 ---
@@ -20,10 +20,10 @@ superseded_by:
 Two options deliver the same Room Brief of
 [PD-0002](PD-0002-room-brief-requester-decisions.md) and
 [PD-0003](PD-0003-room-brief-behaviour-clarifications.md); they differ only
-in where it is edited (`product/state.md` of INIT-0014, "Options"). The
+in where it is edited (`product/state.md` of INIT-0001, "Options"). The
 technical architect found both **feasible-with-constraints**, band
 **multi-component**
-([assessment](../initiatives/INIT-0014-room-brief/technical/assessment.md),
+([assessment](../initiatives/INIT-0001-room-brief/technical/assessment.md),
 "Verdicts"). The choice changes no user-visible outcome of PD-0002, so it is
 the PM's (`product-manager-orchestrator` §4.1).
 
@@ -33,7 +33,7 @@ the PM's (`product-manager-orchestrator` §4.1).
 tab replaces the Direction tab and holds Goal, Rules and Decisions with their
 own `Save brief`, `Discard changes` and `Tidy`. The Room tab loses its
 "Shared room instructions" field; nothing else on it changes. The hero frames
-on `design/INIT-0014-room-brief` (`ee1629f`), recorded as `DES-0001`, draw
+on `design/INIT-0001-room-brief` (`ee1629f`), recorded as `DES-0001`, draw
 this option ([PD-0004](PD-0004-room-brief-design-depth-and-display-matrix.md)).
 Its feasibility verdict is feasible-with-constraints; its constraints C-01 to
 C-12, C-14 and C-15 bind the stories.

@@ -29,7 +29,7 @@ One static reference frame at 1440 wide, light theme, authored at `cba8cfe` on
 - `clone-room-setup`, right: the `Clone room setup` dialog with `From {room}`, a 40-character pre-filled name, a 2,000-character Goal, a 200-character project folder with `Browse…`, the one line of PD-0010 item 10, and `Cancel` / `Create room` -> REQ-0004 (dialog contents and composition criterion).
 
 Parley is plain HTML/JS with no React or Storybook, so PD-0009 item 3 (the
-adaptation PD-0004 item 1 made for INIT-0014) replaces the code-design path
+adaptation PD-0004 item 1 made for INIT-0001) replaces the code-design path
 (production steps 2a-10) with this one frame, as DES-0001 does. There is no
 fixture path, no stories and no screen render script.
 

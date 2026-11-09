@@ -1,14 +1,14 @@
 ---
-id: PSTATE-INIT-0014
+id: PSTATE-INIT-0001
 type: product-state
-title: Product definition state for INIT-0014
+title: Product definition state for INIT-0001
 status: authoritative
 revision: 10
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
-initiative: INIT-0014
+initiative: INIT-0001
 phase: HANDOFF
 phase_entered: 2026-11-06
 requester: Ricardo (via the room "Parlay Product Evolution", step 3 of its agreed decision)
@@ -21,7 +21,7 @@ design_refs: [DES-0001]
 decisions: [PD-0001, PD-0002, PD-0003, PD-0004, PD-0005, PD-0006]
 ---
 
-# Product definition state — INIT-0014
+# Product definition state — INIT-0001
 
 `phase` above is the authority for where this work stands on the product side.
 Delivery stage lives in `delivery/state.md` and is owned by `ROLE-orchestrator`;
@@ -144,8 +144,8 @@ user-visible outcome of PD-0002).
 
 | Date | Delegate role | Question | Answer / verdict | Recorded as |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | INIT-0014 options A and B for REQ-0001..0003: feasibility, constraints, risks, band, platform conflicts (`product-feasibility-assessment`, size rule: one dispatch) | A and B both feasible-with-constraints, multi-component; recommends B; 15 constraints, 7 risks, 13 conflicts, RQ-1..RQ-6; brief-delivery already landed as `b6591be` — [technical/assessment.md](../technical/assessment.md), [impact.md](../technical/impact.md), [capability-scan.md](../technical/capability-scan.md) | Options table; CAP-0001 revision 2; PD-0005 (option B); PD-0006 (RQ-1..RQ-6); constraints C-01..C-15 into REQ-0001..0003 |
-| 2026-11-06 | ROLE-product-designer, design author (vendor claude, model fable) | Step 1b hero frames for option B (REQ-0002, REQ-0003), approach set by PD-0004 | DONE — `ee1629f` on `design/INIT-0014-room-brief`: `design/heroes/room-brief-brief-panel` and `room-brief-dialogs` (.dc.html, .png), `approach.md` with two proposals | Options table; both proposals accepted into REQ-0002 and REQ-0003 (G8); `DES-0001` at DECOMPOSITION |
+| 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | INIT-0001 options A and B for REQ-0001..0003: feasibility, constraints, risks, band, platform conflicts (`product-feasibility-assessment`, size rule: one dispatch) | A and B both feasible-with-constraints, multi-component; recommends B; 15 constraints, 7 risks, 13 conflicts, RQ-1..RQ-6; brief-delivery already landed as `b6591be` — [technical/assessment.md](../technical/assessment.md), [impact.md](../technical/impact.md), [capability-scan.md](../technical/capability-scan.md) | Options table; CAP-0001 revision 2; PD-0005 (option B); PD-0006 (RQ-1..RQ-6); constraints C-01..C-15 into REQ-0001..0003 |
+| 2026-11-06 | ROLE-product-designer, design author (vendor claude, model fable) | Step 1b hero frames for option B (REQ-0002, REQ-0003), approach set by PD-0004 | DONE — `ee1629f` on `design/INIT-0001-room-brief`: `design/heroes/room-brief-brief-panel` and `room-brief-dialogs` (.dc.html, .png), `approach.md` with two proposals | Options table; both proposals accepted into REQ-0002 and REQ-0003 (G8); `DES-0001` at DECOMPOSITION |
 | 2026-11-06 | ROLE-product-designer, DES recorder (vendor claude, model des-recorder declaration) | Step 11, adapted by PD-0004: record the hero frames as `DES-0001` | DONE — [DES-0001](../../../design/DES-0001-room-brief-hero-frames.md), accepted, `local_export` the four hero files plus `approach.md`; index row; counter `design: 1` | `DES-0001` on REQ-0002, REQ-0003; two bracketed titles removed inline (§9b.3) |
 | 2026-11-06 | ROLE-planner as technical architect (vendor claude, model opus) | Coherence check of draft REQ-0001..0003 (`story-set-technical-coherence`, full pass, round 1 of 2, terminal unless it reports a blocking defect) | `defects-open`: 2 blocking (1 release gap after REQ-0001 alone; 2 REQ-0003 hidden dependency on REQ-0002), 3 non-blocking (scope wording REQ-0002, REQ-0001; pin-save wording REQ-0003); set still matches option B, not regression-required — [technical/coherence.md](../technical/coherence.md) | Repair pass: all five fixed in place (see Session notes); delta re-check round 2 required (§9d.3) |
 | 2026-11-06 | ROLE-planner as technical architect (vendor claude, model sonnet) | Coherence delta re-check, round 2 of 2 (terminal), on REQ-0001..0003 revision 2 (repair `8315eb3`) | `coherent`: defects 1-5 fixed; new defect 6 non-blocking — REQ-0002 and REQ-0003 Rollout cite C-15 but did not list it — [technical/coherence.md](../technical/coherence.md) | Defect 6 fixed inline (C-15 added to both, §9a.2 disposition: fixed); REQ-0001..0003 accepted |
@@ -178,7 +178,7 @@ appended — a prior row is never edited, withdrawn, or overwritten.
 
 | Date | Round | Verdict | Conditions | Reviewer | Story-set digest | Findings | Finding ids |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-11-06 | 1 (cycle 1; size rule §9d, one round) | READY | none | ROLE-product-readiness-reviewer (claude, sonnet) | REQ-0001@2, REQ-0002@2, REQ-0003@2 (all `updated` 2026-11-06); INIT-0014@3; `context_digest` 2d800d8e864d5ce6 at phase entry (a tool run now prints 9729c0e8624a32c5; the only difference is this file's `revision` 6 to 7, checked by recomputing with revision 6) | 0 | none |
+| 2026-11-06 | 1 (cycle 1; size rule §9d, one round) | READY | none | ROLE-product-readiness-reviewer (claude, sonnet) | REQ-0001@2, REQ-0002@2, REQ-0003@2 (all `updated` 2026-11-06); INIT-0001@3; `context_digest` 2d800d8e864d5ce6 at phase entry (a tool run now prints 9729c0e8624a32c5; the only difference is this file's `revision` 6 to 7, checked by recomputing with revision 6) | 0 | none |
 
 Round 1 criteria record (judged band; `R1`-`R12` not re-run, validator report: 0 defects, re-run at review start, still 0).
 `R13` pass. `R14` pass. `R15` pass: the Brief panel preview frame draws the block without Parley's line marks while REQ-0002 Behavior 2 and PD-0006 item 1 require them; DES-0001 "Deviations permitted" and PD-0004 item 2 settle it for the requirement, so no finding. `R16` pass. `R17` pass. `R18` pass. Flag-only `R8` pass (no contradiction with PD-0002..PD-0006 or constraints #1-#3; no open `Q-`). Flag-only `R9` pass (terminal round-2 `coherent` verdict still describes the set: the only later edit is the C-15 line added to REQ-0002 and REQ-0003, so there is no substantive mismatch). `B10`: not applicable (`DES-0001` is hero frames recorded under PD-0004, not `kind: code`).
@@ -194,7 +194,7 @@ Written by `ROLE-product-readiness-reviewer` only.
 
 Assembled at ENGINEERING_READY on 2026-11-06 against readiness round 1 `READY`
 (story set REQ-0001@2, REQ-0002@2, REQ-0003@2, all `updated` 2026-11-06;
-INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
+INIT-0001@3). Drafted inline by the PM (size rule §9d.2).
 
 - **Outcome:** a room has one Room Brief — Goal, Rules and Decisions — written
   once by the user, and every agent in the room holds all of it on every turn,
@@ -204,7 +204,7 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
   the requester) and one desktop repackage, only after all three are on
   `main` (REQ-0001 `## Sequencing` and `## Rollout`).
 - **Design references and export paths:** `DES-0001` (hero frames, PD-0004) →
-  `initiatives/INIT-0014-room-brief/design/heroes/room-brief-brief-panel.dc.html`,
+  `initiatives/INIT-0001-room-brief/design/heroes/room-brief-brief-panel.dc.html`,
   `room-brief-brief-panel.png` (Room settings, Brief tab — REQ-0002),
   `room-brief-dialogs.dc.html`, `room-brief-dialogs.png` (Create room brief
   fields — REQ-0002; Pin to room brief dialog — REQ-0003), notes in
@@ -237,15 +237,15 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
   scope").
 - **Open questions (non-blocking):** none. The reviewer's minor observations
   (not conditions) are in the Readiness log, round 1.
-- **Delivery manifest:** `initiatives/INIT-0014-room-brief/delivery/manifest.md`.
-- **Tickets:** PRL-1 (REQ-0001), PRL-2 (REQ-0002, blocked by PRL-1), PRL-3 (REQ-0003, blocked by PRL-1 and PRL-2), per `delivery/tickets.md`; Ariadne project PRL, initiative INIT-0014. Design capture for PRL-2 and PRL-3 at `~/Factory/Artifacts/projects/PRL/tickets/<code>/design/`.
+- **Delivery manifest:** `initiatives/INIT-0001-room-brief/delivery/manifest.md`.
+- **Tickets:** PRL-1 (REQ-0001), PRL-2 (REQ-0002, blocked by PRL-1), PRL-3 (REQ-0003, blocked by PRL-1 and PRL-2), per `delivery/tickets.md`; Ariadne project PRL, initiative INIT-0001. Design capture for PRL-2 and PRL-3 at `~/Factory/Artifacts/projects/PRL/tickets/<code>/design/`.
 
 ## Handoff log
 
 | Date | Receiving role | Packet digest | Note |
 | --- | --- | --- | --- |
-| 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0014@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`; ticket codes follow from `create-tickets-from-stories` |
-| 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0014@3 | Tickets created: PRL-1, PRL-2, PRL-3 (3 created, 0 updated; initiative INIT-0014 set on each; X12 lint 0 matches; criteria 15/14/5 one for one). Translations (X14): REQ-0001 AC4 — PD-0003 item 4 → the brief wording quoted; REQ-0001 AC10 — Behavior 5 → the transition line quoted; REQ-0002 AC7 — exact copy → the length warning quoted; REQ-0002 AC14, REQ-0003 AC5 — PD-0004 display matrix → 1440 wide, light only; REQ-0003 AC1 — Behavior 2 → the room line quoted. PM additions in Scope/Dependencies: the story-wins-over-frame rule (PD-0004 item 2) and the coordinated release (REQ-0001 Sequencing) |
+| 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0001@3 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-06`; ticket codes follow from `create-tickets-from-stories` |
+| 2026-11-06 | ROLE-orchestrator | REQ-0001@2@2026-11-06, REQ-0002@2@2026-11-06, REQ-0003@2@2026-11-06; INIT-0001@3 | Tickets created: PRL-1, PRL-2, PRL-3 (3 created, 0 updated; initiative INIT-0001 set on each; X12 lint 0 matches; criteria 15/14/5 one for one). Translations (X14): REQ-0001 AC4 — PD-0003 item 4 → the brief wording quoted; REQ-0001 AC10 — Behavior 5 → the transition line quoted; REQ-0002 AC7 — exact copy → the length warning quoted; REQ-0002 AC14, REQ-0003 AC5 — PD-0004 display matrix → 1440 wide, light only; REQ-0003 AC1 — Behavior 2 → the room line quoted. PM additions in Scope/Dependencies: the story-wins-over-frame rule (PD-0004 item 2) and the coordinated release (REQ-0001 Sequencing) |
 
 ## Session notes
 
@@ -279,7 +279,7 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
   defect 5 — REQ-0003 Behavior 4 and its criterion: the pin saves at once and
   also joins the open edit.
 - 2026-11-06 — READINESS round 1 `READY`, 0 findings. ENGINEERING_READY:
-  packet and manifest. HANDOFF: Ariadne initiative INIT-0014 created in PRL;
+  packet and manifest. HANDOFF: Ariadne initiative INIT-0001 created in PRL;
   tickets PRL-1, PRL-2, PRL-3 created; hero frames copied to the PRL-2 and
   PRL-3 design capture. Nothing pushed: the run instructions forbid it.
 - Dispatch log: `phase | delegate | vendor | model | tokens-scale | ledger run | artifact produced`
@@ -289,7 +289,7 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
   - `DECOMPOSITION (coherence r1) | ROLE-planner (architect) | claude | opus | M | aedcceb564e75d4e7 | technical/coherence.md`
   - `DECOMPOSITION (coherence r2, delta) | ROLE-planner (architect) | claude | sonnet | S | a4368b1ecbe5d912a | technical/coherence.md`
   - `READINESS (round 1) | ROLE-product-readiness-reviewer | claude | sonnet | L | a067fde0934fd65b2 | Readiness log row`
-  - `HANDOFF (transcription) | ticket-transcriber | claude | sonnet | M | aec327061b689a781 | scratchpad INIT-0014-tickets.json (ticket bodies)`
+  - `HANDOFF (transcription) | ticket-transcriber | claude | sonnet | M | aec327061b689a781 | scratchpad INIT-0001-tickets.json (ticket bodies)`
 
 ## Phase log
 
@@ -302,7 +302,7 @@ INIT-0014@3). Drafted inline by the PM (size rule §9d.2).
 | 2026-11-06 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: options A and B recorded, each with a feasibility verdict and a user-visible trade-off; PM recommendation B with reasoning | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 two options; X2 verdicts from the allowed set; one Consultation log row per delegate response) | 76290e15dc559ddc |
 | 2026-11-06 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD (PD-0005, option B, verdict feasible-with-constraints), indexed; REQ-0001..0003 updated to it; option A rejected with reason; Solution Contract citing PD-0005 and the hero frames | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-phase-entry pass (one accepted chosen-option PD citing a non-infeasible verdict) | fd2a35ed17734d1b |
 | 2026-11-06 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1-O3 each map to an accepted story; REQ-0001..0003 meet §10.3; coherence round 2 of 2 (terminal) `coherent`, no open blocking defect; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-phase-entry pass (`converged: true`; traceability full mode 0 defects; terminal coherence verdict not regression-required; accepted DES-0001 with committed local_export for REQ-0002, REQ-0003). Publication push skipped: the run instructions forbid pushing (main is ahead of origin) | 2d800d8e864d5ce6 |
-| 2026-11-06 | READINESS | ENGINEERING_READY | ROLE-product-manager | Exit criteria met: readiness round 1 `READY`, no conditions, no known issues, 0 findings; no open `Q-` | Exited READINESS, entered ENGINEERING_READY. Hooks: HOOK-phase-entry pass (verdict READY; story set unchanged since the verdict — REQ-0001@2, REQ-0002@2, REQ-0003@2, INIT-0014@3, as recorded in the Readiness log) | 9729c0e8624a32c5 |
+| 2026-11-06 | READINESS | ENGINEERING_READY | ROLE-product-manager | Exit criteria met: readiness round 1 `READY`, no conditions, no known issues, 0 findings; no open `Q-` | Exited READINESS, entered ENGINEERING_READY. Hooks: HOOK-phase-entry pass (verdict READY; story set unchanged since the verdict — REQ-0001@2, REQ-0002@2, REQ-0003@2, INIT-0001@3, as recorded in the Readiness log) | 9729c0e8624a32c5 |
 | 2026-11-06 | ENGINEERING_READY | HANDOFF | ROLE-product-manager | Exit criteria met: handoff packet complete (H0-H12 bullets populated, `none` where empty); `delivery/manifest.md` at `band_owner: product`, M1-M8 hold (graph acyclic, waves 0/1/2, every `local_export` on disk); initiative `active`; stories `readiness: engineering-ready` | Exited ENGINEERING_READY, entered HANDOFF. Hooks: HOOK-handoff-conformance pass (packet plus manifest present; coverage full mode 0 defects; no `blocker` `Q-`). Publication push skipped: the run instructions forbid pushing | c58bdcb6c70dfcb5 |
 
 > Every product-side session updates this file before ending — **including

@@ -168,7 +168,7 @@ Parley's server makes the copy from the original's saved setup
 ## Sequencing
 
 `depends_on: [none]`. Starts from `main` at or after `704039f`, where the Room
-Brief (INIT-0014, PRL-1..PRL-3) is merged; the clone copies its Goal and
+Brief (INIT-0001, PRL-1..PRL-3) is merged; the clone copies its Goal and
 Rules.
 
 ## Technical constraints

@@ -1,6 +1,6 @@
 Verdict: coherent
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0014
+Initiative: INIT-0001
 Story set reviewed: round 1: REQ-0001 (rev 1, draft), REQ-0002 (rev 1, draft), REQ-0003 (rev 1, draft). Round 2: the same three at rev 2 (repair commit `8315eb3`)
 Authorising decision: PD-0005 (option B), with the rulings of PD-0006
 Assessment round relied on: 1

@@ -1782,6 +1782,53 @@ kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; line-height: 1.
 #roomList .room-item .ract.del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 @media (hover: none) { #roomList .room-item .rmore { visibility: visible; } }
 
+/* Clone room setup dialog. Keep the form body independently scrollable so
+   long saved Goals and project paths remain visible without moving the footer. */
+#roomList .room-item.menu-open .racts { padding: 0 4px 6px 10px; }
+#roomList .room-item .ract { padding: 0 7px; }
+#cloneRoomDialog {
+  width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px);
+  padding: 0; border: 1px solid var(--border2); border-radius: 20px;
+  background: var(--panel); color: var(--text); overflow: hidden;
+  box-shadow: 0 32px 100px rgba(0,0,0,.32);
+}
+#cloneRoomDialog::backdrop { background: rgba(8,12,22,.55); backdrop-filter: blur(4px); }
+#cloneRoomForm { display: flex; flex-direction: column; min-width: 0; max-height: calc(100dvh - 34px); padding: 18px 20px 0; overflow: hidden; }
+#cloneRoomForm *, #cloneRoomForm *::before, #cloneRoomForm *::after { box-sizing: border-box; }
+#cloneRoomForm > .form-title { flex: none; margin-bottom: 8px; }
+#cloneRoomForm > .form-title strong { font-size: 21px; }
+#cloneRoomForm > .form-title span { font-size: 12px; margin-top: 3px; overflow-wrap: anywhere; }
+.clone-room-body { flex: 1; min-height: 0; overflow: auto; padding: 0 2px 12px; }
+#cloneRoomForm .fld { margin: 16px 0; }
+#cloneRoomForm .fld > label { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-dim); line-height: 1.4; margin-bottom: 6px; }
+#cloneRoomForm input:not([type="checkbox"]), #cloneRoomForm textarea {
+  width: 100%; min-width: 0; min-height: 36px; padding: 7px 11px;
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 9px;
+  color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.4; font-weight: 400;
+  transition: border-color .15s, box-shadow .15s;
+}
+#cloneRoomForm textarea { display: block; padding: 9px 11px; line-height: 1.45; resize: vertical; }
+#cloneRoomGoal { field-sizing: content; min-height: 5.5em; max-height: 38dvh; }
+#cloneRoomForm input:hover, #cloneRoomForm textarea:hover { border-color: color-mix(in srgb, var(--text-faint) 55%, var(--border2)); }
+#cloneRoomForm input:focus, #cloneRoomForm textarea:focus { outline: 0; border-color: color-mix(in srgb, var(--accent) 60%, var(--border2)); box-shadow: 0 0 0 3px var(--ring); }
+#cloneRoomForm input::placeholder, #cloneRoomForm textarea::placeholder { color: var(--text-faint); }
+#cloneRoomForm .project-folder-field { display: flex; gap: 8px; align-items: center; }
+#cloneRoomForm .project-folder-field input { flex: 1; }
+#cloneRoomForm #cloneRoomProj { flex: none; width: auto; height: 36px; margin: 0; padding: 0 14px; border: 1px solid var(--border2); border-radius: 9px; background: var(--panel2); color: var(--text); font-size: 13px; font-weight: 500; line-height: 1; white-space: nowrap; }
+#cloneRoomForm #cloneRoomProj:hover { background: var(--panel2); color: var(--text); border-color: var(--border2); }
+.clone-summary { margin: 18px 0 4px; font-size: 13px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
+.clone-error { margin: 8px 0 0; color: var(--danger); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.clone-error:empty { display:none; }
+#cloneRoomForm > .form-actions { flex: none; position: relative; z-index: 4; display: flex; justify-content: flex-end; gap: 8px; margin: 0 -20px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--panel); }
+#cloneRoomForm .btn { height: 34px; padding: 0 14px; border-radius: 9px; font-size: 13px; font-weight: 500; line-height: 1; }
+#cloneRoomForm .form-actions .btn:not(.primary) { background: transparent; border-color: transparent; color: var(--text-dim); }
+#cloneRoomForm .form-actions .btn:not(.primary):hover { background: var(--panel2); color: var(--text); border-color: var(--border2); }
+#cloneRoomForm .btn.primary { color: var(--accent-ink); font-weight: 600; }
+#cloneRoomForm .btn.primary:hover { filter: none; background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+#cloneRoomForm .btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+#cloneRoomForm #cloneRoomCreate { min-width: 84px; height: 36px; padding: 0 20px !important; font-size: 13px !important; }
+#cloneRoomForm #cloneRoomCreate:disabled { opacity: .45; cursor: default; }
+
 /* Room Brief editor and shared pin controls. */
 #contextSettings .direction-card .fld { margin: 0 0 14px; }
 #contextSettings .direction-card textarea { width: 100%; }

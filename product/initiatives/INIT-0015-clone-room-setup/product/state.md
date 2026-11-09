@@ -107,7 +107,7 @@ below is cited.
 creation and setup (changed: gains a clone path).
 [CAP-0001](../../../capabilities/CAP-0001-room-shared-context.md) — room
 shared context; its record still describes the room note and direction, while
-`main` at `704039f` has the Room Brief (INIT-0014, PRL-1..PRL-3 merged; the
+`main` at `704039f` has the Room Brief (INIT-0001, PRL-1..PRL-3 merged; the
 initiative is not yet closed). This initiative reads the Room Brief as built,
 it does not change it.
 
@@ -252,9 +252,9 @@ inline by the PM (size rule §9d.2).
 
 - 2026-11-06 — Hydration: packet `ready`, no initiative resolved (new ask),
   profile S, head `704039f`. Neighbouring: CAP-0001, PD-0002/0003/0005/0006
-  (Room Brief), INIT-0014 (`active`; PRL-1..PRL-3 merged on local `main` at
+  (Room Brief), INIT-0001 (`active`; PRL-1..PRL-3 merged on local `main` at
   `704039f`, not yet closed — CAP-0001 still describes the room note and
-  direction; closing INIT-0014 is outside this run).
+  direction; closing INIT-0001 is outside this run).
 - 2026-11-06 — Triage verdict `new-initiative`: no capability does this, no
   decision settled or rejected it, no constraint forbids it, no initiative
   covers it, and the ask names one outcome.
@@ -272,7 +272,7 @@ inline by the PM (size rule §9d.2).
 - 2026-11-06 — Dispatch log: `SOLUTION_EXPLORATION | ROLE-planner (architect) | claude | opus | L | ae406b6d244ae3f4f | technical/capability-scan.md, impact.md, assessment.md`.
 - 2026-11-06 — SOLUTION_EXPLORATION: design steps 1a–1b skipped as derivative
   work (see `## Options`, Design); the reference frame and `DES-` come at
-  DECOMPOSITION, at the depth PD-0004 set for INIT-0014. CAP-0002 corrected to
+  DECOMPOSITION, at the depth PD-0004 set for INIT-0001. CAP-0002 corrected to
   revision 2 from the capability scan (current-state facts only, not the
   shipped change).
 - 2026-11-06 — SOLUTION_CONVERGENCE: PD-0009 (option A; design depth one
@@ -320,7 +320,7 @@ inline by the PM (size rule §9d.2).
   isolated check on a copied root (port 4196, fake provider), 4142 untouched,
   4141 unused, runtime protocol unchanged (16). Leftover: local branch `PRL-4`
   (merged; `git branch -d` refuses from this checkout's branch). This product
-  branch is not merged to `main`: `main` renumbered INIT-0014 to INIT-0001
+  branch is not merged to `main`: `main` renumbered INIT-0001 to INIT-0001
   (`ff616aa`), which conflicts in five indexes and the initiative counter; left
   for the renumbering owner.
 

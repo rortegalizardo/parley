@@ -37,7 +37,7 @@ Product Memory existed. Revision 2 applies the corrections of the architect's
   listening (lurk on/off, style, prompt) and sleep, instructions; add and remove agents. *Room*: Talk
   or Work mode, automatic follow-ups (hop budget), default agent, pair review
   rounds and the other room-level values. *Brief*: Goal, Rules, Decisions
-  (INIT-0014). Footer: Rename…, Clear conversation…, Archive room…, Delete
+  (INIT-0001). Footer: Rename…, Clear conversation…, Archive room…, Delete
   room.
 - **Room actions menu.** Each row in the room list has one "Room actions"
   button that opens Archive, Rename and Delete (no Delete for the default
@@ -64,7 +64,7 @@ See frontmatter `surfaces`.
 Rooms linked to the same project folder work on the same files: a room has
 its own conversation, Room Brief and agent sessions, not its own copy of the
 project. Per-agent standing instructions belong to each agent; the Room Brief
-belongs to the room (CAP-0001, INIT-0014).
+belongs to the room (CAP-0001, INIT-0001).
 
 ## Constraints
 

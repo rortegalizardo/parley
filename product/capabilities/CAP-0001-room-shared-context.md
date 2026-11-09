@@ -14,12 +14,12 @@ decisions: []
 
 # CAP-0001 — Agents in a room receive the user's shared room context — a room note and a room direction
 
-Recorded at INIT-0014 DISCOVERY from the committed code at `d07a67d` and
+Recorded at INIT-0001 DISCOVERY from the committed code at `d07a67d` and
 `docs/ROOM-BEHAVIOR.md`, because Product Memory was bootstrapped after this
 behaviour shipped (it was built before Product Memory existed). Revision 2
 follows `main` at `b6591be` ("Send room direction and room note in full every
 turn", the brief-delivery change), per the architect's capability scan
-([INIT-0014 technical/capability-scan.md](../initiatives/INIT-0014-room-brief/technical/capability-scan.md)).
+([INIT-0001 technical/capability-scan.md](../initiatives/INIT-0001-room-brief/technical/capability-scan.md)).
 
 ## Behavior today
 
@@ -67,5 +67,5 @@ None recorded beyond `project/constraints.md`.
 
 | Date | Revision | Change | Initiative |
 | --- | --- | --- | --- |
-| 2026-11-06 | 1 | Recorded as current state | INIT-0014 (DISCOVERY) |
-| 2026-11-06 | 2 | Follows `main` at `b6591be`: note and direction sent in full every turn; the 8,000 note limit applies only in Create room; Direction tab copy now untrue | INIT-0014 (SOLUTION_EXPLORATION, architect's capability scan) |
+| 2026-11-06 | 1 | Recorded as current state | INIT-0001 (DISCOVERY) |
+| 2026-11-06 | 2 | Follows `main` at `b6591be`: note and direction sent in full every turn; the 8,000 note limit applies only in Create room; Direction tab copy now untrue | INIT-0001 (SOLUTION_EXPLORATION, architect's capability scan) |

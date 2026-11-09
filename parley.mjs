@@ -1799,10 +1799,69 @@ function cleanRoomName(name) {
   return String(name || "").trim();
 }
 
+// Read persisted setup without loading, migrating or activating the source.
+function readCloneSetup(name) {
+  if (!validRoomName(name)) throw Object.assign(new Error("invalid room name"), { status: 400 });
+  const dir = path.join(ROOT, name);
+  if (!fs.existsSync(path.join(dir, "room.json")) || fs.lstatSync(dir).isSymbolicLink()) {
+    throw Object.assign(new Error(`no such room: ${name}`), { status: 404 });
+  }
+  const cfg = readJSON(path.join(dir, "room.json"));
+  const briefError = () => badBrief("This room's saved brief can't be read. Open the room, check Room settings → Brief, then try cloning again.");
+  let brief;
+  if (rooms.has(name)) {
+    brief = rooms.get(name).contextLedger?.roomBrief;
+  } else {
+    let context;
+    try {
+      context = readJSON(path.join(dir, "context.json"));
+      if (!context || typeof context !== "object" || Array.isArray(context) || !Array.isArray(context.events)) throw briefError();
+    }
+    catch (error) {
+      if (error.code !== "ENOENT") throw briefError();
+      context = {};
+    }
+    if (Object.hasOwn(context, "roomBrief")) brief = context.roomBrief;
+    else if (Object.hasOwn(context, "briefMigration")) throw briefError();
+    else brief = legacyBriefText(context, cfg);
+  }
+  if (!brief || typeof brief.goal !== "string" || typeof brief.rules !== "string") throw briefError();
+  const state = fs.existsSync(path.join(dir, "state.json")) ? readJSON(path.join(dir, "state.json")) : {};
+  const setup = {};
+  for (const key of ["mode", "hopBudget", "defaultAgent", "accounting", "pairRounds", "timeoutMs"]) {
+    if (Object.hasOwn(cfg, key)) setup[key] = cfg[key];
+  }
+  setup.agents = Object.fromEntries(Object.entries(cfg.agents || {}).map(([id, agent]) => {
+    const copy = {};
+    const provider = providerIdFor(agent, id);
+    for (const key of ["provider", "model", "permissionMode", "sandbox", "approvalMode", "command", "instructions", "lurk", "lurkStyle", "lurkPrompt",
+      ...(PROVIDERS[provider]?.fields.includes("effort") ? ["effort"] : []), ...(provider === "codex" ? ["serviceTier"] : [])]) {
+      if (Object.hasOwn(agent, key)) copy[key] = agent[key];
+    }
+    copy.provider = provider;
+    if (Object.hasOwn(agent, "extraArgs")) copy.extraArgs = [...agent.extraArgs];
+    return [id, copy];
+  }));
+  const sleep = Object.fromEntries(Object.keys(setup.agents).filter((id) => state.agents?.[id]?.asleep)
+    .map((id) => [id, { reason: state.agents[id].asleep.reason ?? null }]));
+  return { name, setup, sleep, goal: brief.goal, rules: brief.rules, projectDir: cfg.projectDir || "" };
+}
+
+function cloneNameTaken(name) {
+  return [...rooms.keys(), ...fs.readdirSync(ROOT)].some((existing) => existing.toLowerCase() === name.toLowerCase());
+}
+function suggestedCloneName(name) {
+  for (let n = 1; ; n++) {
+    const suffix = n === 1 ? " copy" : ` copy ${n}`;
+    const candidate = name.slice(0, 40 - suffix.length).trimEnd() + suffix;
+    if (!cloneNameTaken(candidate)) return candidate;
+  }
+}
+
 // Rooms come into existence only when explicitly created (the + button, or the
 // bootstrap of `default`). Merely naming a room must never conjure it — that's
 // how a deleted room could otherwise resurrect itself.
-function loadRoom(name, seatChoice, create = false, initialConfig = null, initialBrief = null) {
+function loadRoom(name, seatChoice, create = false, initialConfig = null, initialBrief = null, initialSleep = null) {
   if (rooms.has(name)) return rooms.get(name);
   // Client input, not a server fault — report it like the 404 two lines below.
   if (!validRoomName(name)) throw Object.assign(new Error(`invalid room name: ${name}`), { status: 400 });
@@ -1881,7 +1940,12 @@ function loadRoom(name, seatChoice, create = false, initialConfig = null, initia
       writeJSON(stateFile, state);
     }
   }
-  else { state = defaultState(cfg.agents); writeJSON(stateFile, state); }
+  else {
+    state = defaultState(cfg.agents);
+    const since = Date.now();
+    for (const [id, sleep] of Object.entries(initialSleep || {})) state.agents[id].asleep = { since, reason: sleep.reason };
+    writeJSON(stateFile, state);
+  }
 
   const loadedContext = contextLedger({ dir, cfg }, {
     newRoom: !existingRoom, initialBrief,
@@ -1921,6 +1985,7 @@ function loadRoom(name, seatChoice, create = false, initialConfig = null, initia
   // legacy value has to normalize to one of the two shapes the runtime
   // understands: null, or { since, reason }. A bare `true` still means asleep.
   for (const id of seats) {
+    if (!rawState && initialSleep) continue;
     const seat = state.agents[id];
     const raw = seat.asleep;
     const normalized = raw ? { since: raw.since || null, reason: cleanSleepReason(raw.reason) } : null;
@@ -2098,6 +2163,12 @@ const badBrief = (message) => Object.assign(new Error(message), { status: 400 })
 function emptyBrief() {
   return { schemaVersion: 1, revision: 0, goal: "", rules: "", decisions: [], updatedAt: null };
 }
+function legacyBriefText(context, cfg) {
+  return {
+    goal: typeof context.direction?.goal === "string" ? context.direction.goal : "",
+    rules: typeof cfg.roomNote === "string" ? cfg.roomNote : "",
+  };
+}
 function contextFile(room) { return path.join(room.dir, "context.json"); }
 function contextLedger(room, { newRoom = false, initialBrief = null, legacySessions = [] } = {}) {
   if (!room.contextLedger) {
@@ -2115,8 +2186,7 @@ function contextLedger(room, { newRoom = false, initialBrief = null, legacySessi
       const raw = data.direction;
       data.roomBrief = newRoom ? (initialBrief || emptyBrief()) : {
         ...emptyBrief(),
-        goal: typeof raw?.goal === "string" ? raw.goal : "",
-        rules: typeof room.cfg.roomNote === "string" ? room.cfg.roomNote : "",
+        ...legacyBriefText(data, room.cfg),
         decisions: (Array.isArray(raw?.pins) ? raw.pins : []).map((pin) => {
           let id = typeof pin.id === "string" && pin.id && !ids.has(pin.id) ? pin.id : crypto.randomUUID();
           ids.add(id);
@@ -7786,6 +7856,31 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (route === "GET /api/rooms") return json(res, 200, { rooms: roomsWithModes(), providers: providerCatalog(), maxSeats: MAX_ROOM_SEATS, archivedRooms: archivedRooms() });
+
+    if (route === "GET /api/room/clone-setup") {
+      const source = readCloneSetup(url.searchParams.get("name"));
+      return json(res, 200, { name: source.name, suggestedName: suggestedCloneName(source.name), goal: source.goal, projectDir: source.projectDir });
+    }
+
+    if (route === "POST /api/room/clone") {
+      const { room, name, goal, projectDir } = await readBody(req);
+      const source = readCloneSetup(room);
+      const roomName = cleanRoomName(name);
+      if (!validRoomName(roomName)) return json(res, 400, { error: "Room names: letters, numbers, dashes, underscores (max 40)." });
+      if (cloneNameTaken(roomName)) return json(res, 409, { error: `a room called "${roomName}" already exists` });
+      if (Object.keys(source.setup.agents).length > MAX_ROOM_SEATS) return json(res, 400, { error: "Rooms support at most four agents." });
+      const initialBrief = prepareBrief({ ...emptyBrief(), goal: source.goal, rules: source.rules },
+        { baseRevision: 0, goal, rules: source.rules, decisions: [] }).brief;
+      let linked = null;
+      if (projectDir) {
+        linked = path.resolve(String(projectDir).trim());
+        let isDir = false;
+        try { isDir = fs.statSync(linked).isDirectory(); } catch { /* missing */ }
+        if (!isDir) return json(res, 400, { error: `Project folder not found (or not a directory): ${linked}` });
+      }
+      loadRoom(roomName, null, true, { ...source.setup, projectDir: linked }, initialBrief, source.sleep);
+      return json(res, 200, { ok: true, name: roomName, rooms: roomsWithModes() });
+    }
 
     if (route === "POST /api/rooms") {
       const { name, seats, projectDir, goal = "", rules = "", decisions = [], mode } = await readBody(req);
