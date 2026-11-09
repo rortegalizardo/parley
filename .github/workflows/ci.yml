@@ -39,14 +39,15 @@ jobs:
       - name: Focused unit tests
         run: npm run test:unit
       # A CI-only failure was otherwise diagnosable from one assertion line. On
-      # failure the suite leaves its room state and server log in smoke-failure/
+      # failure the suite leaves its room state and server log in .scratch/smoke-failure-*/
       # instead of deleting them.
       - name: Collect failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: smoke-failure-${{ matrix.os }}-node${{ matrix.node }}
-          path: smoke-failure/
+          path: .scratch/smoke-failure-*/
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
 

@@ -22,12 +22,12 @@ Thumbs.db
 /*.png
 /*.jpg
 
-# Scratch dirs from ad-hoc browser/demo runs. The test suite itself works out
-# of the OS temp dir, so nothing here is ever needed again.
+# Scratch dirs from ad-hoc browser/demo runs and isolated test runs.
 .tmp-*/
 .test-tmp/
+.scratch/
 
-# What the smoke suite leaves behind when it fails, for CI to upload.
+# Preserve historical failure bundles; new smoke failures go in .scratch/.
 smoke-failure/
 browser-failure/
 
