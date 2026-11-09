@@ -3,16 +3,16 @@ id: PSTATE-INIT-0003
 type: product-state
 title: Product definition state for INIT-0003
 status: authoritative
-revision: 8
+revision: 9
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
 updated_by_role: ROLE-product-manager
 initiative: INIT-0003
-phase: ENGINEERING_READY
+phase: HANDOFF
 phase_entered: 2026-11-08
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: HANDOFF — create the Ariadne tickets from REQ-0005 then REQ-0006 (create-tickets-from-stories), write delivery/tickets.md, record the Handoff log"
+next_action: "ROLE-orchestrator: deliver ticket_code PRL-14 (REQ-0005, Room settings and the dialogs, builds the shared editor), then PRL-15 (REQ-0006, chat bar) once PRL-14 is merged; each one ticket_code at a time, started by the requester or the launching session, and only after PRL-6 is merged and green on main. The product manager dispatches nothing further."
 blocked_by: []
 converged: true
 readiness_verdict: READY
@@ -39,7 +39,7 @@ and REQ-0006 (chat bar, after REQ-0005). Option A (PD-0012) was assessed
 feasible-with-constraints; the reference frames are DES-0003; coherence ended
 `coherent` at its terminal round. The independent readiness verdict is `READY`
 (round 1, no finding). The packet and manifest are written; the tickets are
-created at HANDOFF.
+created: PRL-14 (REQ-0005) and PRL-15 (REQ-0006), in that order.
 
 ## Problem statement
 
@@ -53,9 +53,12 @@ separate preview, and the saved text is exactly what was typed
 
 ## Next action
 
-ROLE-product-manager: HANDOFF — create the Ariadne tickets from REQ-0005 then
-REQ-0006 (`create-tickets-from-stories`), write `delivery/tickets.md`, record the
-Handoff log. Engineering is not dispatched from here.
+ROLE-orchestrator: deliver ticket_code PRL-14 (REQ-0005, Room settings and the
+dialogs, builds the shared editor), then PRL-15 (REQ-0006, chat bar) once PRL-14
+is merged. Each one `ticket_code` at a time, started by the requester or the
+launching session, and only after PRL-6 is merged and green on `main`. The
+product manager dispatches nothing further; engineering is not dispatched from
+here.
 
 ## Blocked by
 
@@ -169,6 +172,7 @@ within the requester's decided behaviour; none is requester-owned.
 | 2026-11-08 | ROLE-planner (technical architect, `story-set-technical-coherence`, full pass, round 1 of 2) — vendor claude, model opus | Is the draft set REQ-0005 then REQ-0006 (revision 2) technically coherent, sequenced possibly, free of an assumed missing capability and of verdict drift? | `defects-open`: 1 blocking (defect 1: the library's default writes a dropped file's text into the field, on top of the page's own file attach; resolvable in decomposition, no product question) and 6 non-blocking (2 suite criterion on REQ-0005, 3 test-line counts, 4 a tab can only be pasted, 5 and 6 two scope lines, 7 harness is Chromium only); no verdict drift, no regression; no `Q-` | [technical/coherence.md](../technical/coherence.md); repaired inline by the PM in the same session (both stories to revision 3: behaviour sentence, acceptance criterion and constraint C-21 for the drop, REQ-0005 suites criterion, per-story test counts, pasted tab, scope wording, Chromium note), commit `7a0ea41` |
 | 2026-11-08 | ROLE-planner (technical architect, `story-set-technical-coherence`, delta re-check, round 2 of 2, terminal) — vendor claude, model sonnet | Did the repair close the seven round-1 defects, and did it add a blocking defect? | `coherent`: all seven `fixed`; 0 open blocking, 0 open non-blocking; terminal for this story set, no round 3 (rule 10) | [technical/coherence.md](../technical/coherence.md) (round-1 rows kept, dispositions updated by the checker); every blocking finding of the terminal round carries disposition `fixed` (R9) |
 | 2026-11-08 | ROLE-product-readiness-reviewer (readiness, cycle 1 round 1) — vendor claude, model sonnet | Is INIT-0003 engineering-ready: R13–R18 plus the flag-only R8 and R9 clauses, against the validator report | `READY`, no conditions, 0 findings (0 blocking) | `## Readiness log` row (written by the reviewer); `## Readiness findings` (none) |
+| 2026-11-08 | ticket-transcriber (`create-tickets-from-stories` §2, one dispatch for the story set) — vendor claude, model sonnet | Map REQ-0005 and REQ-0006 onto the ticket template, translating every product-identifier reference, with each story's Behavior inlined into Scope and the requester's done-means into Success metric | Two ticket bodies written; 18 and 16 criteria one for one, none carried an identifier; identifier lint 0 matches; a placeholder stood for the first ticket's key in the second; PM-side flags (no partial-delivery sentence exists in REQ-0005, only its stop-and-report rule; REQ-0006's Behavior opening was lossy, so the shared-editor rules were inlined in full; the settings-only server-file sentence was left out of the chat bar ticket) all accepted | Ticket bodies created as PRL-14 and PRL-15 (Ariadne); [delivery/tickets.md](../delivery/tickets.md) |
 
 ## Escalation log
 
@@ -201,6 +205,7 @@ within the requester's decided behaviour; none is requester-owned.
 | 2026-11-08 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0012 (A, feasible-with-constraints), indexed; REQ-0005 and REQ-0006 revision 2 consistent with PD-0012 and PD-0013 and carrying the technical constraints; no competing option under consideration; Solution Contract cites PD-0012 and its design concept (item 4) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (accepted PD-0012 and PD-0013, each with its index row in one commit; counter 13); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | n/a |
 | 2026-11-08 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1 maps to accepted REQ-0005 and O2 to accepted REQ-0006; both meet §10.3 (accepted, one testable outcome, pass/fail acceptance criteria with a `composition:` criterion, CAP-, DES-0003 with five exports on disk, `depends_on` explicit, no blocker `Q-`, no PD- or constraint contradicted, indexed); coherence round 1 `defects-open` (one blocking, repaired) and round 2 (terminal) `coherent`; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-design-coverage pass (DES-0003 accepted, exports on disk, names REQ-0005 and REQ-0006); HOOK-dependency-graph pass (two nodes, one edge, acyclic); HOOK-phase-entry pass (`converged: true`; coverage full mode 0 defects; terminal coherence not regression-required; accepted DES-0003 for the user-facing stories) | n/a |
 | 2026-11-08 | READINESS | ENGINEERING_READY | ROLE-product-manager | Exit criteria met: readiness cycle 1 round 1 `READY`, 0 findings, no conditions; terminal under §9d.4 (no blocking finding) | Exited READINESS, entered ENGINEERING_READY. Hooks: HOOK-readiness pass (verdict READY, not void; story-set digest (REQ-0005, 3; REQ-0006, 3, 2026-11-08), INIT-0003@4 matches disk); HOOK-phase-entry pass | n/a |
+| 2026-11-08 | ENGINEERING_READY | HANDOFF | ROLE-product-manager | Exit criteria met: handoff packet complete (H0–H12), delivery manifest `DM-INIT-0003` issued against `READY@2026-11-08` and the same digest, initiative `active`, both stories `engineering-ready`, no blocker `Q-` | Exited ENGINEERING_READY, entered HANDOFF. Hooks: HOOK-handoff-conformance pass (H1–H12; H13: PRL-14 and PRL-15 created in Ariadne and mapped); HOOK-manifest-conformance pass (product band issued, execution band untouched); two tickets created, design captured to both ticket folders, ticket rows written | n/a |
 
 ## Readiness log
 
@@ -291,7 +296,13 @@ Drafted inline by the PM (size rule §9d.2).
   (PD-0011 item 8). REQ-0005's check settles the library risk before REQ-0006
   starts.
 - **Delivery manifest:** `initiatives/INIT-0003-live-markdown-editor/delivery/manifest.md`.
-- **Tickets:** created at HANDOFF; see `delivery/tickets.md`. Ariadne project PRL, initiative INIT-0003.
+- **Tickets:** PRL-14 (REQ-0005) then PRL-15 (REQ-0006, blocked by PRL-14), Ariadne project PRL, initiative INIT-0003; mapping in `delivery/tickets.md`. PRL-6 stays an external precondition stated in both tickets, not a blocker edge.
+
+## Handoff log
+
+| Date | Receiving role | Packet digest | Note |
+| --- | --- | --- | --- |
+| 2026-11-08 | ROLE-orchestrator | REQ-0005@3@2026-11-08; REQ-0006@3@2026-11-08; INIT-0003@4 | Packet and `delivery/manifest.md` (product band) issued against `READY@2026-11-08`. Tickets created: PRL-14 (REQ-0005) and PRL-15 (REQ-0006, blocked by PRL-14) (2 created, 0 updated; initiative INIT-0003 created in Ariadne with the key INIT-0003 and set on both; identifier lint 0 matches on both titles and bodies; criteria 18/18 and 16/16 one for one, checked by script against the stories and against the tracker text; six `##` sections only). Translations (X14): no criterion carried an identifier, so none was stripped; load-bearing references: REQ-0006's "REQ-0005 Behavior 1–8 and 10" → the shared-editor rules inlined in full in PRL-15 and the first ticket named by its key; every "PD-" and constraints citation in the Behavior items, constraints and Notes deleted as attribution. Scope inlines each story's Behavior in full; Success metric carries the outcome element and the requester's done-means; Dependencies carry the binding constraints C-01..C-21 and PRL-6 as an external precondition. DES-0003's five files copied byte-for-byte (compared) to `PRL-14` and `PRL-15` under `~/Factory/Artifacts/projects/PRL/tickets/<ticket_code>/design/capture/`, each with `design/design.md`. Initiative `tickets` filled (a lifecycle field, no revision bump, digest unchanged) |
 
 ## Session notes
 
@@ -352,6 +363,8 @@ Drafted inline by the PM (size rule §9d.2).
 - 2026-11-08 — Coverage, full mode (PM, inline, as INIT-0002): R1–R12 all pass, 0 defects. Map: O1 → REQ-0005 (accepted, rev 3) → CAP-0001, CAP-0002, DES-0003 (five exports on disk), PD-0011/0012/0013 (accepted); O2 → REQ-0006 (accepted, rev 3) → CAP-0003, DES-0003, PD-0011/0012/0013; DES-0003 names both REQ-; depends_on: REQ-0005 none, REQ-0006 [REQ-0005] (accepted, acyclic, sequencing notes in `Stories`); no `Q-` raised (Q-0001 belongs to INIT-0002, `important`); out-of-scope section non-empty and no REQ- names excluded behaviour; every escalation-class Ambiguity log row: none (all `pm-resolvable` or the requester's own decision); R9: PD-0012 cites feasible-with-constraints, coherence verdict `coherent` recorded in the Consultation log, terminal round 2, every blocking finding `fixed`; counters capability 3, decision 13, initiative 3, requirement 6, design 3, question 1 equal the highest files; 115 links in the changed records resolve (script, two literal-text false positives checked by hand). Story-set digest of this report: `(REQ-0005, 3; REQ-0006, 3, 2026-11-08)`; INIT-0003 revision 4.
 - 2026-11-08 — Dispatch log. READINESS | ROLE-product-readiness-reviewer (cycle 1, round 1) | claude | sonnet | M | ledger run `aca49b1c139fbf737` | `## Readiness log` row and `## Readiness findings` (none) in this file.
 - 2026-11-08 — READINESS: verdict `READY`, no conditions, no finding. Round 2 not run (no blocking finding, §9d.4). H1–H6 re-checked at ENGINEERING_READY: verdict recorded and not void; digest `(REQ-0005, 3, 2026-11-08; REQ-0006, 3, 2026-11-08); INIT-0003 revision 4` equals the files on disk; both stories `accepted`; no `blocker` `Q-`; every identifier resolves; the five DES-0003 exports exist. Coverage full mode re-run by script: 0 defects.
+- 2026-11-08 — Dispatch log. HANDOFF | ticket-transcriber (create-tickets-from-stories, one dispatch) | claude | sonnet | M | ledger run `aab19481ffbe1e9b2` | scratch ticket bodies, consumed and not committed.
+- 2026-11-08 — HANDOFF: Ariadne project PRL confirmed (`get_project`); initiative INIT-0003 was not in Ariadne, so it was created with key INIT-0003, the title and the Outcome section. PRL-14 (REQ-0005) created first, then PRL-15 (REQ-0006) with blockedBy PRL-14, as INIT-0001 did for its chain. Checked against the tracker: both titles equal the story titles, both bodies equal the transcribed text (script), lint 0 matches, project PRL, initiative INIT-0003, status Backlog. PRL-6 was `Done` in the tracker at this time; it stays an external precondition in the text of both tickets. No `Q-` raised at any phase. The engineering orchestrator was not dispatched.
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
