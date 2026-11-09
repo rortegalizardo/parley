@@ -7,6 +7,7 @@ An unindexed capability file is not authoritative.
 | --- | --- | --- | --- | --- |
 | CAP-0001 | Agents in a room receive the user's shared room context — a room note and a room direction | authoritative | [CAP-0001-room-shared-context.md](CAP-0001-room-shared-context.md) | 2026-11-06 |
 | CAP-0002 | The user creates a room and sets up its agents, Room Brief, room settings and project folder | authoritative | [CAP-0002-room-creation-and-setup.md](CAP-0002-room-creation-and-setup.md) | 2026-11-06 |
+| CAP-0003 | The user writes and sends messages to a room's agents from the chat bar | authoritative | [CAP-0003-chat-bar-message-composing.md](CAP-0003-chat-bar-message-composing.md) | 2026-11-08 |
 
 New rows are added by the role that closes an initiative, in the same commit as
 the capability record.

@@ -17,6 +17,7 @@ not re-open the question.
 | PD-0008 | Clone room setup behaviour the requester left open — decided by the product manager | superseded | [PD-0008-clone-room-setup-behaviour-clarifications.md](PD-0008-clone-room-setup-behaviour-clarifications.md) | 2026-11-06 |
 | PD-0009 | Clone room setup is a server-side copy (option A); its design reference is one static frame at 1440 light | accepted | [PD-0009-clone-room-setup-chosen-option-server-side.md](PD-0009-clone-room-setup-chosen-option-server-side.md) | 2026-11-06 |
 | PD-0010 | Clone room setup behaviour — the product manager's rulings, with the architect's findings | accepted | [PD-0010-clone-room-setup-behaviour-rulings.md](PD-0010-clone-room-setup-behaviour-rulings.md) | 2026-11-06 |
+| PD-0011 | One shared live Markdown editor for the chat bar and every multi-line field in Room Settings, built on CodeMirror 6 with one prebuilt vendor file | accepted | [PD-0011-live-markdown-editor-requester-decisions.md](PD-0011-live-markdown-editor-requester-decisions.md) | 2026-11-08 |
 
 Empty at bootstrap. Decisions about the memory system itself
 (`owner_role: ROLE-product-architect`) and product decisions

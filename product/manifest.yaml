@@ -179,10 +179,10 @@ id_counters:
   # AREA- is a SLUG identifier (architecture/identifiers.md §1) and allocates no
   # counter, exactly like ROLE- and SKILL-. This key stays at 0 permanently.
   area: 0
-  capability: 2
-  decision: 10
+  capability: 3
+  decision: 11
   initiative: 3
-  requirement: 4
+  requirement: 6
   design: 2
   question: 1
 
