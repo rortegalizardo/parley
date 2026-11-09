@@ -122,7 +122,7 @@ Each agent has its own **lane**: tag them back-to-back and they genuinely work a
 - **Conservative by default.** Talk rooms run Claude with its normal print-mode permissions and Codex in the `read-only` sandbox. Work mode loosens that only for the agent you name; Full access for either provider is host-level trust and sits behind a deliberate confirmation.
 - Reviewer, listener and discussion turns run read-only **where the provider can enforce it** — Claude is switched to Plan and kept out of any bypass-enabled session. Codex's equivalent lives inside its existing sandboxed thread, so it's a workflow instruction, **not an OS-level boundary**.
 
-`npm test` boots a real server against fake agent CLIs and exercises routing, the delta protocol, sessions, lurk, hops, pair, lanes, work mode, seat sleep and cancellation — no provider login, no tokens spent. CI runs it on Ubuntu, Windows and macOS, Node 20, 22 and 24.
+`npm test` boots a real server against fake agent CLIs and exercises routing, the delta protocol, sessions, lurk, hops, pair, lanes, work mode, seat sleep and cancellation — no provider login, no tokens spent. The existing form probes cover provider model/effort choices, full-list reopening and selected/custom values saved through to CLI invocation. The suite also checks per-room shortcut restoration, sleep-skip notices, and held-message recovery without duplicate sibling work. CI runs it on Ubuntu, Windows and macOS, Node 20, 22 and 24.
 
 ## Docs
 

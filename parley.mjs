@@ -5032,9 +5032,13 @@ function startRecoveredDelivery(room, userTurn, targets, scope, turnOptions = nu
   const chain = newChain(room);
   const queueGroupId = `d${room.dispatchSeq++}`;
   const relayPolicy = relayPolicyForEntry(room, userTurn);
+  // A single-seat root held before anyone could run had no listener at
+  // acceptance. Recovery now creates that exchange; select its listeners here.
+  const recoveryListeners = !multiTarget(userTurn.target) && userTurn.meta?.audience?.addressed?.length === 0
+    ? seatIds(room) : (userTurn.meta?.audience?.lurking || []);
   const noteRecoveryLurkers = (reason, invoked = new Set(targets)) => {
     if (relayPolicy.solo || restrictedAudience(userTurn)) return;
-    for (const agent of userTurn.meta?.audience?.lurking || []) {
+    for (const agent of recoveryListeners) {
       if (!invoked.has(agent) && room.cfg.agents[agent].lurk) {
         noteLurkOutcome(room, agent, userTurn.n, reason);
       }
@@ -5109,7 +5113,7 @@ function startRecoveredDelivery(room, userTurn, targets, scope, turnOptions = nu
         }
         const listeners = relayPolicy.solo || restrictedAudience(userTurn)
           ? []
-          : (userTurn.meta?.audience?.lurking || (userTurn.target === "both" ? [] : seatIds(room))).filter((agent) => !coordinator.invoked.has(agent) &&
+          : recoveryListeners.filter((agent) => !coordinator.invoked.has(agent) &&
             room.cfg.agents[agent].lurk);
         const lurkers = [];
         for (const agent of listeners) {
@@ -5692,13 +5696,12 @@ function handleUserMessage(room, rawText, targetSel, rawImages, rawFiles, rawRel
   // Nobody lurks on a message that was delivered to nobody: with `agents` empty
   // the only remaining candidates are the sleeping addressee and the seat the
   // user pointedly did *not* write to, and launching the latter is exactly the
-  // invocation holding exists to avoid. Sleeping seats are excluded outright —
-  // the lurk filter downstream would drop them anyway, but not before writing a
-  // second notice saying the message was never delivered, next to the one
-  // saying it is being held.
+  // invocation holding exists to avoid. Exclude held addressees from listeners
+  // to avoid a second, contradictory notice. Other sleeping listeners still
+  // reach the downstream sleep check, which records their skipped assessment.
   const recipientScope = String(effectiveTarget).includes(",") ? requested : null;
   const listeners = asPairTurn || solo || recipientScope || !agents.length ? [] // the reviewer is already in the loop
-    : allSeats.filter((a) => !agents.includes(a) && !isAsleep(room, a) && room.cfg.agents[a].lurk);
+    : allSeats.filter((a) => !agents.includes(a) && !sleeping.includes(a) && room.cfg.agents[a].lurk);
   const discussion = multiTarget(effectiveTarget) && room.cfg.mode === "work";
   const convergence = !asPairTurn && effectiveTarget === "both" && allSeats.length > 1 && discussionMode !== "parallel";
   const reviewRounds = convergence ? convergenceRoundsValue(convergenceRounds) : null;
@@ -6927,7 +6930,7 @@ function retryEnvelope(room, lu = room.state.lastUser) {
   if (!lu) return [];
   // Wake can deliberately narrow this envelope from the original @both root.
   const root = room.entries.find((e) => e.n === lu.n && e.kind === "user");
-  const envelope = root?.meta?.groupAddress ? [...(root.meta.audience?.addressed || []), ...(root.meta.audience?.asleep || [])] : targetSeats(room, lu.target);
+  const envelope = multiTarget(lu.target) && root?.meta?.groupAddress ? [...(root.meta.audience?.addressed || []), ...(root.meta.audience?.asleep || [])] : targetSeats(room, lu.target);
   return [...new Set(envelope)].filter((id) => room.cfg.agents[id]);
 }
 
@@ -7201,7 +7204,7 @@ function handleAsk(room, opts = {}) {
 
   const recipientScope = String(target).includes(",") ? requested : null;
   const listeners = solo || recipientScope || !agents.length ? []
-    : allSeats.filter((a) => !agents.includes(a) && !isAsleep(room, a) && room.cfg.agents[a].lurk);
+    : allSeats.filter((a) => !agents.includes(a) && !sleeping.includes(a) && room.cfg.agents[a].lurk);
   const attachments = persistAttachments(room, prepared);
   let userTurn;
   try {

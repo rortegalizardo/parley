@@ -217,8 +217,12 @@ const sawWhatReply = () => {
   return "SAWJSON " + JSON.stringify({ briefing: inert(briefingText), prompt: inert(prompt) });
 };
 
-const isLurk = has("you are lurking", prompt) || has("not addressed in this exchange", prompt) || has("You were not addressed", prompt) || has("You are listening again, not addressed", prompt);
-const isClosure = has("causal closure delivery", prompt) || has("causal answer delivery", prompt);
+// Delivery instructions follow the authoritative activity boundary. Prompt
+// echoes inside history must not turn an answer return back into a listener.
+const deliveryInstruction = prompt.split(/^\[End of room activity\]\r?$/m).at(-1);
+const isLurk = /^\(You were not addressed\.|^\(You are listening again, not addressed\./m.test(deliveryInstruction);
+const isClosure = /^\(This is a causal answer delivery/m.test(deliveryInstruction);
+const isListeningAnswer = /^This peer contribution is provided only for listening assessment/m.test(deliveryInstruction);
 const isReview = has("you are the reviewer", prompt);
 const isFix = has("review feedback above", prompt);
 const isHop = has("You were addressed directly by the other agent", prompt);
@@ -332,7 +336,7 @@ if (process.env.FAKE_CONVERGENCE) {
     reply = "LURKJSON " + JSON.stringify(String(prompt || "").replaceAll("@", "\\u0040"));
   }
   else if (has("LURKARGS", prompt)) reply = argvReply();
-  else if (has("CLOSUREARGS", prompt)) reply = "One thing worth flagging: CLOSUREARGS.";
+  else if (has("CLOSUREARGS", prompt)) reply = isListeningAnswer ? argvReply() : "One thing worth flagging: CLOSUREARGS.";
   else
   reply = has("CLOSURETAG", prompt) ? "One thing worth flagging: CLOSURETAG."
     : has("CLOSUREPASS", prompt) ? "One thing worth flagging: CLOSUREPASS."

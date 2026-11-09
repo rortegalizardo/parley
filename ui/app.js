@@ -29,7 +29,7 @@ const state = {
   chip: "auto",
   chipRevision: 0,   // manual changes fence off older in-flight send responses
   sendVersion: 0,    // only the newest send may synchronize the selected chip
-  hopChoice: "default", // per-room browser-session shortcut: default | solo | -1..8
+  hopChoice: storedHopChoice(INITIAL_ROOM), // per-room browser-session shortcut: default | solo | -1..8
   discussionMode: "converge", // @all default: converge | parallel
   convergenceRounds: 2,
   draftImages: [],   // native image attachments waiting for the next successful send
@@ -3464,7 +3464,7 @@ async function loadRoom(name) {
   const roomName = data.room.name || name;
   if (roomName !== state.room) {
     closeHopMenu();
-    state.hopChoice = "default";
+    state.hopChoice = storedHopChoice(roomName);
     state.discussionMode = "converge";
     state.convergenceRounds = 2;
     loadDiscussionPrefs(roomName);
