@@ -2,7 +2,7 @@
 id: REQ-0006
 type: requirement
 title: The user types Markdown in the chat bar and sees it format as they type
-status: draft
+status: accepted
 revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-08

@@ -3,7 +3,7 @@ id: INIT-0003
 type: initiative
 title: Markdown text formats as you type in the chat bar and Room Settings
 status: draft
-revision: 3
+revision: 4
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
@@ -125,3 +125,4 @@ None.
 | 2026-11-08 | 1 | Created at INTAKE (`new-initiative`) | Raw request from the requester |
 | 2026-11-08 | 2 | Outcome O1 and O2, scope, out-of-scope, success measures and two draft requirements | PRODUCT_DEFINITION |
 | 2026-11-08 | 3 | Field list settled from the architect's scan; backend wording; PD-0012 and PD-0013 | SOLUTION_CONVERGENCE |
+| 2026-11-08 | 4 | Reference frames recorded as DES-0003; coherence repair (file drops, test counts, scope wording) to REQ-0005 and REQ-0006 revision 3, both accepted; scope unchanged | DECOMPOSITION |

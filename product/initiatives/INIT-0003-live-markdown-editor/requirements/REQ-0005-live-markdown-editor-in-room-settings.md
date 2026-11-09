@@ -2,7 +2,7 @@
 id: REQ-0005
 type: requirement
 title: The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type
-status: draft
+status: accepted
 revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-08

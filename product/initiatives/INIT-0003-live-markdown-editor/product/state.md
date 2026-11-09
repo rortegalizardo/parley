@@ -3,18 +3,18 @@ id: PSTATE-INIT-0003
 type: product-state
 title: Product definition state for INIT-0003
 status: authoritative
-revision: 6
+revision: 7
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
 updated_by_role: ROLE-product-manager
 initiative: INIT-0003
-phase: DECOMPOSITION
+phase: READINESS
 phase_entered: 2026-11-08
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: dispatch the planner for coherence round 1 (story-set-technical-coherence, round 1 of 2), fix non-blocking findings, accept REQ-0005 and REQ-0006, declare convergence (DECOMPOSITION)"
+next_action: "ROLE-product-readiness-reviewer: independent readiness verdict on INIT-0003, round 1 (R13-R18 plus the flag-only clauses R8 and R9), against the validator report in Session notes (digest (REQ-0005, 3; REQ-0006, 3, 2026-11-08); INIT-0003 revision 4)"
 blocked_by: []
-converged: false
+converged: true
 readiness_verdict: none
 stories: [REQ-0005, REQ-0006]
 design_refs: [DES-0003]
@@ -33,6 +33,13 @@ New initiative from a raw request whose product decision the requester already
 made ([raw request](sources/raw-request.md)). The requester pre-authorized the
 whole run with no approval stops ([run instructions](sources/run-instructions.md)).
 
+Two stories are accepted and the set is converged: REQ-0005 (Room settings and
+the New Room and Clone dialogs, builds the shared editor and the vendor file)
+and REQ-0006 (chat bar, after REQ-0005). Option A (PD-0012) was assessed
+feasible-with-constraints; the reference frames are DES-0003; coherence ended
+`coherent` at its terminal round. The phase is READINESS: the independent
+verdict is next.
+
 ## Problem statement
 
 Goal, Rules, agent instructions and chat messages are Markdown, but the user
@@ -45,9 +52,10 @@ separate preview, and the saved text is exactly what was typed
 
 ## Next action
 
-ROLE-product-manager: dispatch design-lead for the two reference frames
-(PD-0012 item 4) and des-recorder for DES-0003, then coherence round 1, accept
-REQ-0005 and REQ-0006, declare convergence (DECOMPOSITION).
+ROLE-product-readiness-reviewer: independent readiness verdict on INIT-0003,
+round 1 (R13-R18 plus the flag-only clauses R8 and R9), against the validator
+report in Session notes (digest `(REQ-0005, 3; REQ-0006, 3, 2026-11-08)`;
+INIT-0003 revision 4).
 
 ## Blocked by
 
@@ -158,6 +166,8 @@ within the requester's decided behaviour; none is requester-owned.
 | 2026-11-08 | ROLE-planner (technical architect, `product-feasibility-assessment`) — vendor claude, model opus | Feasibility of Option A (one shared CodeMirror 6 editor, one prebuilt vendor file) for REQ-0005 and REQ-0006, with capability scan and system impact (size rule §9d.1) | A: feasible-with-constraints (multi-component); C-01..C-20; R-01..R-08; PC-01..PC-09 (PC-02 blocking as written: no text draft exists today); PR-1..PR-11 all pm-resolvable; no requester question; no cooling-period exception needed; 6 corrections to CAP-0003 | Consultation log; [technical/assessment.md](../technical/assessment.md), [capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md); CAP-0003 revision 2; rulings to PD-0012 at SOLUTION_CONVERGENCE |
 | 2026-11-08 | ROLE-product-designer (design author, step 1b, one direction) — vendor claude, model fable | Draw the two reference frames PD-0012 item 4 names (Room settings Brief and Agents; chat bar) at 1440, light, from today's markup and `ui/styles.css` | Delivered both frames and renders (1440 scroll width, no console errors); no toolbar, toggle, preview or language header; fence lines as blank strips; marks on the edited line only; Agents tab without the Edit/Preview toggle; no Proposals that need scope; two pre-existing light-theme observations (image chip close mark, inline-code background) left unchanged | Design branch merged at `8a65ee2`; frames under `design/heroes/`; [DES-0003](../../../design/DES-0003-markdown-editor-reference-frames.md) |
 | 2026-11-08 | ROLE-product-designer (DES recorder, step 11, hero-frame record) — vendor claude, model sonnet | Record DES-0003 and its index row | DONE, commit `8d04ea3`; `local_export` the five files; requirements REQ-0005, REQ-0006 | [DES-0003](../../../design/DES-0003-markdown-editor-reference-frames.md), `design/index.md` row |
+| 2026-11-08 | ROLE-planner (technical architect, `story-set-technical-coherence`, full pass, round 1 of 2) — vendor claude, model opus | Is the draft set REQ-0005 then REQ-0006 (revision 2) technically coherent, sequenced possibly, free of an assumed missing capability and of verdict drift? | `defects-open`: 1 blocking (defect 1: the library's default writes a dropped file's text into the field, on top of the page's own file attach; resolvable in decomposition, no product question) and 6 non-blocking (2 suite criterion on REQ-0005, 3 test-line counts, 4 a tab can only be pasted, 5 and 6 two scope lines, 7 harness is Chromium only); no verdict drift, no regression; no `Q-` | [technical/coherence.md](../technical/coherence.md); repaired inline by the PM in the same session (both stories to revision 3: behaviour sentence, acceptance criterion and constraint C-21 for the drop, REQ-0005 suites criterion, per-story test counts, pasted tab, scope wording, Chromium note), commit `7a0ea41` |
+| 2026-11-08 | ROLE-planner (technical architect, `story-set-technical-coherence`, delta re-check, round 2 of 2, terminal) — vendor claude, model sonnet | Did the repair close the seven round-1 defects, and did it add a blocking defect? | `coherent`: all seven `fixed`; 0 open blocking, 0 open non-blocking; terminal for this story set, no round 3 (rule 10) | [technical/coherence.md](../technical/coherence.md) (round-1 rows kept, dispositions updated by the checker); every blocking finding of the terminal round carries disposition `fixed` (R9) |
 
 ## Escalation log
 
@@ -168,8 +178,8 @@ within the requester's decided behaviour; none is requester-owned.
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
-| REQ-0005 | The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type | draft | CAP-0001, CAP-0002 | DES-0003 | `depends_on: [none]`; on the frontier; builds the shared editor and the vendor file; engineering starts only after PRL-6 is merged and green on `main` (PD-0011 item 10) |
-| REQ-0006 | The user types Markdown in the chat bar and sees it format as they type | draft | CAP-0003 | DES-0003 | `depends_on: [REQ-0005]`; reuses the shared editor and the vendor file; same PRL-6 precondition |
+| REQ-0005 | The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type | accepted | CAP-0001, CAP-0002 | DES-0003 | `depends_on: [none]`; on the frontier; builds the shared editor and the vendor file; engineering starts only after PRL-6 is merged and green on `main` (PD-0011 item 10) |
+| REQ-0006 | The user types Markdown in the chat bar and sees it format as they type | accepted | CAP-0003 | DES-0003 | `depends_on: [REQ-0005]`; reuses the shared editor and the vendor file; same PRL-6 precondition |
 
 ## Design coverage
 
@@ -188,6 +198,7 @@ within the requester's decided behaviour; none is requester-owned.
 | 2026-11-08 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1 and O2, explicit out-of-scope, success measures, draft REQ-0005 and REQ-0006 covering both outcomes with no uncovered stated need, Product Definition Contract (accepted) citing both raw sources; PD-0011 accepted | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1: outcome and out-of-scope present; F2: draft-mode coverage run with no R1 defect: O1 maps to REQ-0005, O2 to REQ-0006; R3, R6, R7 and R12 also clean on the two drafts) | n/a |
 | 2026-11-08 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: the one option is recorded with a feasibility verdict (feasible-with-constraints) and its user-visible trade-off; single option justified as the requester's decision (PD-0011), alternatives ruled out by him; PM recommendation A with reasoning; design 1a–1b skipped, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 justified single decided option; X2 verdict in the set; one Consultation log row for the one delegate response) | n/a |
 | 2026-11-08 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0012 (A, feasible-with-constraints), indexed; REQ-0005 and REQ-0006 revision 2 consistent with PD-0012 and PD-0013 and carrying the technical constraints; no competing option under consideration; Solution Contract cites PD-0012 and its design concept (item 4) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (accepted PD-0012 and PD-0013, each with its index row in one commit; counter 13); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | n/a |
+| 2026-11-08 | DECOMPOSITION | READINESS | ROLE-product-manager | Exit criteria met: O1 maps to accepted REQ-0005 and O2 to accepted REQ-0006; both meet §10.3 (accepted, one testable outcome, pass/fail acceptance criteria with a `composition:` criterion, CAP-, DES-0003 with five exports on disk, `depends_on` explicit, no blocker `Q-`, no PD- or constraint contradicted, indexed); coherence round 1 `defects-open` (one blocking, repaired) and round 2 (terminal) `coherent`; convergence declared | Exited DECOMPOSITION, entered READINESS. Hooks: HOOK-design-coverage pass (DES-0003 accepted, exports on disk, names REQ-0005 and REQ-0006); HOOK-dependency-graph pass (two nodes, one edge, acyclic); HOOK-phase-entry pass (`converged: true`; coverage full mode 0 defects; terminal coherence not regression-required; accepted DES-0003 for the user-facing stories) | n/a |
 
 ## Session notes
 
@@ -242,6 +253,10 @@ within the requester's decided behaviour; none is requester-owned.
 - 2026-11-08 — Dispatch log. DECOMPOSITION | ROLE-product-designer (design author, step 1b; one dispatch for both frames) | claude | fable | M | ledger run `ae666f070d55b9e2d` | `design/heroes/` (two frames, two renders, `approach.md`), commit `40aee93`, merged to main at `8a65ee2`.
 - 2026-11-08 — Dispatch log. DECOMPOSITION | ROLE-product-designer (DES recorder, step 11) | claude | sonnet | S | ledger run `ad4bba8359e160a06` | DES-0003 and its index row, commit `8d04ea3`. The recorder was briefed for a hero-frame record (the code-DES steps do not apply to Parley); `manifest.yaml` design counter bumped to 3 by the PM.
 - 2026-11-08 — PM validation of the frames against the raw request, PD-0013 and the stories (the PNGs and `approach.md` read, not the report): no toolbar, toggle, preview or extra button; Goal unfocused shows no marks; Rules focused shows the edited line's marks only and the fence lines as blank strips with no language header; closed bullets show a bullet and numbers as typed; the agent instructions have no Edit/Preview toggle and keep Expand editor; the chat bar frame has the chips, the sent message for comparison and the exact placeholder; 1440 scroll width on both. Nothing needs a new requirement; the two light-theme observations are existing behaviour, outside this initiative.
+- 2026-11-08 — Dispatch log. DECOMPOSITION | ROLE-planner (technical architect, coherence full pass, round 1) | claude | opus | M | ledger run `a4ac516d0b1a9d676` | `technical/coherence.md`.
+- 2026-11-08 — Dispatch log. DECOMPOSITION | ROLE-planner (technical architect, coherence delta re-check, round 2, terminal) | claude | sonnet | S | ledger run `acfc4a8e4c8c7c097` | `technical/coherence.md` (updated).
+- 2026-11-08 — DECOMPOSITION: coherence round 1 found one blocking defect (a file dropped on the editor would be written into the text by the library default, and none of the stories or the assessment said so). The PM repaired it inline within §4.1 (conformance to REQ-0005 Behavior 6 and PD-0011 item 6, "the saved text is exactly what was typed"; no outcome, user or measure changes): each story gained the behaviour sentence, an acceptance criterion and constraint C-21 (not in PD-0012's C-01..C-20 list, which stays as accepted; the stories and the coherence file carry it). The six non-blocking defects were fixed in the same pass. Round 2 (terminal, §9d.3) returned `coherent`. REQ-0005 and REQ-0006 accepted at revision 3; INIT-0003 revision 4; `converged: true`.
+- 2026-11-08 — Coverage, full mode (PM, inline, as INIT-0002): R1–R12 all pass, 0 defects. Map: O1 → REQ-0005 (accepted, rev 3) → CAP-0001, CAP-0002, DES-0003 (five exports on disk), PD-0011/0012/0013 (accepted); O2 → REQ-0006 (accepted, rev 3) → CAP-0003, DES-0003, PD-0011/0012/0013; DES-0003 names both REQ-; depends_on: REQ-0005 none, REQ-0006 [REQ-0005] (accepted, acyclic, sequencing notes in `Stories`); no `Q-` raised (Q-0001 belongs to INIT-0002, `important`); out-of-scope section non-empty and no REQ- names excluded behaviour; every escalation-class Ambiguity log row: none (all `pm-resolvable` or the requester's own decision); R9: PD-0012 cites feasible-with-constraints, coherence verdict `coherent` recorded in the Consultation log, terminal round 2, every blocking finding `fixed`; counters capability 3, decision 13, initiative 3, requirement 6, design 3, question 1 equal the highest files; 115 links in the changed records resolve (script, two literal-text false positives checked by hand). Story-set digest of this report: `(REQ-0005, 3; REQ-0006, 3, 2026-11-08)`; INIT-0003 revision 4.
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
