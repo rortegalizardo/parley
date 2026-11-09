@@ -1,19 +1,19 @@
 ---
-id: DM-INIT-0015
+id: DM-INIT-0002
 type: delivery-manifest
-title: Delivery manifest for INIT-0015
+title: Delivery manifest for INIT-0002
 status: authoritative
 revision: 1
 owner_role: ROLE-orchestrator
 created: 2026-11-06
 updated: 2026-11-06
 updated_by_role: ROLE-product-manager
-initiative: INIT-0015
+initiative: INIT-0002
 manifest_version: 1
 band_owner: product
 issued_on: 2026-11-06
 issued_from_verdict: READY@2026-11-06
-story_set_digest: "REQ-0004@3@2026-11-06; INIT-0015@3"
+story_set_digest: "REQ-0004@3@2026-11-06; INIT-0002@3"
 accepted_on: none
 dispatch_unit: ticket
 max_parallelism: default
@@ -21,7 +21,7 @@ completion: pending
 stories: [REQ-0004]
 ---
 
-# Delivery manifest — INIT-0015
+# Delivery manifest — INIT-0002
 
 > Schema: `product/schemas/delivery-manifest.md`. Consumption:
 > `product/architecture/delivery-fanout.md`.
@@ -31,13 +31,13 @@ stories: [REQ-0004]
 
 ## Identity
 
-- Initiative: `INIT-0015`
+- Initiative: `INIT-0002`
 - Outcome: from any room's menu, in one short dialog, the user creates a new room with that room's agents (with their permissions), Room Brief Goal and Rules, room settings and project folder, an empty chat and fresh agent sessions, independent of the original from then on.
 - Handoff packet: [`../product/state.md`](../product/state.md) `## Handoff packet`
 
 ## Shared references
 
-- Design references: `DES-0002 → initiatives/INIT-0015-clone-room-setup/design/heroes/` (`clone-room-setup.dc.html`, `clone-room-setup.png`, `approach.md`)
+- Design references: `DES-0002 → initiatives/INIT-0002-clone-room-setup/design/heroes/` (`clone-room-setup.dc.html`, `clone-room-setup.png`, `approach.md`)
 - Decisions in force: `PD-0003`, `PD-0004`, `PD-0006`, `PD-0007`, `PD-0009`, `PD-0010`
 - Binding technical constraints:
   - `C-01` — `technical/assessment.md` round 1

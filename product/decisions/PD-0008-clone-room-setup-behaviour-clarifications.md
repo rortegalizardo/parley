@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0015, CAP-0002]
+affects: [INIT-0002, CAP-0002]
 supersedes:
 superseded_by: PD-0010
 archived_on: 2026-11-06
@@ -20,7 +20,7 @@ Decided by `ROLE-product-manager` under §4.1 (clarifications that do not
 change the user-visible outcome of
 [PD-0007](PD-0007-clone-room-setup-requester-decisions.md) and contradict no
 constraint, principle or accepted `PD-`). Each item answers one row of the
-INIT-0015 Ambiguity log.
+INIT-0002 Ambiguity log.
 
 ## Context
 

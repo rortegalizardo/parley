@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0015, CAP-0002]
+affects: [INIT-0002, CAP-0002]
 supersedes:
 superseded_by:
 ---
@@ -24,11 +24,11 @@ items 5, 6 and 12).
 
 The architect found both options feasible-with-constraints, band
 multi-component, and recommended A
-([assessment](../initiatives/INIT-0015-clone-room-setup/technical/assessment.md);
-INIT-0015 `## Options`). Both give the user the same menu item, dialog and new
+([assessment](../initiatives/INIT-0002-clone-room-setup/technical/assessment.md);
+INIT-0002 `## Options`). Both give the user the same menu item, dialog and new
 room. The design look is fixed by the requester: reuse the Create room
 dialog's styling, 1440 light, no canvas
-([raw request](../initiatives/INIT-0015-clone-room-setup/product/sources/raw-request.md), "Constraints").
+([raw request](../initiatives/INIT-0002-clone-room-setup/product/sources/raw-request.md), "Constraints").
 
 ## Decision
 

@@ -1,6 +1,6 @@
 Verdict: coherent
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0015
+Initiative: INIT-0002
 Story set reviewed: REQ-0004 (revision 2, draft) — the whole set
 Authorising decision: PD-0009 (option A, server-side clone), with the rulings of PD-0010
 Assessment round relied on: 1
@@ -9,7 +9,7 @@ Round: 1 of 2 — full pass
 
 Evidence: [capability-scan.md](capability-scan.md), [impact.md](impact.md),
 [assessment.md](assessment.md) (round 1). Code read on branch
-`product/INIT-0015-clone-room-setup`, which equals `main` at `704039f` outside
+`product/INIT-0002-clone-room-setup`, which equals `main` at `704039f` outside
 `product/`. The live store `~/.parley-fork` was read only (keys and flags, no
 content). No server was started. Source lines below are evidence only, not
 design.

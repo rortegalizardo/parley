@@ -1,9 +1,9 @@
 ---
-id: INIT-0015
+id: INIT-0002
 type: initiative
 title: Clone a room's setup into a new room with an empty chat
 status: active
-revision: 3
+revision: 4
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
@@ -13,7 +13,7 @@ tickets: [PRL-4]
 decisions: [PD-0003, PD-0004, PD-0006, PD-0007, PD-0009, PD-0010]
 ---
 
-# INIT-0015 — Clone a room's setup into a new room with an empty chat
+# INIT-0002 — Clone a room's setup into a new room with an empty chat
 
 ## Outcome
 
@@ -101,3 +101,4 @@ Decisions; `important`, non-blocking, default no.
 | 2026-11-06 | 1 | Created at INTAKE (`new-initiative`) | Raw request from the requester |
 | 2026-11-06 | 2 | Outcome, scope, out-of-scope, success measures and one draft requirement | PRODUCT_DEFINITION |
 | 2026-11-06 | 3 | Chosen option A (PD-0009); behaviour rulings PD-0010 supersede PD-0008; scope unchanged | SOLUTION_CONVERGENCE |
+| 2026-11-06 | 4 | Renumbered to INIT-0002: initiatives now count per project (old-to-new map: `~/Factory/Artifacts/tracker/migration/prl-init-renumber-map.json`) | Owner decision, room Factory M3 #181 |

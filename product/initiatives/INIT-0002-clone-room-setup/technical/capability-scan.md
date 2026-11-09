@@ -1,6 +1,6 @@
 ---
 mode: PRODUCT-DISCOVERY
-initiative: INIT-0015
+initiative: INIT-0002
 type: technical-assessment
 title: Platform capability scan — Clone a room's setup into a new room with an empty chat
 status: authoritative
@@ -18,7 +18,7 @@ updated_by_role: ROLE-planner
 ---
 
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0015
+Initiative: INIT-0002
 Scanned: 2026-11-06
 Systems scanned: Parley server `parley.mjs`, browser UI `ui/index.html`, `ui/app.js`, `ui/styles.css`, `lib/bridge-backend.mjs`, `lib/claude-auth.mjs`, `bin/parley-link.mjs`, `desktop/main.cjs`, `test/server-fixture.mjs`, `docs/ROOM-BEHAVIOR.md`, at `main` `704039f` (the product branch differs from it only under `product/`; checked with `git diff 704039f -- . ':!product'`, empty). The live room store `~/.parley-fork` was read only: file names, JSON keys, lengths and setting values. No content was read out, nothing was written, and no server was started.
 

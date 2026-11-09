@@ -7,7 +7,7 @@ revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
-initiative: INIT-0015
+initiative: INIT-0002
 outcome_element: "O1 — From any room's menu, in one short dialog, the user creates a new room with that room's agents, Goal, Rules, room settings and project folder, an empty chat and fresh agent sessions, independent of the original from then on."
 acceptance:
   - "Open Room actions on a room row → the menu lists Clone room setup… beside Archive and Rename"

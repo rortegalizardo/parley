@@ -1,4 +1,4 @@
-# INIT-0015 — hero frame: approach
+# INIT-0002 — hero frame: approach
 
 Set by the PM (PD-0009 item 3, same depth as PD-0004 item 1); recorded here,
 then followed.

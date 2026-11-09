@@ -1,5 +1,5 @@
 ---
-initiative: INIT-0015
+initiative: INIT-0002
 type: solution-contract
 title: Solution contract — Clone a room's setup into a new room with an empty chat
 status: accepted
@@ -13,7 +13,7 @@ chosen_decision: PD-0009
 design_refs: [DES-0002]
 ---
 
-# Solution contract — INIT-0015
+# Solution contract — INIT-0002
 
 Cites [PD-0009](../../../decisions/PD-0009-clone-room-setup-chosen-option-server-side.md)
 (chosen option and design depth),
@@ -75,7 +75,7 @@ The reference frame of PD-0009 item 3, drawn and recorded at DECOMPOSITION.
 
 | DES- id | Local export | Requirements served |
 | --- | --- | --- |
-| [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md) | `initiatives/INIT-0015-clone-room-setup/design/heroes/clone-room-setup.dc.html`, `clone-room-setup.png`, `approach.md` | REQ-0004 |
+| [DES-0002](../../../design/DES-0002-clone-room-setup-reference-frame.md) | `initiatives/INIT-0002-clone-room-setup/design/heroes/clone-room-setup.dc.html`, `clone-room-setup.png`, `approach.md` | REQ-0004 |
 
 ## Validation
 

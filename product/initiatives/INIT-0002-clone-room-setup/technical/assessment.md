@@ -1,6 +1,6 @@
 ---
 mode: PRODUCT-DISCOVERY
-initiative: INIT-0015
+initiative: INIT-0002
 type: technical-assessment
 title: Technical assessment — Clone a room's setup into a new room with an empty chat
 status: authoritative
@@ -18,7 +18,7 @@ updated_by_role: ROLE-planner
 ---
 
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0015
+Initiative: INIT-0002
 Phase at assessment: SOLUTION_EXPLORATION
 Assessed: 2026-11-06
 Round: 1

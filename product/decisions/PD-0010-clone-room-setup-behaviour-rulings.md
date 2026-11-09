@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0015, CAP-0002]
+affects: [INIT-0002, CAP-0002]
 supersedes: PD-0008
 superseded_by:
 ---
@@ -22,7 +22,7 @@ constraint, principle or accepted `PD-`). It supersedes
 [PD-0008](PD-0008-clone-room-setup-behaviour-clarifications.md): the same
 fourteen items, with the architect's findings PC-01 and PC-03 to PC-07 and
 risk R-04 applied
-([assessment](../initiatives/INIT-0015-clone-room-setup/technical/assessment.md)).
+([assessment](../initiatives/INIT-0002-clone-room-setup/technical/assessment.md)).
 Items changed from PD-0008: 2, 3, 4, 5, 6, 11, 13.
 
 ## Context

@@ -8,7 +8,7 @@ owner_role: ROLE-product-manager
 created: 2026-11-06
 updated: 2026-11-06
 decided_on: 2026-11-06
-affects: [INIT-0015, CAP-0002]
+affects: [INIT-0002, CAP-0002]
 supersedes:
 superseded_by:
 ---
@@ -17,9 +17,9 @@ superseded_by:
 
 Decided by the requester (Ricardo) in the room "Parlay Product Evolution";
 recorded from
-[the raw request](../initiatives/INIT-0015-clone-room-setup/product/sources/raw-request.md),
+[the raw request](../initiatives/INIT-0002-clone-room-setup/product/sources/raw-request.md),
 "Decision to build". Final: not re-asked
-([run instructions](../initiatives/INIT-0015-clone-room-setup/product/sources/run-instructions.md)).
+([run instructions](../initiatives/INIT-0002-clone-room-setup/product/sources/run-instructions.md)).
 
 ## Context
 

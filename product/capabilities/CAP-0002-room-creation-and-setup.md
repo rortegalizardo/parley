@@ -14,11 +14,11 @@ decisions: []
 
 # CAP-0002 — The user creates a room and sets up its agents, Room Brief, room settings and project folder
 
-Recorded at INIT-0015 DISCOVERY from the committed code on `main` at
+Recorded at INIT-0002 DISCOVERY from the committed code on `main` at
 `704039f` (`ui/index.html`, `ui/app.js`, `parley.mjs`) and a read-only look at
 the room files under `~/.parley-fork`, because room creation shipped before
 Product Memory existed. Revision 2 applies the corrections of the architect's
-[capability scan](../initiatives/INIT-0015-clone-room-setup/technical/capability-scan.md)
+[capability scan](../initiatives/INIT-0002-clone-room-setup/technical/capability-scan.md)
 (sleep, Gemini permissions).
 
 ## Behavior today
@@ -74,5 +74,5 @@ None recorded beyond `project/constraints.md`.
 
 | Date | Revision | Change | Initiative |
 | --- | --- | --- | --- |
-| 2026-11-06 | 1 | Recorded as current state | INIT-0015 (DISCOVERY) |
-| 2026-11-06 | 2 | Corrected: sleep lives in `state.json`; Gemini approval mode is a permission; effort and Fast mode only where the provider has them | INIT-0015 (SOLUTION_EXPLORATION, architect's capability scan) |
+| 2026-11-06 | 1 | Recorded as current state | INIT-0002 (DISCOVERY) |
+| 2026-11-06 | 2 | Corrected: sleep lives in `state.json`; Gemini approval mode is a permission; effort and Fast mode only where the provider has them | INIT-0002 (SOLUTION_EXPLORATION, architect's capability scan) |

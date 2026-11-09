@@ -1,6 +1,6 @@
 ---
 mode: PRODUCT-DISCOVERY
-initiative: INIT-0015
+initiative: INIT-0002
 type: technical-assessment
 title: System impact map — Clone a room's setup into a new room with an empty chat
 status: authoritative
@@ -18,7 +18,7 @@ updated_by_role: ROLE-planner
 ---
 
 Mode: PRODUCT-DISCOVERY
-Initiative: INIT-0015
+Initiative: INIT-0002
 Mapped: 2026-11-06
 Options mapped:
 - A — Server-side clone: a new server action builds the room from the original's saved setup.

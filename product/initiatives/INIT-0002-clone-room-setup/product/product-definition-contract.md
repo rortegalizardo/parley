@@ -1,5 +1,5 @@
 ---
-initiative: INIT-0015
+initiative: INIT-0002
 type: product-definition-contract
 title: Product definition contract — Clone a room's setup into a new room with an empty chat
 status: accepted
@@ -15,7 +15,7 @@ decisions: [PD-0003, PD-0007, PD-0008]
 raw_sources: [sources/raw-request.md, sources/run-instructions.md]
 ---
 
-# Product definition contract — INIT-0015
+# Product definition contract — INIT-0002
 
 > A contract cites raw sources; it never supersedes them. A drift between
 > this file and the raws is a defect in this file.
@@ -83,8 +83,8 @@ empty chat and fresh agent sessions, independent of the original from then on
 
 ## Raw-source citations
 
-- `product/initiatives/INIT-0015-clone-room-setup/product/sources/raw-request.md`
-- `product/initiatives/INIT-0015-clone-room-setup/product/sources/run-instructions.md`
+- `product/initiatives/INIT-0002-clone-room-setup/product/sources/raw-request.md`
+- `product/initiatives/INIT-0002-clone-room-setup/product/sources/run-instructions.md`
 
 ## Non-goals
 

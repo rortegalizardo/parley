@@ -10,20 +10,20 @@ raised_by_role: ROLE-product-manager
 raised_on: 2026-11-06
 created: 2026-11-06
 updated: 2026-11-06
-initiative: INIT-0015
+initiative: INIT-0002
 resolved_by:
 ---
 
 # Q-0001 — Should "Clone room setup…" offer an option to also copy the room's Decisions?
 
-triage: A product — the requester named this his own open question and set its default ([raw request](../initiatives/INIT-0015-clone-room-setup/product/sources/raw-request.md), "Out of scope").
+triage: A product — the requester named this his own open question and set its default ([raw request](../initiatives/INIT-0002-clone-room-setup/product/sources/raw-request.md), "Out of scope").
 
 ## Question
 
 When you clone a room's setup, should there be a choice to bring the
 original room's Decisions (from its Room Brief) into the new room too?
 
-Not blocking: INIT-0015 builds the clone without Decisions, as the requester
+Not blocking: INIT-0002 builds the clone without Decisions, as the requester
 decided ([PD-0007](../decisions/PD-0007-clone-room-setup-requester-decisions.md)
 items 3 and 6). An answer of "yes" would be a new, separate change.
 
