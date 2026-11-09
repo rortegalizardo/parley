@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>INIT-0003 reference frame · Live Markdown editor in Room settings (Brief and Agents)</title>
+<link rel="stylesheet" href="../../../../../ui/styles.css">
+<!-- INIT-0003 reference frame · 1440 wide · light (PD-0012 item 4).
+     Reuses Parley's own ui/styles.css and today's markup classes for Room
+     settings (the modal, its tabs, the Brief card from renderBriefCard, the
+     agent card from renderSeatCards / seatInstructionsHTML). The only change
+     to today's markup: each multi-line Markdown text box (Goal, Rules, Standing
+     instructions) is the live editor, drawn here as a .md-editor element; the
+     Edit/Preview toggle of the instructions field is gone (REQ-0005 Behavior
+     9). The new pieces are the plain CSS below. Sample text is illustrative;
+     where it and a requirement differ, the requirement wins (PD-0012 item 4).
+     Two modals are staged one under the other (two 820px dialogs do not fit
+     side by side at 1440); the head and foot ids repeat in both so today's
+     id-keyed rules apply to each. -->
+<style>
+  /* ---- The live editor takes the text box's rules ----
+     Mirrors the cascade that reaches a textarea in these fields today
+     (ui/styles.css: .fld textarea; #overlay .modal textarea; the lift's
+     :is(#overlay .modal) .fld textarea; .instructions-field textarea).
+     C-16: every visible rule on the textarea applies to the editor. */
+  #overlay .modal .fld .md-editor {
+    display: block; width: 100%; box-sizing: border-box; position: relative;
+    min-height: 5.5em; padding: 9px 11px;
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: 9px;
+    color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.45;
+    overflow: auto; overflow-wrap: anywhere;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .md-editor .ln { white-space: pre-wrap; }
+  #overlay .modal .instructions-field .md-editor { min-height: 190px; line-height: 1.6; }
+  /* The focus ring is today's (:focus on a settings field). */
+  #overlay .modal .fld .md-editor.focused { border-color: color-mix(in srgb, var(--accent) 60%, var(--border2)); box-shadow: 0 0 0 3px var(--ring); }
+  /* resize: vertical — the drag handle a textarea has today, where it exists (C-16). */
+  #overlay .modal .fld .md-editor.resizable::after {
+    content: ""; position: absolute; right: 2px; bottom: 2px; width: 10px; height: 10px; opacity: .55;
+    background: linear-gradient(135deg, transparent 0 50%, var(--text-faint) 50% 58%, transparent 58% 72%, var(--text-faint) 72% 80%, transparent 80%);
+  }
+
+  /* ---- The Markdown look: chat's values (ui/styles.css .bubble rules, lines
+     319–343), applied line by line. One typed line is one .ln; a blank typed
+     line is the only vertical spacing (an editor adds no block margins). ---- */
+  .md-editor .ln { display: block; }
+  .md-editor .h1 { font-size: 1.25em; font-weight: 700; line-height: 1.3; }
+  .md-editor .h2 { font-size: 1.15em; font-weight: 700; line-height: 1.3; }
+  .md-editor .h3 { font-size: 1.05em; font-weight: 700; line-height: 1.3; }
+  .md-editor .h4 { font-size: 1em;    font-weight: 700; line-height: 1.3; }
+  .md-editor strong { font-weight: 700; }
+  .md-editor code { font-family: var(--mono); font-size: .88em; background: rgba(255,255,255,.08); padding: 2px 5px; border-radius: 5px; }
+  .md-editor a { color: var(--user); text-decoration: none; }
+  /* Lists: chat's 22px indent. A hidden bullet marker still shows a bullet
+     (C-08); a numbered item shows the number as typed (PD-0013 item 4). */
+  .md-editor .li { position: relative; padding-left: 22px; }
+  .md-editor .li.ul::before { content: "•"; position: absolute; left: 7px; top: 0; }
+  .md-editor .li.ul.editing::before { content: none; }
+  .md-editor .li .num { position: absolute; left: 4px; top: 0; }
+  /* Fenced code block: chat's .codeblock surface (border, 10px radius, code
+     background, monospace 13px/1.5), without the language header, the copy
+     button and the language colours (PD-0013 item 5). The two fence lines are
+     hidden as blank strips of the block background and keep their height
+     (PD-0013 item 2); they double as the block's top and bottom padding. */
+  .md-editor .fence { font-family: var(--mono); font-size: 13px; line-height: 1.5; background: var(--code-bg); border: 1px solid var(--border2); padding: 0 13px; }
+  .md-editor .fence.open  { border-radius: 10px 10px 0 0; border-bottom: 0; }
+  .md-editor .fence.code  { border-top: 0; border-bottom: 0; }
+  .md-editor .fence.close { border-radius: 0 0 10px 10px; border-top: 0; }
+  /* The line being edited: its marks show, in the muted text colour
+     (--text-faint, today's token); the text keeps its formatting. */
+  .md-editor .mark { color: var(--text-faint); }
+  .md-editor .li.editing .mark.marker { position: absolute; left: 7px; top: 0; }
+  .md-editor .cursor { display: inline-block; width: 1.5px; height: 1.15em; margin-left: 1px; background: var(--text); vertical-align: -.18em; }
+</style>
+</head>
+<body>
+<style>
+  /* Reference staging only: both dialogs on one page that scrolls, at full
+     height, instead of the app's fixed 760px modal with a scrolling body. */
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  body { background: #d9dde4; }
+  #overlay.open { position: static; display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; background: none; backdrop-filter: none; }
+  #overlay .modal { height: auto; max-height: none; overflow: visible; flex: none; }
+  .settings-scroll-body { overflow: visible; }
+  .settings-fixed-foot.mrow { border-radius: 0 0 16px 16px; }
+</style>
+<div id="overlay" class="open">
+
+  <!-- ============ (a) Room settings → Brief ============ -->
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="settings-fixed-head"><h2 id="settingsTitle">Room settings</h2>
+    <div class="sub" id="roomPath">/Users/ortega/Parley/rooms/parlay-product-evolution</div>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="false">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="true">Brief</button></div></div>
+    <div class="settings-scroll-body">
+    <section id="contextSettingsPane" role="tabpanel" aria-labelledby="contextSettingsTab"><section id="contextSettings" aria-label="Room brief">
+      <section id="briefCard" class="context-brief-card direction-card brief-card">
+        <div class="context-section-head"><div><h3>Room brief</h3><p class="note">Every agent gets this whole brief — goal, rules and active decisions — on every turn. Edits apply on each agent's next turn.</p></div></div>
+
+        <!-- Goal: the live editor, not focused → every closed element formatted, no marks (PD-0013 item 3). rows=3 today → 79px. Source (202 characters):
+             Ship the **live Markdown editor** for Parley: *typed text formats in place*, and what is saved is exactly what was typed. Reference: [the product brief](https://github.com/rortegalizardo/parley#readme). -->
+        <div class="fld"><label for="briefGoal">Goal</label><div id="briefGoal" class="md-editor resizable" role="textbox" aria-multiline="true" aria-label="Goal" style="min-height:79px"><div class="ln">Ship the <strong>live Markdown editor</strong> for Parley: <em>typed text formats in place</em>, and what is saved is exactly what was typed. Reference: <a href="https://github.com/rortegalizardo/parley#readme">the product brief</a>.</div></div></div>
+
+        <!-- Rules: the live editor, focused (ring), dragged taller than its rows=9 default so every element is visible. Exactly one line is being edited: the second bullet, cursor at its end, its marks (`- ` and `**`) shown muted. Source (387 characters):
+             ## How we work
+             Keep the thread **short** and *concrete*; one topic per message.
+             - Say the trade-off before the answer
+             - Cite the file and line when you **quote code**
+             - Ask before touching `ui/app.js`
+             1. Reproduce
+             2. Fix
+             3. Verify on an isolated port
+             Run the check with:
+             ```sh
+             npm run test:smoke
+             ```
+             Links go in Markdown: [Parley README](https://github.com/rortegalizardo/parley#readme). -->
+        <div class="fld"><label for="briefRules">Rules</label><div id="briefRules" class="md-editor resizable focused" role="textbox" aria-multiline="true" aria-label="Rules">
+<div class="ln h2">How we work</div>
+<div class="ln">Keep the thread <strong>short</strong> and <em>concrete</em>; one topic per message.</div>
+<div class="ln li ul">Say the trade-off before the answer</div>
+<div class="ln li ul editing"><span class="mark marker">-</span>Cite the file and line when you <span class="mark">**</span><strong>quote code</strong><span class="mark">**</span><span class="cursor" aria-hidden="true"></span></div>
+<div class="ln li ul">Ask before touching <code>ui/app.js</code></div>
+<div class="ln li ol"><span class="num">1.</span>Reproduce</div>
+<div class="ln li ol"><span class="num">2.</span>Fix</div>
+<div class="ln li ol"><span class="num">3.</span>Verify on an isolated port</div>
+<div class="ln">Run the check with:</div>
+<div class="ln fence open">&#8203;</div>
+<div class="ln fence code">npm run test:smoke</div>
+<div class="ln fence close">&#8203;</div>
+<div class="ln">Links go in Markdown: <a href="https://github.com/rortegalizardo/parley#readme">Parley README</a>.</div>
+</div></div>
+
+        <!-- Decisions, as today: 200-character fields, plain (not the editor). -->
+        <div class="fld"><label>Decisions</label><ul class="direction-pins brief-decisions">
+          <li><div class="brief-decision-field"><textarea rows="1" data-decision-index="0" maxlength="200" aria-label="Decision 1">Design at 1440 wide, light theme only.</textarea></div><button type="button" class="ract" data-brief-archive="0" aria-label="Archive decision 1">Archive</button></li>
+          <li><div class="brief-decision-field"><textarea rows="1" data-decision-index="1" maxlength="200" aria-label="Decision 2">No toolbar, no preview toggle, no separate preview.</textarea></div><button type="button" class="ract" data-brief-archive="1" aria-label="Archive decision 2">Archive</button></li>
+        </ul>
+        <div class="direction-add"><input type="text" id="briefNewDecision" maxlength="200" placeholder="Add a one-line decision…" aria-label="New decision"><button type="button" class="btn" id="briefAddDecision">Add</button></div></div>
+        <div id="briefMergeNotice" class="brief-notice" role="status" hidden></div>
+        <!-- briefChars(goal, rules, decisions) = 202 + 387 + 38 + 51 -->
+        <div class="brief-length"><span id="briefCount" class="direction-count">678 characters · guide about 2,000</span><p id="briefLengthWarning" class="brief-notice warn" role="status" hidden>This brief is longer than the 2,000-character guide (about 500 tokens), and every agent reads all of it on every turn. Consider archiving decisions you no longer need or trimming the rules. Nothing is cut automatically.</p></div>
+        <details id="briefPreviewDetails"><summary>What agents see</summary><p id="briefUnsaved" class="note">Includes unsaved changes.</p><pre id="briefPreview" class="brief-preview" aria-label="The exact block every agent receives"></pre></details>
+        <!-- The brief has an unsaved edit (the Rules line being typed), so Discard changes shows, as today. -->
+        <div class="direction-foot"><button type="button" class="btn" id="briefTidy">Tidy</button><button type="button" class="btn" id="briefDiscard">Discard changes</button><button type="button" class="btn primary" id="briefSave">Save brief</button></div>
+        <p id="briefStatus" class="note" role="status"></p>
+      </section>
+      <div id="contextExtras"><details class="context-sessions" data-context-detail="sessions"><summary>Agent sessions and context events</summary><p class="note">Only confirmed resets and compactions are recorded.</p></details></div>
+    </section></section>
+    </div>
+    <div class="mrow settings-fixed-foot">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="mRename">Rename…</button>
+        <button class="btn danger" id="mNewConv">Clear conversation…</button>
+        <button class="btn" id="mArchive">Archive room…</button><button class="btn danger" id="mDelete">Delete room</button>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="mCancel">Cancel</button>
+        <button class="btn primary" id="mSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ (b) Room settings → Agents ============ -->
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="settings-fixed-head"><h2 id="settingsTitle">Room settings</h2>
+    <div class="sub" id="roomPath">/Users/ortega/Parley/rooms/parlay-product-evolution</div>
+    <div class="settings-tabs" role="tablist" aria-label="Room settings sections"><button type="button" role="tab" id="agentsSettingsTab" aria-selected="true">Agents</button><button type="button" role="tab" id="roomSettingsTab" aria-selected="false">Room</button><button type="button" role="tab" id="contextSettingsTab" aria-selected="false">Brief</button></div></div>
+    <div class="settings-scroll-body">
+    <section id="agentsSettingsPane" role="tabpanel" aria-labelledby="agentsSettingsTab"><div class="settings-roster-head"><div><strong>Agents in this room</strong><span id="settingsRosterNote">2 of 4 agents · edits stay in draft until you save.</span></div><button type="button" id="settingsAddSeat" class="btn">＋ Add agent</button></div>
+    <div id="settingsAgentNav" class="settings-agent-nav" aria-label="Agent to edit"><button type="button" data-edit-agent="0" aria-pressed="true">@fable</button><button type="button" data-edit-agent="1" aria-pressed="false">@astra</button></div>
+    <div id="seatCards">
+      <div class="mgroup" data-roster-index="0">
+        <div class="settings-agent-bar"><div class="agent-identity"><strong class="agc" style="color:var(--claude)">@fable</strong><small>Claude · existing seat</small></div><button type="button" class="btn settings-remove-agent" data-remove-roster="0" aria-label="Remove agent 1">Remove</button></div>
+        <div class="agent-main-fields">
+          <div class="fld"><label>Model</label><div class="freecombo"><input class="freecombo-input" data-seat="fable" data-f="model" value="claude-sonnet-4-5" spellcheck="false" autocomplete="off" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" placeholder="blank = the CLI's default"><button type="button" class="freecombo-toggle" aria-label="Show all suggestions" title="Show all suggestions">▾</button></div><div class="note">Any value the CLI accepts — aliases or full model names.</div></div>
+          <div class="fld"><label>Reasoning effort</label><div class="freecombo"><input class="freecombo-input" data-seat="fable" data-f="effort" value="high" spellcheck="false" autocomplete="off" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" placeholder="blank = default"><button type="button" class="freecombo-toggle" aria-label="Show all suggestions" title="Show all suggestions">▾</button></div></div>
+        </div>
+        <!-- Standing instructions: the same live editor. No Edit/Preview toggle (instructionsModeHTML is gone), no .instructions-preview; Expand editor as today. Not focused → no marks. Source:
+             ## Role
+             You are the **lead**: drive the discussion and *keep it moving*.
+             - Open with the goal of the turn
+             - Name the trade-off before the answer
+             - Close with one question
+             Format commands as `code`; cite [the brief](https://github.com/rortegalizardo/parley#readme) when you quote it. -->
+        <div class="fld instructions-field"><label>Standing instructions <button type="button" class="ract expand-instructions">Expand editor</button></label><div class="md-editor resizable" role="textbox" aria-multiline="true" aria-label="Standing instructions for @fable" data-seat="fable" data-f="instructions">
+<div class="ln h2">Role</div>
+<div class="ln">You are the <strong>lead</strong>: drive the discussion and <em>keep it moving</em>.</div>
+<div class="ln li ul">Open with the goal of the turn</div>
+<div class="ln li ul">Name the trade-off before the answer</div>
+<div class="ln li ul">Close with one question</div>
+<div class="ln">Format commands as <code>code</code>; cite <a href="https://github.com/rortegalizardo/parley#readme">the brief</a> when you quote it.</div>
+</div><div class="note">This identity follows the agent through the whole room. Markdown is supported.</div></div>
+        <details class="agent-advanced"><summary>Advanced agent settings <span class="info-tip" tabindex="0" role="note" aria-label="Controls how this agent runs commands, requests permissions, and joins conversations." data-tip="Controls commands, permissions, and how this agent joins conversations.">ⓘ</span></summary></details>
+        <div class="sess">Session linked (a91f3c…), seen through turn 14.</div>
+      </div>
+    </div></section>
+    </div>
+    <div class="mrow settings-fixed-foot">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="mRename">Rename…</button>
+        <button class="btn danger" id="mNewConv">Clear conversation…</button>
+        <button class="btn" id="mArchive">Archive room…</button><button class="btn danger" id="mDelete">Delete room</button>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="mCancel">Cancel</button>
+        <button class="btn primary" id="mSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
