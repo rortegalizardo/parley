@@ -2,7 +2,7 @@
 id: INIT-0003
 type: initiative
 title: Markdown text formats as you type in the chat bar and Room Settings
-status: draft
+status: active
 revision: 4
 owner_role: ROLE-product-manager
 created: 2026-11-08

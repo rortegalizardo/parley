@@ -35,7 +35,7 @@ depends_on: [none]
 constraints: []
 observability: []
 rollout: none
-readiness: not-assessed
+readiness: engineering-ready
 tickets: []
 supersedes:
 superseded_by:

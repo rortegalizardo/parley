@@ -33,7 +33,7 @@ depends_on: [REQ-0005]
 constraints: []
 observability: []
 rollout: none
-readiness: not-assessed
+readiness: engineering-ready
 tickets: []
 supersedes:
 superseded_by:
