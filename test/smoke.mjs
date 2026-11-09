@@ -34,7 +34,7 @@ function ok(name, cond, detail) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let TOKEN = ""; // read out of the served page, exactly as the browser does
-const RUNTIME_PROTOCOL = "14";
+const RUNTIME_PROTOCOL = "16";
 
 async function api(method, route, body) {
   if (route === "/api/message" && body && body.discussionMode === undefined) body = { ...body, discussionMode: "parallel" };
@@ -699,7 +699,7 @@ async function checkFolderPickerUi() {
         contains: (name) => classes.has(name),
       };
     }
-    get textContent() { return this._text; }
+    get textContent() { return this._text + this.children.map((child) => child.textContent).join(""); }
     set textContent(v) {
       // The behaviour under test: assigning text replaces every child, so
       // anything still holding one of them by id is holding nothing.
@@ -708,31 +708,71 @@ async function checkFolderPickerUi() {
       this._text = String(v);
     }
     get innerHTML() { return this._text; }
-    set innerHTML(v) { this.textContent = v; }
-    querySelector(sel) {
-      const attr = /^\[([^\]=]+)]$/.exec(sel);
-      return attr ? (this.children.find((c) => attr[1] in c.attrs) || null) : null;
+    set innerHTML(v) {
+      this.textContent = v;
+      // Only the seat forms need parsed markup. Keep real controls and options
+      // from the app's renderer, rather than inventing successful selectors.
+      if (this.id === "rosterList" || this.id === "seatCards") {
+        this._text = "";
+        const stack = [this];
+        for (const token of String(v).match(/<[^>]+>|[^<]+/g) || []) {
+          if (token.startsWith("</")) { stack.pop(); continue; }
+          const tag = /^<([a-z][\w-]*)\b([^>]*)>/i.exec(token);
+          if (!tag) { stack.at(-1)._text += token; continue; }
+          const attrs = Object.fromEntries([...tag[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)]
+            .map((match) => [match[1], match[2] || ""]));
+          const node = new El(attrs.id, attrs);
+          node.tagName = tag[1].toUpperCase();
+          node.className = attrs.class || "";
+          node.value = attrs.value || "";
+          node.hidden = Object.hasOwn(attrs, "hidden");
+          for (const [name, value] of Object.entries(attrs)) {
+            if (name.startsWith("data-")) node.dataset[name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = value;
+          }
+          stack.at(-1).appendChild(node);
+          if (!["input", "br", "hr"].includes(tag[1])) stack.push(node);
+        }
+      }
     }
-    querySelectorAll() { return []; }
-    appendChild(c) { this.children.push(c); if (c.id) byId.set(c.id, c); return c; }
+    matches(sel) {
+      if (!/^(?:[\w-]+|\.[\w-]+|#[\w-]+|\[[\w-]+(?:="[^"]*")?\])+$/.test(sel)) return false;
+      return [...sel.matchAll(/(\.[\w-]+|#[\w-]+|\[([\w-]+)(?:="([^"]*)")?\]|[\w-]+)/g)].every(([part, , attr, value]) => {
+        if (part[0] === ".") return this.classList.contains(part.slice(1)) || (this.className || "").split(/\s+/).includes(part.slice(1));
+        if (part[0] === "#") return this.id === part.slice(1);
+        if (attr) return Object.hasOwn(this.attrs, attr) && (value === undefined || this.attrs[attr] === value);
+        return this.tagName === part.toUpperCase();
+      });
+    }
+    querySelector(sel) {
+      return this.querySelectorAll(sel)[0] || null;
+    }
+    querySelectorAll(sel) {
+      const descendants = this.children.flatMap((child) => [child, ...child.querySelectorAll("*")]);
+      return sel === "*" ? descendants : descendants.filter((child) => child.matches(sel));
+    }
+    appendChild(c) { c.parentNode = this; this.children.push(c); if (c.id) { byId.set(c.id, c); destroyed.delete(c.id); } return c; }
     append(...children) { children.forEach((child) => this.appendChild(child)); }
     addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
     showModal() { this.open = true; this.showModalCount++; }
     close() { this.open = false; this.closeCount++; }
     click() { this.clicked = (this.clicked || 0) + 1; return this.onclick && this.onclick({ target: this }); }
-    removeEventListener() {} setAttribute() {} removeAttribute() {}
-    getAttribute() { return null; } closest() { return null; }
+    dispatchEvent(event) { this["on" + event.type]?.({ target: this }); }
+    removeEventListener() {} setAttribute(name, value) { this.attrs[name] = String(value); }
+    removeAttribute(name) { delete this.attrs[name]; }
+    getAttribute(name) { return this.attrs[name] ?? null; }
+    closest(sel) { return this.matches(sel) ? this : this.parentNode?.closest(sel) || null; }
+    get options() { return this.querySelectorAll("option"); }
     focus() {} blur() {} remove() {} scrollTo() {}
     getBoundingClientRect() { return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }; }
   }
   const el = (id, attrs) => { const e = new El(id, attrs); if (id) byId.set(id, e); return e; };
-  // The picker buttons keep their real shape: a label span the "Choosing…"
-  // swap may touch, and — on the new-room button — a live value span that
-  // other code writes to while the dialog is open.
+  // The picker buttons keep their real label span; the editable project path
+  // is a separate input in the current form.
   const newRoomProj = el("newRoomProj");
-  newRoomProj.appendChild(new El(null, { "data-picker-label": "" }));
-  newRoomProj.appendChild(el("newRoomProjVal"));
+  const pickerLabel = new El(null, { "data-picker-label": "" });
+  newRoomProj.appendChild(pickerLabel);
   el("s_browse").appendChild(new El(null, { "data-picker-label": "" }));
+  const roomTemplateLabel = new El(null);
   const chips = ["auto", "claude", "codex", "both"].map((target) => {
     const chip = new El(null); chip.dataset.t = target;
     if (target === "auto") chip.classList.add("active");
@@ -754,7 +794,7 @@ async function checkFolderPickerUi() {
   const windowListeners = {};
   const sandbox = {
     console, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask,
-    URL: TestURL, URLSearchParams, TextDecoder, AbortController, FileReader: TestFileReader,
+    URL: TestURL, URLSearchParams, TextDecoder, AbortController, Event, FileReader: TestFileReader,
     crypto: { randomUUID: () => `draft-${++blobSeq}` },
     fetch: (...a) => nextFetch(...a),
     confirm: () => true, prompt: () => null, alert: noop,
@@ -779,9 +819,15 @@ async function checkFolderPickerUi() {
       querySelector(sel) {
         if (sel.includes("parley-token")) return { content: "smoke-token-0123456789abcdef" };
         if (sel.includes("parley-runtime-protocol")) return { content: RUNTIME_PROTOCOL };
+        if (sel === ".room-template > span") return roomTemplateLabel;
         return null;
       },
-      querySelectorAll: (sel) => sel === ".chip" ? chips : [],
+      querySelectorAll(sel) {
+        if (sel === ".chip") return chips;
+        const fields = /^#seatCards \.mgroup\[data-roster-index="(\d+)"\] \[data-f\]$/.exec(sel);
+        if (fields) return byId.get("seatCards")?.querySelector(`.mgroup[data-roster-index="${fields[1]}"]`)?.querySelectorAll("[data-f]") || [];
+        return [];
+      },
       createElement: (tag) => { const node = new El(null); node.tagName = String(tag || "").toUpperCase(); return node; },
       createDocumentFragment: () => new El(null),
       addEventListener: noop,
@@ -820,7 +866,19 @@ async function checkFolderPickerUi() {
     return bubble;
   },
   set text(value) { $("input").value = value; },
-  get projectDir() { return newRoomProjectDir; },
+  get projectDir() { return $("newRoomProjectPath").value; },
+  seatForms(summary) {
+    state.summary = summary; state.providers = summary.providers;
+    newRoster = rosterDraftFromSummary(summary);
+    renderRoster();
+    settingsRosterDraft = rosterDraftFromSummary(summary);
+    settingsRosterVersion = summary.rosterVersion;
+    renderSeatCards(summary);
+  },
+  chooseOption: chooseFreeCombo,
+  openCombo: setFreeComboOpen,
+  submitRoom() { return $("newRoomForm").onsubmit({ preventDefault() {} }); },
+  saveSettings() { return $("mSave").onclick(); },
   seedRoom(summary, entries, receipts = []) {
     state.summary = summary;
     state.providers = summary.providers || state.providers;
@@ -876,7 +934,7 @@ async function checkFolderPickerUi() {
   const openWhileReset = probe.openPicker();
   try { probe.resetForm(); } catch (e) { crash = e; }
   ok("folder picker UI: resetting the form mid-pick doesn't destroy the button's contents",
-    !crash, crash && crash.message);
+    !crash && newRoomProj.querySelector("[data-picker-label]") === pickerLabel, crash && crash.message);
   ok("new-room UI: opening the form uses the native modal dialog",
     probe.dialogState().open && probe.dialogState().showModalCount === 1, JSON.stringify(probe.dialogState()));
 
@@ -889,7 +947,7 @@ async function checkFolderPickerUi() {
   settle(ok200({ path: "D:\\stale-project" }));
   await stale;
   ok("folder picker UI: a result arriving after the form was reset is discarded",
-    probe.projectDir === null, String(probe.projectDir));
+    probe.projectDir === "", String(probe.projectDir));
   await Promise.race([openWhileReset, sleep(0)]);
   probe.cancelNewRoom();
   ok("new-room UI: cancel closes the native dialog and retires its pending picker",
@@ -1358,6 +1416,85 @@ async function checkFolderPickerUi() {
   const imageCard = imageBubble.children[0] && imageBubble.children[0].children[0];
   ok("file attachment UI: transcript images keep their existing image-card rendering",
     imageCard && imageCard.className === "attachment" && imageCard.children[0].tagName === "IMG");
+
+  // Regression: the retired datalist-string check could neither follow the
+  // current controls nor prove that selected/custom values survive a save.
+  const summary = (await room("default")).room;
+  probe.seatForms(summary);
+  const newRows = byId.get("rosterList").querySelectorAll(".roster-row");
+  const settingsRows = byId.get("seatCards").querySelectorAll(".mgroup");
+  const values = (choices) => choices.map((choice) => typeof choice === "string" ? choice : choice.value);
+  const controlsMatch = (rows) => rows.length === summary.seats.length && rows.every((row, i) => {
+    const provider = summary.providers[summary.seats[i]];
+    return ["model", "effort"].every((field) => {
+      const input = row.querySelector(`[data-f="${field}"]`);
+      if (!provider.fields.includes(field)) return input === null;
+      const options = input?.closest(".freecombo")?.querySelectorAll(".freecombo-option");
+      return !!options && JSON.stringify(options.map((option) => option.dataset.comboValue)) === JSON.stringify(values(provider[field === "model" ? "models" : "efforts"]));
+    });
+  });
+  ok("new-room and Settings model/effort controls offer the provider's own choices",
+    controlsMatch(newRows) && controlsMatch(settingsRows));
+
+  let fullList = true;
+  for (const row of [...newRows, ...settingsRows]) {
+    for (const field of ["model", "effort"]) {
+      const input = row.querySelector(`[data-f="${field}"]`);
+      if (!input) continue;
+      const combo = input.closest(".freecombo");
+      const options = combo.querySelectorAll(".freecombo-option");
+      probe.chooseOption(options[0]);
+      fullList &&= input.value === options[0].dataset.comboValue && !combo.classList.contains("open");
+      probe.openCombo(combo, true, "");
+      fullList &&= options.every((option) => !option.hidden);
+    }
+  }
+  // Type values absent from the suggestion catalog, through the same change
+  // path as a selection. Settings captures its input values when saved.
+  const model = newRows[0].querySelector('[data-f="model"]');
+  model.value = "custom-smoke-model"; model.dispatchEvent(new Event("input"));
+  const effort = newRows[0].querySelector('[data-f="effort"]');
+  effort.value = "custom-smoke-effort"; effort.dispatchEvent(new Event("input"));
+  let formBody;
+  nextFetch = async (_url, opts) => {
+    formBody = JSON.parse(opts.body);
+    return { ok: false, status: 400, headers: { get: () => RUNTIME_PROTOCOL }, json: async () => ({ error: "capture form without navigating" }) };
+  };
+  byId.get("newRoomInput").value = "combo-ui";
+  byId.get("newRoomGoal").value = "Verify provider settings";
+  await probe.submitRoom();
+  const newSeats = formBody.seats;
+  const newValues = newSeats[0];
+  settingsRows[0].querySelector('[data-f="model"]').value = "settings-custom-model";
+  settingsRows[0].querySelector('[data-f="effort"]').value = "settings-custom-effort";
+  sandbox.document.getElementById("s_hopbudget").value = "0";
+  sandbox.document.getElementById("s_accounting").value = "automatic";
+  await probe.saveSettings();
+  ok("combobox selection reopens the full list and custom values reach both form requests",
+    fullList && newValues.model === model.value && newValues.effort === effort.value &&
+    formBody.config.agents.claude.model === "settings-custom-model" &&
+    formBody.config.agents.claude.effort === "settings-custom-effort", JSON.stringify(formBody));
+
+  const created = await api("POST", "/api/rooms", { name: "combo-ui", goal: "Verify provider settings", seats: newSeats });
+  await useFakes("combo-ui");
+  await say("combo-ui", "@all ARGJSON");
+  const chosenRoom = await idle("combo-ui");
+  const chosenArgs = argvFrom(lastAgent(chosenRoom, "claude"));
+  const selectedArgs = argvFrom(lastAgent(chosenRoom, "codex"));
+  const saved = await cfg("combo-ui", { agents: { claude: { ...formBody.config.agents.claude, command: FAKE } } });
+  await say("combo-ui", "@claude ARGJSON");
+  const customRoom = await idle("combo-ui");
+  const customArgs = argvFrom(lastAgent(customRoom, "claude"));
+  ok("selected/custom form values persist in room config and reach the provider CLI",
+    created.status === 200 && saved.status === 200 &&
+    customRoom.entries.filter((entry) => entry.kind === "agent").length === 3 &&
+    chosenRoom.room.cfg.agents.claude.model === newValues.model &&
+    hasArg(chosenArgs, "--model", newValues.model) && hasArg(chosenArgs, "--effort", newValues.effort) &&
+    chosenRoom.room.cfg.agents.codex.model === newSeats[1].model &&
+    hasArg(selectedArgs, "-m", newSeats[1].model) && hasArg(selectedArgs, "-c", "model_reasoning_effort=" + newSeats[1].effort) &&
+    customRoom.room.cfg.agents.claude.model === "settings-custom-model" &&
+    hasArg(customArgs, "--model", "settings-custom-model") && hasArg(customArgs, "--effort", "settings-custom-effort"),
+    JSON.stringify({ created: created.status, saved: saved.status, chosenModel: argValue(chosenArgs, "--model"), chosenEffort: argValue(chosenArgs, "--effort"), customModel: argValue(customArgs, "--model"), customEffort: argValue(customArgs, "--effort") }));
 }
 
 // Actions arrive several times a minute, and rebuilding the transcript for each
@@ -1457,7 +1594,8 @@ async function checkSoloPairControlUi() {
 
   const from = src.indexOf("function pairControlOnly(");
   const to = src.indexOf("function closeHopMenu(", from);
-  const block = from >= 0 && to > from ? src.slice(from, to) : "";
+  const targetHelpers = src.slice(src.indexOf("function routeSeats("), src.indexOf("function guessTextRoute("));
+  const block = from >= 0 && to > from ? targetHelpers + src.slice(from, to) : "";
   const state = {
     hopChoice: "solo", chip: "auto",
     summary: { pair: null, lastAddressed: "claude", cfg: { defaultAgent: "claude" } },
@@ -1758,12 +1896,6 @@ async function main() {
   ok("pair banner renders zero rounds as until approved",
     typeof pairLabel === "function" && pairLabel(0) === "until approved" &&
     pairLabel(1) === "up to 1 round per message" && page.includes("pairRoundsLabel(pair.rounds)"));
-  ok("new-room model and effort fields expose provider datalists while settings retain full-list comboboxes",
-    page.includes('list="roster-models-${i}"') &&
-    page.includes('<datalist id="roster-models-${i}">${suggestions(catalog.models)}</datalist>') &&
-    page.includes('list="roster-efforts-${i}"') &&
-    page.includes('<datalist id="roster-efforts-${i}">${suggestions(catalog.efforts)}</datalist>') &&
-    page.includes('class="freecombo-toggle"') && page.includes('setFreeComboOpen(combo, opening, "")'));
   ok("Claude Full access is a warned structured setting",
     page.includes('<option value="bypassPermissions">full access') &&
     page.includes("Give ${who} Full access in this room?") &&
@@ -2058,7 +2190,7 @@ async function main() {
   ok("a plain leading model name does not route", lastAgent(d).author === "codex" && lastAgent(d).text === "PEAR");
 
   const beforeDualTag = d.entries.length;
-  await say("default", "@claude compare with @codex SAY:DUO");
+  await say("default", "@claude @codex compare SAY:DUO");
   d = await idle("default");
   const dualTagReplies = d.entries.slice(beforeDualTag).filter((e) => e.kind === "agent" && e.text === "DUO");
   ok("tagging both model names routes to both", dualTagReplies.length === 2 &&
@@ -2098,7 +2230,7 @@ async function main() {
     parsedImages.some((reply) => reply.author === "codex" && reply.images.length === 1 &&
       reply.images[0].promptOnStdin === true && reply.images[0].path !== "-" && !reply.images[0].swallowedPrompt),
     JSON.stringify(parsedImages));
-  const imageEntry = imagesRoom.entries.find((e) => e.kind === "user" && e.text === "@both IMAGEINFO");
+  const imageEntry = imagesRoom.entries.find((e) => e.kind === "user" && e.text === "IMAGEINFO");
   const imageRef = imageEntry && imageEntry.meta && imageEntry.meta.attachments && imageEntry.meta.attachments[0];
   ok("image storage: transcript metadata is safe and does not retain a client path",
     imageRef && imageRef.name === "clipboard.png" && !imageRef.path && !imageRef.data &&
@@ -2247,7 +2379,7 @@ async function main() {
     parsedFiles.every((reply) => !fs.existsSync(reply.files[0].path) &&
       !fs.existsSync(reply.files[0].addDir)), JSON.stringify(parsedFiles));
 
-  const fileEntry = filesRoom.entries.find((e) => e.kind === "user" && e.text === "@both FILEINFO");
+  const fileEntry = filesRoom.entries.find((e) => e.kind === "user" && e.text === "FILEINFO");
   const fileRef = fileEntry && fileEntry.meta && fileEntry.meta.attachments && fileEntry.meta.attachments[0];
   const canonicalFile = fileRef && path.join(ROOT, "files", "attachments", `${fileRef.id}.blob`);
   ok("file storage: only sanitized metadata is retained in the transcript entry",
@@ -2546,7 +2678,7 @@ async function main() {
     stopLurkRoom.room.lurkOutcomes.some((o) => o.agent === "codex" && o.reason === "stopped"),
     JSON.stringify({ entries: stopLurkRoom.entries.map((e) => [e.author, e.kind]), outcomes: stopLurkRoom.room.lurkOutcomes }));
 
-  // The ~915B lurk instruction is a pure function of lurkStyle/lurkPrompt and
+  // The role-bounded lurk instruction is a pure function of lurkStyle/lurkPrompt and
   // used to be re-sent verbatim on every listener turn of a resumed session —
   // the highest-frequency invocation Parley generates. A session that has
   // durably received it now gets a one-line reminder that keeps the control
@@ -2556,6 +2688,7 @@ async function main() {
   await cfg("lurkdiet", { hopBudget: 0, agents: { claude: { lurk: false }, codex: { lurk: true } } });
   await say("lurkdiet", "@claude SAY_LDONE LURKWHAT");
   await idle("lurkdiet", 30000);
+  const firstLurkSession = JSON.parse(fs.readFileSync(path.join(ROOT, "lurkdiet", "state.json"), "utf8")).agents.codex.sessionRef;
   await say("lurkdiet", "@claude SAY_LDTWO LURKWHAT");
   const lurkDietRoom = await idle("lurkdiet", 30000);
   // Only the listener turns themselves: the chime spawns right-of-reply and
@@ -2563,17 +2696,21 @@ async function main() {
   // carry different instructions by design.
   const lurkEchoes = lurkDietRoom.entries.filter((e) =>
     e.author === "codex" && e.meta && e.meta.lurk && /^LURKJSON /.test(e.text || ""));
-  // The second turn's delta QUOTES the first chime, which contains the full
-  // instruction as nested text — so the discriminator is the occurrence count,
-  // not mere presence: a live re-send adds one more on top of the quoted one.
-  const criteriaCount = (t) => ((t || "").match(/Interjection criteria:/g) || []).length;
+  // A prior answer return can consume the first chime before the next listener
+  // delta. Inspect the live instruction, independently of quoted prompt dumps,
+  // and prove that the provider session itself has not changed.
+  const liveLurkInstruction = (entry) => JSON.parse(entry.text.slice("LURKJSON ".length))
+    .split(/^\[End of room activity\]\r?$/m).at(-1);
+  const criteriaCount = (t) => (t.match(/Interjection criteria \(subject to your standing instructions and role\):/g) || []).length;
   ok("the first listener turn of a session carries the full lurk criteria",
-    lurkEchoes.length >= 2 && criteriaCount(lurkEchoes[0].text) === 1,
+    lurkEchoes.length >= 2 && criteriaCount(liveLurkInstruction(lurkEchoes[0])) === 1,
     JSON.stringify(lurkEchoes.map((e) => e.text.slice(0, 120))));
   ok("…and the next listener turn of the SAME session gets the reminder instead",
-    lurkEchoes.length >= 2 && criteriaCount(lurkEchoes[1].text) === 1 &&
-    /same interjection criteria from your earlier briefing/.test(lurkEchoes[1].text) &&
-    /reply with exactly: \[pass\]/.test(lurkEchoes[1].text),
+    lurkEchoes.length >= 2 && criteriaCount(liveLurkInstruction(lurkEchoes[1])) === 0 &&
+    !!firstLurkSession && firstLurkSession === JSON.parse(fs.readFileSync(path.join(ROOT, "lurkdiet", "state.json"), "utf8")).agents.codex.sessionRef &&
+    /You are listening again, not addressed/.test(liveLurkInstruction(lurkEchoes[1])) &&
+    /Apply the earlier criteria only inside these bounds/.test(liveLurkInstruction(lurkEchoes[1])) &&
+    /Otherwise reply exactly \[pass\], with no other text/.test(liveLurkInstruction(lurkEchoes[1])),
     (lurkEchoes[1] || { text: "" }).text.slice(-500));
   // A criteria change must flip the fingerprint and re-send in full.
   await cfg("lurkdiet", { agents: { codex: { lurkStyle: "vocal" } } });
@@ -2584,7 +2721,7 @@ async function main() {
   // The vocal criteria text is distinct from balanced, so plain presence works
   // here: the nested quotes carry only the OLD criteria.
   ok("…while a criteria change re-sends the full instruction",
-    /sharp senior colleague/.test((lurkEchoes2[lurkEchoes2.length - 1] || { text: "" }).text),
+    lurkEchoes2.length >= 3 && /Within your standing role, flag material errors, caveats, disagreements or alignment violations earlier/.test(liveLurkInstruction(lurkEchoes2.at(-1))),
     (lurkEchoes2[lurkEchoes2.length - 1] || { text: "" }).text.slice(-300));
 
   // Charged hop legs carried the ground rules AND the budget countdown as one
@@ -2859,7 +2996,7 @@ async function main() {
     x.room.busy.includes("claude") && x.room.agents.codex.held === 1,
   "the original Claude half to run while Codex holds the root", 10000);
   const wakeOverlapRoot = wakeOverlapHeld.entries.find((e) =>
-    e.kind === "user" && e.text === "@both ORDERSTART");
+    e.kind === "user" && e.text === "ORDERSTART");
   const wakeOverlapAccepted = await api("POST", "/api/seat/sleep", {
     room: "causal-both-wake-overlap", agent: "codex", asleep: false, deliver: true,
   });
@@ -2916,7 +3053,7 @@ async function main() {
   "both initial root turns to start", 10000);
   await say("causal-stop-pending-requests", "@claude SLEEP:3000 SAY:QUEUEBLOCK");
   const stopPending = await waitRoom("causal-stop-pending-requests", (x) => {
-    const root = x.entries.find((e) => e.kind === "user" && e.text === "@both ORDERSTART");
+    const root = x.entries.find((e) => e.kind === "user" && e.text === "ORDERSTART");
     const blocker = x.entries.find((e) => e.kind === "user" && /QUEUEBLOCK/.test(e.text));
     const direct = root ? x.entries.filter((e) => e.kind === "agent" && e.meta &&
       e.meta.replyTo === root.n) : [];
@@ -2924,7 +3061,7 @@ async function main() {
       run.agent === "claude" && run.rootN === blocker.n);
   }, "the first sibling request to wait with the second still queued", 15000);
   const stopPendingRoot = stopPending.entries.find((e) =>
-    e.kind === "user" && e.text === "@both ORDERSTART");
+    e.kind === "user" && e.text === "ORDERSTART");
   const stopPendingReplies = stopPending.entries.filter((e) => e.kind === "agent" &&
     e.meta && e.meta.replyTo === stopPendingRoot.n);
   await api("POST", "/api/stop", { room: "causal-stop-pending-requests", scope: "all" });
@@ -3150,7 +3287,7 @@ async function main() {
     customLurkPrompt.includes("Parley control protocol (always applies, including with custom criteria)") &&
     customLurkPrompt.includes("reply with exactly: [pass]") &&
     customLurkPrompt.indexOf("Parley control protocol") > customLurkPrompt.indexOf(customLurkCriteria) &&
-    !customLurkPrompt.includes("Interject ONLY for outright problems"),
+    !customLurkPrompt.includes("Only flag a clear, material uncorrected error or alignment violation within your standing role."),
     customLurkPrompt);
 
   await api("POST", "/api/rooms", { name: "hoproom" });
@@ -3208,8 +3345,12 @@ async function main() {
   beforeHop = d.entries.length;
   await say("hoproom", "@claude CALL:codex");
   d = await idle("hoproom");
-  ok("a lurking agent responds to a soft plain-name call",
-    d.entries.slice(beforeHop).some((e) => e.author === "codex" && e.meta && e.meta.hop));
+  const softCallRoot = d.entries.slice(beforeHop).find((e) => e.kind === "user");
+  ok("a soft plain-name call reaches an enabled listener for role-bounded assessment",
+    !!softCallRoot && d.receipts.some((r) => r.agent === "codex" && r.mode === "hop" &&
+      r.delivery?.rootN === softCallRoot.n && r.delivery.kind === "explicit" &&
+      r.outcome === "pass" && r.spoke === false) &&
+    !d.entries.slice(beforeHop).some((e) => e.author === "codex" && e.kind === "agent"));
 
   beforeHop = d.entries.length;
   await say("hoproom", "@claude PROSE:codex");
@@ -4188,7 +4329,7 @@ async function main() {
   ok("the free seat answers without waiting for the busy one",
     !early.entries.some((e) => e.author === "codex" && e.text === "SPLIT"));
   d = await idle("splitboth", 40000);
-  const splitUser = d.entries.filter((e) => e.kind === "user" && e.text === "@both SAY:SPLIT");
+  const splitUser = d.entries.filter((e) => e.kind === "user" && e.text === "SAY:SPLIT");
   ok("the user's message is recorded exactly once", splitUser.length === 1, String(splitUser.length));
   ok("the one entry still addresses both seats",
     splitUser[0] && splitUser[0].target === "both" &&
@@ -4239,9 +4380,9 @@ async function main() {
   await say("splitorder", "@both SAY:ORDERLATE");     // claude answers now
   const ordered = await room("splitorder");
   const userOrder = texts(ordered, "user");
-  // A leading single-seat tag is stripped from the stored text; @both is not.
+  // Leading routing tags are stripped from the stored text, including @both.
   ok("a held message keeps its place in the transcript",
-    userOrder.join("|") === "SLEEP:2500 SAY:ORDERBUSY|SAY:ORDEREARLY|@both SAY:ORDERLATE",
+    userOrder.join("|") === "SLEEP:2500 SAY:ORDERBUSY|SAY:ORDEREARLY|SAY:ORDERLATE",
     JSON.stringify(userOrder));
   ok("the last thing the user sent owns the retry slot",
     ordered.room.lastAddressed === "both", ordered.room.lastAddressed);
@@ -4270,7 +4411,7 @@ async function main() {
   d = await idle("splitbothbusy", 40000);
   ok("the slower seat still gets the same message, once",
     d.entries.filter((e) => e.author === "codex" && e.text === "BOTHBUSY").length === 1 &&
-    d.entries.filter((e) => e.kind === "user" && e.text === "@both SAY:BOTHBUSY").length === 1);
+    d.entries.filter((e) => e.kind === "user" && e.text === "SAY:BOTHBUSY").length === 1);
 
   // Accepted user work outranks agent-to-agent follow-ups. A hop that finds the
   // seat free must still wait for anything the user has queued for it.
@@ -5441,7 +5582,9 @@ async function main() {
   for (const [roomName, pressStop] of [["stopfuture", true], ["stopfuture-control", false]]) {
     await api("POST", "/api/rooms", { name: roomName });
     await useFakes(roomName);
-    await cfg(roomName, { agents: { codex: { lurk: true } } });
+    // This pair proves the direct handoff, separately from the listening pair
+    // below. A listening recipient may legitimately pass without a reply.
+    await cfg(roomName, { agents: { codex: { lurk: false } } });
     await say(roomName, "@codex SLEEP:3000 SAY:CODEXBUSY");
     await sleep(150);
     await say(roomName, "@claude TAG:codex");
@@ -7020,8 +7163,9 @@ async function main() {
   ok("a CRLF HEAD does not carry its line ending into the branch name",
     crlfId && crlfId.branch === "crlf-branch", JSON.stringify(crlfId));
 
-  const nonRepo = path.join(gitFix, "not-a-repo");
-  fs.mkdirSync(nonRepo, { recursive: true });
+  // Scratch fixtures now live inside this checkout. Probe the filesystem root
+  // read-only: it has no repository ancestor and needs no external writes.
+  const nonRepo = path.parse(ROOT).root;
   ok("a folder outside any repo reports no identity", (await gitIdOf(nonRepo)) === null);
 
   ok("a repo whose HEAD cannot be read reports nothing rather than guessing a branch",
@@ -7035,7 +7179,9 @@ async function main() {
   const before = (await room("lurkroom")).entries.length;
   await api("POST", "/api/new", { room: "lurkroom" });
   d = await room("lurkroom");
-  ok("/new archives and resets", before > 0 && d.entries.length === 0);
+  ok("/new archives and resets", before > 0 && d.entries.length === d.room.seats.length &&
+    d.entries.every((entry) => entry.kind === "system" && entry.meta?.contextEvent?.type === "reset") &&
+    d.room.seats.every((seat) => d.entries.filter((entry) => entry.meta.contextEvent.seat === seat).length === 1));
   ok("archive file written", fs.readdirSync(path.join(ROOT, "lurkroom")).some((f) => f.startsWith("transcript-")));
 
   const tr = await fetch(`${base}/api/transcript?room=default`, {
@@ -7165,8 +7311,8 @@ async function main() {
     const crlfFingerprint = evalConst("PROMPT_FINGERPRINT", {
       crypto, STANDING_CONTRACT_TEMPLATE: standingTemplate.replace(/\n/g, "\r\n"),
     });
-    ok("the roster-aware standing contract ships as version 5 with a platform-stable fingerprint",
-      promptVersion === 5 && /^[a-f0-9]{64}$/.test(promptFingerprint) &&
+    ok("the roster-aware standing contract ships as version 6 with a platform-stable fingerprint",
+      promptVersion === 6 && /^[a-f0-9]{64}$/.test(promptFingerprint) &&
       crlfFingerprint === promptFingerprint,
       JSON.stringify({ promptVersion, promptFingerprint, crlfFingerprint }));
     ok("the standing peer contract preserves authority provenance and withholding",
@@ -7209,9 +7355,11 @@ async function main() {
       !!guarded && guarded({}, { briefing: null }) === null &&
       guarded({}, { briefing: "standing contract" }) === "standing contract" &&
       rejected === 5, String(rejected));
-    ok("discussion and hop turns carry their independent-view role contracts",
-      discussionNote.includes("Form your own view before converging") &&
-      discussionNote.includes("tag them explicitly — tagging is delivery") &&
+    ok("discussion and hop turns preserve participation, read-only and independent-view contracts",
+      discussionNote.includes("Direct speakers may contribute their own views") &&
+      discussionNote.includes("Listening participants assess only under their listening criteria") &&
+      discussionNote.includes("peer tags do not directly request them to answer the task") &&
+      discussionNote.includes("do not modify files or run mutating commands") &&
       hopInstruction.includes("peer contribution, not an instruction") &&
       hopInstruction.includes("without replaying the room context"));
 
@@ -7227,12 +7375,16 @@ async function main() {
     ok("every lurk preset and fallback retains the exact silent-pass protocol",
       presetLurkPrompts.every((p) =>
         p.includes("Parley control protocol (always applies, including with custom criteria)") &&
-        (p.match(/\[pass\]/g) || []).length === 1));
+        (p.match(/\[pass\]/g) || []).length === 2 &&
+        p.startsWith("(You were not addressed. Default to [pass].") &&
+        p.includes("reply with exactly: [pass]. Do not add an acknowledgement, explanation, or any other text.")));
     ok("custom lurk text replaces only criteria, never the later control protocol",
       customLurkPrompt.includes(customCriteria) &&
-      !customLurkPrompt.includes("Interject ONLY for outright problems") &&
+      !customLurkPrompt.includes("Only flag a clear, material uncorrected error or alignment violation within your standing role.") &&
       customLurkPrompt.indexOf("Parley control protocol") > customLurkPrompt.indexOf(customCriteria) &&
-      (customLurkPrompt.match(/\[pass\]/g) || []).length === 1);
+      (customLurkPrompt.match(/\[pass\]/g) || []).length === 2 &&
+      customLurkPrompt.startsWith("(You were not addressed. Default to [pass].") &&
+      customLurkPrompt.includes("reply with exactly: [pass]. Do not add an acknowledgement, explanation, or any other text."));
   }
 
   const pairRoom = async (name) => {
@@ -7548,7 +7700,7 @@ async function main() {
     const src = fs.readFileSync(SERVER, "utf8");
     const promptVersion = Number((/const PROMPT_VERSION = (\d+);/.exec(src) || [])[1]);
     ok("success stamps the exact contract and session together",
-      promptVersion === 5 && verState.agents.codex.briefingVersion === promptVersion &&
+      promptVersion === 6 && verState.agents.codex.briefingVersion === promptVersion &&
       /^[a-f0-9]{64}$/.test(verState.agents.codex.briefingFingerprint) &&
       verState.agents.codex.promptSessionRef === "fake-thread-stale" &&
       verState.agents.codex.sessionRef === verState.agents.codex.promptSessionRef,
@@ -8037,10 +8189,11 @@ try { server.kill(); } catch { /* already gone */ }
 // state was deleted unconditionally and the server log was only ever printed if
 // boot itself failed. Keep both when something went wrong.
 if (failures.length) {
-  const bundle = path.join(here, "..", "smoke-failure");
+  let bundle;
   try {
-    fs.rmSync(bundle, { recursive: true, force: true });
-    fs.mkdirSync(bundle, { recursive: true });
+    const scratch = path.join(here, "..", ".scratch");
+    fs.mkdirSync(scratch, { recursive: true });
+    bundle = fs.mkdtempSync(path.join(scratch, "smoke-failure-"));
     fs.cpSync(ROOT, path.join(bundle, "rooms"), { recursive: true });
     fs.writeFileSync(path.join(bundle, "server.log"), serverLog, "utf8");
     fs.writeFileSync(path.join(bundle, "failures.txt"), failures.join("\n"), "utf8");
