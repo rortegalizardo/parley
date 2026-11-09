@@ -3,16 +3,16 @@ id: PSTATE-INIT-0003
 type: product-state
 title: Product definition state for INIT-0003
 status: authoritative
-revision: 3
+revision: 4
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
 updated_by_role: ROLE-product-manager
 initiative: INIT-0003
-phase: SOLUTION_EXPLORATION
+phase: SOLUTION_CONVERGENCE
 phase_entered: 2026-11-08
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: dispatch the technical architect (planner, opus) for one product-feasibility-assessment writing capability-scan.md, impact.md and assessment.md; fill the Options table (SOLUTION_EXPLORATION)"
+next_action: "ROLE-product-manager: accept PD-0012 (chosen option A and the eleven product rulings), update REQ-0005 and REQ-0006 to rev 2 with technical constraints, write the Solution Contract (SOLUTION_CONVERGENCE)"
 blocked_by: []
 converged: false
 readiness_verdict: none
@@ -42,6 +42,16 @@ one shared live Markdown editor for the chat bar and every multi-line field in
 Room Settings: text formats in place as you type, with no toggle and no
 separate preview, and the saved text is exactly what was typed
 ([raw request](sources/raw-request.md), "Decision to build", "Key rule").
+
+## Next action
+
+ROLE-product-manager: accept PD-0012 (chosen option A and the eleven product
+rulings), update REQ-0005 and REQ-0006 to revision 2 with their technical
+constraints, write the Solution Contract (SOLUTION_CONVERGENCE).
+
+## Blocked by
+
+nothing.
 
 ## Ambiguity log
 
@@ -112,6 +122,51 @@ single-line fields and the 200-character Decision field; any change to the
 backend, tokens sent, "What agents see" or character counts; TipTap or any
 rich-text editor; a hand-built `contenteditable`.
 
+## Options
+
+One option, decided by the requester, so the table has one row and the choice is
+a decision already made, not a trade-off ([PD-0011](../../../decisions/PD-0011-live-markdown-editor-requester-decisions.md),
+Options considered). The alternatives are recorded there as ruled out by the
+requester: a rich-text editor, a hand-built `contenteditable`, a toolbar, a
+preview toggle. Feasibility, constraints C-01..C-20, risks R-01..R-08 and
+conflicts PC-01..PC-09:
+[technical/assessment.md](../technical/assessment.md) (evidence:
+[capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md)).
+
+| Option | User-visible difference | Feasibility verdict | Cost / risk | Trade-off |
+| --- | --- | --- | --- | --- |
+| A — one shared textarea-like component on CodeMirror 6, one prebuilt file in `ui/vendor/` (PD-0011) | Markdown formats in place as the user types, in the chat bar and in every multi-line Markdown field of Room Settings, New Room, Clone and agent instructions; the Edit/Preview toggle goes | feasible-with-constraints (multi-component) | One-line static-file change on the server (C-01); the editor is not a native field, so every id lookup, `.value`, `form.reset()`, `label for` and test read must be made to work (C-09, C-15, C-16, C-17); 35 test lines in 9 files updated; editor re-created at the settings re-render sites (C-11); the CodeMirror behaviour is documented, not yet run (R-01) | The requester's choice; a vendored third-party file a maintainer regenerates, and a second Markdown renderer to keep aligned with chat (C-07) |
+
+**Design.** One direction, no exploration (steps 1a–1b skipped): the look is the
+existing chat Markdown style and the requester ruled out a canvas and a
+multi-page design track ([raw request](sources/raw-request.md), "Constraints",
+"Done means"). There is no direction to debate. The one static reference frame
+that the user-facing stories need for `composition:` is planned at
+DECOMPOSITION (precedent: PD-0004 item 1, PD-0009 item 3).
+
+**Chosen: A**, because the requester decided it. **PM recommendation: A.** The
+architect found no reason it cannot work with the existing UI, and no stop
+condition under PD-0011 item 5. Eleven small product rulings come with it, all
+within the requester's decided behaviour; none is requester-owned.
+
+## Consultation log
+
+| Date | Delegate role | Question | Answer / verdict | Recorded as |
+| --- | --- | --- | --- | --- |
+| 2026-11-08 | ROLE-planner (technical architect, `product-feasibility-assessment`) — vendor claude, model opus | Feasibility of Option A (one shared CodeMirror 6 editor, one prebuilt vendor file) for REQ-0005 and REQ-0006, with capability scan and system impact (size rule §9d.1) | A: feasible-with-constraints (multi-component); C-01..C-20; R-01..R-08; PC-01..PC-09 (PC-02 blocking as written: no text draft exists today); PR-1..PR-11 all pm-resolvable; no requester question; no cooling-period exception needed; 6 corrections to CAP-0003 | Consultation log; [technical/assessment.md](../technical/assessment.md), [capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md); CAP-0003 revision 2; rulings to PD-0012 at SOLUTION_CONVERGENCE |
+
+## Escalation log
+
+| Date | Question | `Q-` | Asked of | Answer | Recorded as |
+| --- | --- | --- | --- | --- | --- |
+
+## Stories
+
+| `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
+| --- | --- | --- | --- | --- | --- |
+| REQ-0005 | The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type | draft | CAP-0001, CAP-0002 | none yet (DES-0003 at DECOMPOSITION) | `depends_on: [none]`; on the frontier; builds the shared editor and the vendor file; engineering starts only after PRL-6 is merged and green on `main` (PD-0011 item 10) |
+| REQ-0006 | The user types Markdown in the chat bar and sees it format as they type | draft | CAP-0003 | none yet (DES-0003 at DECOMPOSITION) | `depends_on: [REQ-0005]`; reuses the shared editor and the vendor file; same PRL-6 precondition |
+
 ## Phase log
 
 | Date | From | To | Role | Trigger | Outcome | `context_digest` |
@@ -120,6 +175,7 @@ rich-text editor; a hand-built `contenteditable`.
 | 2026-11-08 | INTAKE | DISCOVERY | ROLE-product-manager | Exit criteria met: one initiative, one problem, one requester, every ambiguity classified (none escalation-class). size: small (≤3 stories expected) | Exited INTAKE, entered DISCOVERY. Hooks: HOOK-initiative-resolved pass, HOOK-phase-entry pass | n/a |
 | 2026-11-08 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0001 and CAP-0002 mapped (chat bar has no record; CAP-0003 follows the scan), success signals, non-goals | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | n/a |
 | 2026-11-08 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1 and O2, explicit out-of-scope, success measures, draft REQ-0005 and REQ-0006 covering both outcomes with no uncovered stated need, Product Definition Contract (accepted) citing both raw sources; PD-0011 accepted | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1: outcome and out-of-scope present; F2: draft-mode coverage run with no R1 defect: O1 maps to REQ-0005, O2 to REQ-0006; R3, R6, R7 and R12 also clean on the two drafts) | n/a |
+| 2026-11-08 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: the one option is recorded with a feasibility verdict (feasible-with-constraints) and its user-visible trade-off; single option justified as the requester's decision (PD-0011), alternatives ruled out by him; PM recommendation A with reasoning; design 1a–1b skipped, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 justified single decided option; X2 verdict in the set; one Consultation log row for the one delegate response) | n/a |
 
 ## Session notes
 
@@ -147,6 +203,20 @@ rich-text editor; a hand-built `contenteditable`.
   REQ-0006 (chat bar, depends on REQ-0005) drafted inline (size rule §9d.2),
   neutral wording checked against the raw request. Product Definition Contract
   accepted. No escalation-class ambiguity; no `Q-` raised.
+- 2026-11-08 — Dispatch log. SOLUTION_EXPLORATION | ROLE-planner (technical
+  architect, `product-feasibility-assessment` with capability scan and system
+  impact in one dispatch, §9d.1) | claude | opus | M | ledger run
+  `a26103177f61fd752` | `technical/capability-scan.md`, `technical/impact.md`,
+  `technical/assessment.md`. The architect wrote only those three files.
+- 2026-11-08 — PM verification of the architect's report (§8 rule 7), against
+  the code on `main` at `fa35e69`: the Enter handler (`ui/app.js:4167-4170`)
+  has no composition check; no text draft exists (the only `draft` state at
+  `ui/app.js:35-36` is attachments; no storage of composer text); sent text is
+  trimmed (`ui/app.js:3987`, `parley.mjs:8130`); the Brief's Goal and Rules are
+  stored untrimmed (`parley.mjs:2215-2224`); instructions are trimmed
+  (`parley.mjs:513-519`). The REQ-0006 draft criterion on drafts and on
+  Enter-during-composition read "as today" for behavior that does not exist, so
+  the drafts criterion is corrected at SOLUTION_CONVERGENCE (PR-6, PR-7).
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
