@@ -181,7 +181,7 @@ id_counters:
   area: 0
   capability: 2
   decision: 10
-  initiative: 2
+  initiative: 3
   requirement: 4
   design: 2
   question: 1

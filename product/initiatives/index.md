@@ -8,6 +8,7 @@ here and remain in place on disk.
 | --- | --- | --- | --- | --- |
 | INIT-0001 | Every agent knows the room's goal, rules and decisions from one Room Brief | active | [INIT-0001-room-brief/initiative.md](INIT-0001-room-brief/initiative.md) | 2026-11-06 |
 | INIT-0002 | Clone a room's setup into a new room with an empty chat | active | [INIT-0002-clone-room-setup/initiative.md](INIT-0002-clone-room-setup/initiative.md) | 2026-11-06 |
+| INIT-0003 | Markdown text formats as you type in the chat bar and Room Settings | draft | [INIT-0003-live-markdown-editor/initiative.md](INIT-0003-live-markdown-editor/initiative.md) | 2026-11-08 |
 
 To create one: allocate `INIT-nnnn` from `../manifest.yaml`, copy
 `../templates/initiative.md` into `INIT-nnnn-<slug>/initiative.md`, create
