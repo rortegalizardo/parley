@@ -3,14 +3,14 @@ id: INIT-0003
 type: initiative
 title: Markdown text formats as you type in the chat bar and Room Settings
 status: draft
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
 capabilities: [CAP-0001, CAP-0002, CAP-0003]
 requirements: [REQ-0005, REQ-0006]
 tickets: []
-decisions: [PD-0011]
+decisions: [PD-0011, PD-0012, PD-0013]
 ---
 
 # INIT-0003 — Markdown text formats as you type in the chat bar and Room Settings
@@ -45,10 +45,11 @@ In scope:
   ([PD-0011](../../decisions/PD-0011-live-markdown-editor-requester-decisions.md)).
 - It replaces the plain text box in: the chat bar; Goal and Rules in the Room
   Brief (Room settings); agent instructions in Room settings and in Create
-  room; Goal and Rules in the New Room dialog; Goal in the Clone dialog. Any
-  other multi-line Markdown field of Room settings the architect's scan finds
-  is included (the requester's phrase is "every multi-line field in Room
-  Settings").
+  room; Goal and Rules in the New Room dialog; Goal in the Clone dialog. The
+  architect's scan found no other multi-line Markdown field: "every multi-line
+  field in Room Settings" (the requester's phrase) is Goal, Rules and agent
+  instructions ([PD-0012](../../decisions/PD-0012-live-markdown-editor-chosen-option-codemirror-component.md)
+  item 1).
 - Live formatting of what chat messages render today (bold, italic, inline
   code, code blocks, headings, lists, links), with marks hidden when an
   element is closed and shown again on the line being edited.
@@ -63,9 +64,11 @@ Out of scope:
 - **A formatting toolbar, a preview toggle or a separate preview.**
 - **Tables and raw HTML** are not formatted: they stay plain text, and raw HTML
   never runs.
-- **Single-line fields and the 200-character Decision field**, which stay plain.
-- **Any change to the backend, the tokens sent, the "What agents see" preview
-  or the character counts**, and any rewriting of saved Markdown.
+- **Single-line fields and the 200-character Decision fields**, which stay plain.
+- **Any change to a request, response, stored data or check of the backend, the
+  tokens sent, the "What agents see" preview or the character counts**, and any
+  rewriting of saved Markdown. The server's fixed list of client files gains the
+  one vendor file (PD-0012 item 5).
 - **TipTap or another rich-text editor, and a hand-built `contenteditable`.**
 - **A design canvas or a multi-page design track**; other widths and dark mode
   as designed or reviewed surfaces ([constraints](../../project/constraints.md) #3).
@@ -121,3 +124,4 @@ None.
 | --- | --- | --- | --- |
 | 2026-11-08 | 1 | Created at INTAKE (`new-initiative`) | Raw request from the requester |
 | 2026-11-08 | 2 | Outcome O1 and O2, scope, out-of-scope, success measures and two draft requirements | PRODUCT_DEFINITION |
+| 2026-11-08 | 3 | Field list settled from the architect's scan; backend wording; PD-0012 and PD-0013 | SOLUTION_CONVERGENCE |

@@ -3,7 +3,7 @@ id: REQ-0006
 type: requirement
 title: The user types Markdown in the chat bar and sees it format as they type
 status: draft
-revision: 1
+revision: 2
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
@@ -11,23 +11,23 @@ initiative: INIT-0003
 outcome_element: "O2 — In the chat bar, Markdown the user types formats in place as they type, the text sent is exactly what was typed, and the @ agent picker, slash commands, Enter and Shift+Enter, drafts, paste, attachments, undo and redo work as they do today."
 acceptance:
   - "In the chat bar type **bold**, italic, inline code, a fenced code block, a heading, a bullet list, a numbered list and a link, one per line → each shows in the style a sent chat message shows for the same text today when the cursor is on another line, and the ** marks of a closed element are hidden and show again on the line being edited"
-  - "Type a Markdown table and raw HTML (including a script tag) in the chat bar → they stay plain text; nothing runs and no element is created"
-  - "Click a link in the chat bar → the cursor is placed in the text and nothing opens; Cmd+click the link → it opens in a new browser tab"
-  - "Type a multi-line Markdown message and press Enter → it is sent once and the text sent equals the typed text character for character; the message then shows in the conversation as a sent message shows today"
-  - "Press Shift+Enter → a new line is inserted and nothing is sent; press Enter while an accent or IME composition is open → the composition is confirmed and nothing is sent, as today"
-  - "Type @ → the agent picker opens as today; choose an agent → the mention is inserted as today and the message goes to that agent; Arrow keys, Enter and Escape in the open picker work as today and Enter in the picker does not send"
+  - "Type a Markdown table, a > quote line, a --- line, _underscore_ text, a code fence with no closing fence, and raw HTML (including a script tag) in the chat bar → they stay plain text; nothing runs and no element is created"
+  - "Click a link in the chat bar → the cursor is placed in the text and nothing opens; Cmd+click the link (Ctrl+click on Windows and Linux) → it opens in a new browser tab"
+  - "Type a multi-line Markdown message and press Enter → it is sent once and the text sent equals the typed text character for character, after the leading and trailing whitespace that Parley trims today; the message then shows in the conversation as a sent message shows today"
+  - "Press Shift+Enter → a new line is inserted and nothing is sent; press Enter while an accent or IME composition is open → the composition is confirmed and nothing is sent, in every browser"
+  - "Type @ → the agent picker opens as today; choose an agent → the mention is inserted as today and the message goes to that agent; Arrow keys, Enter, Tab and Escape in the open picker work as today and Enter in the picker does not send; type / at the start and choose a command from the picker → it is inserted as today"
   - "Type a slash command such as /note or /pair → it runs exactly as today and the typed text is read as typed"
-  - "Type text, switch rooms and come back, and reload the page → the draft returns as it was saved today, equal to what was typed"
+  - "Type text, switch to another room and back → the text is still in the bar, as today; reload the page → the bar is empty and attachments are cleared when a room loads, as today"
   - "Paste Markdown text → it formats at once and sending it sends the pasted text exactly; paste an image and attach a file → they become attachments as today and a message with attachments sends as today"
-  - "Press Cmd+Z in the chat bar → the last typing or paste is undone; press Cmd+Shift+Z → it is redone"
+  - "Press Cmd+Z in the chat bar → the last typing or paste is undone; press Cmd+Shift+Z → it is redone; after sending, Cmd+Z in the empty bar does not bring the sent text back"
   - "Paste 20,000 characters of Markdown and then type 100 characters at the end and in the middle by keyboard → none of the 100 typed characters is lost or out of order, the cursor stays where it was typed, and the sent text equals the 20,120 characters"
   - "Type an accented letter by composition in the middle of **bold** and type the closing marks → the text is intact, the cursor is not moved and the composition is not interrupted"
-  - "With the bar empty → the placeholder Message the table…  type @ to choose an agent shows; the bar grows with its text up to its present maximum height and scrolls inside itself beyond it; it is disabled whenever it is disabled today"
+  - "With the bar empty → the placeholder Message the table…  type @ to choose an agent shows; the bar grows with its text up to its present maximum height of 200 pixels and scrolls inside itself beyond it; it is disabled whenever it is disabled today"
   - "The existing smoke run (test/smoke.mjs, as repaired by PRL-6) and the existing browser suites pass after the change, updated only where they read the old text box"
   - "composition: at 1440 wide, light theme, the chat bar holding 20,000 characters over many lines with an image attachment, a file attachment and the agent chips shows the send control, the attachment chips and the agent chips in full, with no truncation, clipping, ellipsis or horizontal scroll of the page; the text scrolls inside the bar"
 capabilities: [CAP-0003]
 design_refs: []
-decisions: [PD-0011]
+decisions: [PD-0011, PD-0012, PD-0013]
 depends_on: [REQ-0005]
 constraints: []
 observability: []
@@ -71,31 +71,45 @@ and redo, long text and large pastes, accent and IME typing
 
 ## Behavior
 
-The editor's rules are those of REQ-0005 Behavior 1–8 and 10: live formatting
-with marks hidden on closed elements and shown on the line being edited; bold,
-italic, inline code, code blocks, headings, lists and links in the style chat
-messages show; tables and raw HTML plain, raw HTML never runs; a normal click on
-a link places the cursor and Cmd+click opens it; pasted Markdown formats at
-once and copying returns the Markdown; the saved or sent text is exactly what
-was typed, with no inserted character of any kind. In the chat bar:
+The editor's rules are those of REQ-0005 Behavior 1–8 and 10, as ruled in
+[PD-0013](../../../decisions/PD-0013-live-markdown-editor-behaviour-rulings.md):
+live formatting with marks hidden on closed elements and shown on the line being
+edited (and on every selected line); bold, italic, inline code, code blocks,
+headings, lists and links in the style chat messages show; tables, quotes, rules
+and raw HTML plain, raw HTML never runs; a normal click on a link places the
+cursor and Cmd+click (Ctrl+click on Windows and Linux) opens it; pasted
+Markdown formats at once and copying returns the Markdown; the saved or sent
+text is exactly what was typed, with no inserted character of any kind. In the
+chat bar:
 
 1. **Enter and Shift+Enter** work exactly as today: Enter sends, Shift+Enter
-   inserts a new line, and Enter while an accent or IME composition is open
-   confirms the composition and sends nothing.
+   inserts a new line. Enter while an accent or IME composition is open
+   confirms the composition and sends nothing, in every browser; today nothing
+   checks for a composition, so this one case is fixed rather than kept
+   (PD-0013 item 11).
 2. **The `@` picker** opens when `@` is typed, as today; choosing an agent
-   inserts the mention as today; the picker's own keys (arrows, Enter, Escape)
-   work as today, and Enter in the picker does not send.
+   inserts the mention as today; the picker's own keys (arrows, Enter, Tab,
+   Escape) work as today, and Enter in the picker does not send. When the text
+   so far is `/word` at the start, the same picker lists the slash commands, as
+   today.
 3. **Slash commands** are read from the text as typed and run as today.
-4. **The draft** is kept and restored exactly as today.
+4. **The text in the bar** behaves as today (PD-0013 item 12): it stays when the
+   user switches rooms and is gone when the page is reloaded. There are no
+   per-room saved drafts. Attachment drafts are cleared when a room loads, as
+   today. Parley trims the leading and trailing whitespace of a sent message, as
+   today (PD-0013 item 7).
 5. **Paste.** Text pastes as typed text and formats at once; pasting an image
    makes an attachment, as today. Attachments and sending with them work as
    today.
-6. **Undo and redo** work across typing and paste.
+6. **Undo and redo** work across typing and paste. When Parley's own code writes
+   the bar (send clears it, a mention is inserted, a starter chip fills it), undo
+   cannot bring back the text sent or replaced (PD-0013 item 13).
 7. **Long text.** A 20,000-character message, pasted or typed, can be edited
    and sent without losing, reordering or delaying any typed character.
 8. **Typing is never disturbed.** Formatting never moves the cursor, drops a
    character or interrupts accent or IME composition.
-9. **Placeholder, height and disabled state** are as today.
+9. **Placeholder, height and disabled state** are as today: the bar grows with
+   its text up to 200 pixels and then scrolls inside itself.
 10. **Not delivered partially.** If any of this fails, the story is not
     merged; engineering reports and does not fall back to a different editor
     (PD-0011 items 5 and 7).
@@ -103,54 +117,59 @@ was typed, with no inserted character of any kind. In the chat bar:
 ## Acceptance criteria
 
 - [ ] In the chat bar type `**bold**`, italic, inline code, a fenced code
-      block, a heading, a bullet list, a numbered list and a link, one per line
-      → each shows in the style a sent chat message shows for the same text
-      today when the cursor is on another line, and the `**` marks of a closed
-      element are hidden and show again on the line being edited.
-- [ ] Type a Markdown table and raw HTML (including a script tag) in the chat
-      bar → they stay plain text; nothing runs and no element is created.
+      block, a heading, a bullet list, a numbered list and a link, one per
+      line → each shows in the style a sent chat message shows for the same
+      text today when the cursor is on another line, and the `**` marks of a
+      closed element are hidden and show again on the line being edited
+- [ ] Type a Markdown table, a `>` quote line, a `---` line, `_underscore_`
+      text, a code fence with no closing fence, and raw HTML (including a
+      script tag) in the chat bar → they stay plain text; nothing runs and no
+      element is created
 - [ ] Click a link in the chat bar → the cursor is placed in the text and
-      nothing opens; Cmd+click the link → it opens in a new browser tab.
+      nothing opens; Cmd+click the link (Ctrl+click on Windows and Linux) → it
+      opens in a new browser tab
 - [ ] Type a multi-line Markdown message and press Enter → it is sent once and
-      the text sent equals the typed text character for character; the message
-      then shows in the conversation as a sent message shows today.
+      the text sent equals the typed text character for character, after the
+      leading and trailing whitespace that Parley trims today; the message
+      then shows in the conversation as a sent message shows today
 - [ ] Press Shift+Enter → a new line is inserted and nothing is sent; press
       Enter while an accent or IME composition is open → the composition is
-      confirmed and nothing is sent, as today.
-- [ ] Type `@` → the agent picker opens as today; choose an agent → the mention
-      is inserted as today and the message goes to that agent; Arrow keys,
-      Enter and Escape in the open picker work as today and Enter in the picker
-      does not send.
-- [ ] Type a slash command such as `/note` or `/pair` → it runs exactly as today
-      and the typed text is read as typed.
-- [ ] Type text, switch rooms and come back, and reload the page → the draft
-      returns as it was saved today, equal to what was typed.
+      confirmed and nothing is sent, in every browser
+- [ ] Type `@` → the agent picker opens as today; choose an agent → the
+      mention is inserted as today and the message goes to that agent; Arrow
+      keys, Enter, Tab and Escape in the open picker work as today and Enter
+      in the picker does not send; type `/` at the start and choose a command
+      from the picker → it is inserted as today
+- [ ] Type a slash command such as `/note` or `/pair` → it runs exactly as
+      today and the typed text is read as typed
+- [ ] Type text, switch to another room and back → the text is still in the
+      bar, as today; reload the page → the bar is empty and attachments are
+      cleared when a room loads, as today
 - [ ] Paste Markdown text → it formats at once and sending it sends the pasted
       text exactly; paste an image and attach a file → they become attachments
-      as today and a message with attachments sends as today.
+      as today and a message with attachments sends as today
 - [ ] Press Cmd+Z in the chat bar → the last typing or paste is undone; press
-      Cmd+Shift+Z → it is redone.
+      Cmd+Shift+Z → it is redone; after sending, Cmd+Z in the empty bar does
+      not bring the sent text back
 - [ ] Paste 20,000 characters of Markdown and then type 100 characters at the
       end and in the middle by keyboard → none of the 100 typed characters is
       lost or out of order, the cursor stays where it was typed, and the sent
-      text equals the 20,120 characters.
+      text equals the 20,120 characters
 - [ ] Type an accented letter by composition in the middle of `**bold**` and
       type the closing marks → the text is intact, the cursor is not moved and
-      the composition is not interrupted.
+      the composition is not interrupted
 - [ ] With the bar empty → the placeholder `Message the table…  type @ to
       choose an agent` shows; the bar grows with its text up to its present
-      maximum height and scrolls inside itself beyond it; it is disabled
-      whenever it is disabled today.
+      maximum height of 200 pixels and scrolls inside itself beyond it; it is
+      disabled whenever it is disabled today
 - [ ] The existing smoke run (`test/smoke.mjs`, as repaired by PRL-6) and the
       existing browser suites pass after the change, updated only where they
-      read the old text box.
-- [ ] composition: at 1440 wide, light theme (the display matrix of
-      [PD-0004](../../../decisions/PD-0004-room-brief-design-depth-and-display-matrix.md)
-      item 3), the chat bar holding 20,000 characters over many lines with an
-      image attachment, a file attachment and the agent chips shows the send
-      control, the attachment chips and the agent chips in full, with no
-      truncation, clipping, ellipsis or horizontal scroll of the page; the text
-      scrolls inside the bar.
+      read the old text box
+- [ ] composition: at 1440 wide, light theme, the chat bar holding 20,000
+      characters over many lines with an image attachment, a file attachment
+      and the agent chips shows the send control, the attachment chips and the
+      agent chips in full, with no truncation, clipping, ellipsis or
+      horizontal scroll of the page; the text scrolls inside the bar
 
 ## Sequencing
 
@@ -160,8 +179,36 @@ the story set: PRL-6 merged and green on `main` (PD-0011 item 10).
 
 ## Technical constraints
 
-_To be filled from [technical/assessment.md](../technical/assessment.md) at
-SOLUTION_CONVERGENCE._
+_Binding, from [technical/assessment.md](../technical/assessment.md) (verdict
+`feasible-with-constraints`, band multi-component) as carried by
+[PD-0012](../../../decisions/PD-0012-live-markdown-editor-chosen-option-codemirror-component.md)
+item 3. The vendor file and the shared component (C-01 to C-05, C-11, C-12) are
+built by [REQ-0005](REQ-0005-live-markdown-editor-in-room-settings.md) and
+reused here; its full constraint table applies to the shared component. What
+this story adds or must hold in the chat bar:_
+
+| # | Constraint |
+| --- | --- |
+| C-06 | The editor inserts nothing: no list continuation, auto-indent, bracket or quote closing, smart typography or auto-trim. |
+| C-07 | Formatting is narrowed to what `renderMD` formats; rare edge cases may differ. |
+| C-08 | No hidden range over the line holding the cursor or an open composition. |
+| C-09 | The bar answers everything the code asks of the `#input` text box: value read (`$("input").value`) and write (clear after send, rebuild on failure, `/summarize`, starter chips, mention insert), `selectionStart` read and `selectionStart`/`selectionEnd` written after a mention, the `input` listener that autosizes, updates the route hint and checks for `@`, focus calls, the runtime-mismatch disabled state, the placeholder set again by `renderSeatsUI`, and the `#input` id that CSS and 9 test files query. |
+| C-10 | The existing key and paste handlers run before the editor's own: the picker takes arrows, Enter, Tab and Escape first; Enter sends unless Shift is held or a composition is open; the image-paste handler still gets the paste event. |
+| C-13 | Text written by code must not be undoable back into sent or replaced content. |
+| C-14 | Copy and Cut with nothing selected do nothing. |
+| C-15 | The bar keeps its accessible name and spellcheck, autocorrect and capitalisation settings; Tab and Escape behave as today. |
+| C-16 | The CSS on the bar (size, focus ring on the composer card, placeholder with its ellipsis, 200-pixel maximum height, `resize: none`, no horizontal overflow) applies to the editor. |
+| C-17 | The test lines that read `#input` (35 lines in 9 files, including `test/smoke.mjs`'s stub of `$("input")`) are updated; no new suite; PRL-6 first. |
+| C-18 | Verification on an isolated port with a copied room store, never ports 4142 or 4141. |
+| C-19 | Links open only on Cmd+click (Ctrl+click elsewhere), `http` and `https`, new tab, no opener, no referrer. |
+| C-20 | No new runtime network request and no new stored data. |
+
+The picker uses only the text before the caret and a settable caret, never a
+caret pixel position, so the editor need not supply one. Per-keystroke work on
+the whole text (autosize, route hint, `@` check) is the cost to watch with
+20,000 characters; a single 20,000-character unbroken line is the weak case
+(assessment R-08). If any behaviour above does not work, the story is not
+merged and engineering reports (PD-0011 items 5 and 7).
 
 ## Observability
 

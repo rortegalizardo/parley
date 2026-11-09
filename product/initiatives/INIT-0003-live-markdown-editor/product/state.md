@@ -3,22 +3,22 @@ id: PSTATE-INIT-0003
 type: product-state
 title: Product definition state for INIT-0003
 status: authoritative
-revision: 4
+revision: 5
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
 updated_by_role: ROLE-product-manager
 initiative: INIT-0003
-phase: SOLUTION_CONVERGENCE
+phase: DECOMPOSITION
 phase_entered: 2026-11-08
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: accept PD-0012 (chosen option A and the eleven product rulings), update REQ-0005 and REQ-0006 to rev 2 with technical constraints, write the Solution Contract (SOLUTION_CONVERGENCE)"
+next_action: "ROLE-product-manager: dispatch design-lead for the two reference frames (PD-0012 item 4) and des-recorder for DES-0003, then coherence round 1, accept REQ-0005 and REQ-0006, declare convergence (DECOMPOSITION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
 stories: [REQ-0005, REQ-0006]
 design_refs: []
-decisions: [PD-0011]
+decisions: [PD-0011, PD-0012, PD-0013]
 ---
 
 # Product definition state — INIT-0003
@@ -45,9 +45,9 @@ separate preview, and the saved text is exactly what was typed
 
 ## Next action
 
-ROLE-product-manager: accept PD-0012 (chosen option A and the eleven product
-rulings), update REQ-0005 and REQ-0006 to revision 2 with their technical
-constraints, write the Solution Contract (SOLUTION_CONVERGENCE).
+ROLE-product-manager: dispatch design-lead for the two reference frames
+(PD-0012 item 4) and des-recorder for DES-0003, then coherence round 1, accept
+REQ-0005 and REQ-0006, declare convergence (DECOMPOSITION).
 
 ## Blocked by
 
@@ -144,7 +144,9 @@ multi-page design track ([raw request](sources/raw-request.md), "Constraints",
 that the user-facing stories need for `composition:` is planned at
 DECOMPOSITION (precedent: PD-0004 item 1, PD-0009 item 3).
 
-**Chosen: A**, because the requester decided it. **PM recommendation: A.** The
+**Chosen: A** ([PD-0012](../../../decisions/PD-0012-live-markdown-editor-chosen-option-codemirror-component.md);
+rulings in [PD-0013](../../../decisions/PD-0013-live-markdown-editor-behaviour-rulings.md)),
+because the requester decided it. **PM recommendation: A.** The
 architect found no reason it cannot work with the existing UI, and no stop
 condition under PD-0011 item 5. Eleven small product rulings come with it, all
 within the requester's decided behaviour; none is requester-owned.
@@ -176,6 +178,7 @@ within the requester's decided behaviour; none is requester-owned.
 | 2026-11-08 | DISCOVERY | PRODUCT_DEFINITION | ROLE-product-manager | Exit criteria met: target users, jobs with sources, CAP-0001 and CAP-0002 mapped (chat bar has no record; CAP-0003 follows the scan), success signals, non-goals | Exited DISCOVERY, entered PRODUCT_DEFINITION. Hooks: HOOK-phase-entry pass (A9: Discovery section complete) | n/a |
 | 2026-11-08 | PRODUCT_DEFINITION | SOLUTION_EXPLORATION | ROLE-product-manager | Exit criteria met: outcome O1 and O2, explicit out-of-scope, success measures, draft REQ-0005 and REQ-0006 covering both outcomes with no uncovered stated need, Product Definition Contract (accepted) citing both raw sources; PD-0011 accepted | Exited PRODUCT_DEFINITION, entered SOLUTION_EXPLORATION. Hooks: HOOK-phase-entry pass (F1: outcome and out-of-scope present; F2: draft-mode coverage run with no R1 defect: O1 maps to REQ-0005, O2 to REQ-0006; R3, R6, R7 and R12 also clean on the two drafts) | n/a |
 | 2026-11-08 | SOLUTION_EXPLORATION | SOLUTION_CONVERGENCE | ROLE-product-manager | Exit criteria met: the one option is recorded with a feasibility verdict (feasible-with-constraints) and its user-visible trade-off; single option justified as the requester's decision (PD-0011), alternatives ruled out by him; PM recommendation A with reasoning; design 1a–1b skipped, justified | Exited SOLUTION_EXPLORATION, entered SOLUTION_CONVERGENCE. Hooks: HOOK-phase-entry pass (X1 justified single decided option; X2 verdict in the set; one Consultation log row for the one delegate response) | n/a |
+| 2026-11-08 | SOLUTION_CONVERGENCE | DECOMPOSITION | ROLE-product-manager | Exit criteria met: one accepted chosen-option PD-0012 (A, feasible-with-constraints), indexed; REQ-0005 and REQ-0006 revision 2 consistent with PD-0012 and PD-0013 and carrying the technical constraints; no competing option under consideration; Solution Contract cites PD-0012 and its design concept (item 4) | Exited SOLUTION_CONVERGENCE, entered DECOMPOSITION. Hooks: HOOK-decision-capture pass (accepted PD-0012 and PD-0013, each with its index row in one commit; counter 13); HOOK-phase-entry pass (exactly one accepted chosen-option PD-, non-infeasible verdict) | n/a |
 
 ## Session notes
 
@@ -217,6 +220,16 @@ within the requester's decided behaviour; none is requester-owned.
   (`parley.mjs:513-519`). The REQ-0006 draft criterion on drafts and on
   Enter-during-composition read "as today" for behavior that does not exist, so
   the drafts criterion is corrected at SOLUTION_CONVERGENCE (PR-6, PR-7).
+- 2026-11-08 — SOLUTION_CONVERGENCE: PD-0012 (chosen option A with its binding
+  constraints and the two-frame design reference) and PD-0013 (fifteen rulings
+  on the architect's PR-1..PR-11 and PC-01..PC-09, all pm-resolvable under §4.1,
+  none requester-owned) accepted. REQ-0005 and REQ-0006 revised to revision 2:
+  field list settled, backend wording, selection and fence rules, trimming,
+  limits, Enter during composition, text left in the bar when switching rooms,
+  Ctrl+click, and the technical constraints sections. The brief's "drafts ...
+  as today" and "Enter exactly as today" are kept by describing what exists
+  today; the one real change is Enter during an open composition, which sends
+  nothing (PD-0013 item 11). Solution Contract accepted.
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not
