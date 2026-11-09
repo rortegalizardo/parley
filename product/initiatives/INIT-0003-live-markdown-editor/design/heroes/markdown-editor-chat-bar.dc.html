@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>INIT-0003 reference frame · Live Markdown editor in the chat bar</title>
+<link rel="stylesheet" href="../../../../../ui/styles.css">
+<!-- INIT-0003 reference frame · 1440 wide · light (PD-0012 item 4).
+     The room view's lower part: one sent message, rendered by chat as today
+     (for comparison), then the chat bar holding a multi-line Markdown message
+     being typed, with an image attachment chip and a file attachment chip,
+     the agent chips (Auto · Agents 2 · @all · To all Converge/Parallel ·
+     Rounds, as today) and Send; below it the same bar empty, with its
+     placeholder. Reuses Parley's own ui/styles.css and today's markup
+     (ui/index.html lines 80–159: #composerWrap, .composer-card, #chipsRow,
+     #draftImages, .box, .composer-foot). The only change: the #input textarea
+     is the live editor, drawn here as a .md-editor element. The new pieces are
+     the plain CSS below. Sample text is illustrative. The second bar repeats
+     the composer ids so today's id-keyed rules apply to it too. -->
+<style>
+  /* ---- The live editor takes #input's rules (ui/styles.css lines 597–602,
+     1234, 1478). C-16: size, placeholder with its ellipsis, 200px maximum
+     height, no horizontal overflow. ---- */
+  #composer .box .md-editor {
+    flex: 1; min-width: 0; max-width: 100%; overflow-x: hidden; overflow-y: auto;
+    max-height: 200px; padding: 7px 4px; font-size: 14.5px; line-height: 22px;
+    color: var(--text); background: none; border: 0; outline: none;
+    overflow-wrap: anywhere;
+  }
+  .md-editor .ln { white-space: pre-wrap; }
+  #composer .box .md-editor .placeholder { display: block; color: var(--text-faint); white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+  /* The composer card's focus ring is today's (.composer-card:has(#input:focus)). */
+  .composer-card.focused { border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); box-shadow: 0 0 0 3px var(--ring), var(--shadow-md); }
+
+  /* ---- The Markdown look: chat's values (ui/styles.css .bubble rules, lines
+     319–343), applied line by line. One typed line is one .ln; a blank typed
+     line is the only vertical spacing (an editor adds no block margins). ---- */
+  .md-editor .ln { display: block; }
+  .md-editor .h1 { font-size: 1.25em; font-weight: 700; }
+  .md-editor .h2 { font-size: 1.15em; font-weight: 700; }
+  .md-editor .h3 { font-size: 1.05em; font-weight: 700; }
+  .md-editor .h4 { font-size: 1em;    font-weight: 700; }
+  .md-editor strong { font-weight: 700; }
+  .md-editor code { font-family: var(--mono); font-size: .88em; background: rgba(255,255,255,.08); padding: 2px 5px; border-radius: 5px; }
+  .md-editor a { color: var(--user); text-decoration: none; }
+  /* Lists: chat's 22px indent. A hidden bullet marker still shows a bullet
+     (C-08); a numbered item shows the number as typed (PD-0013 item 4). */
+  .md-editor .li { position: relative; padding-left: 22px; }
+  .md-editor .li.ul::before { content: "•"; position: absolute; left: 7px; top: 0; }
+  .md-editor .li.ul.editing::before { content: none; }
+  .md-editor .li .num { position: absolute; left: 4px; top: 0; }
+  /* Fenced code block: chat's .codeblock surface (border, 10px radius, code
+     background, monospace 13px/1.5), without the language header, the copy
+     button and the language colours (PD-0013 item 5). The two fence lines are
+     hidden as blank strips of the block background and keep their height
+     (PD-0013 item 2); they double as the block's top and bottom padding. */
+  .md-editor .fence { font-family: var(--mono); font-size: 13px; line-height: 1.5; background: var(--code-bg); border: 1px solid var(--border2); padding: 0 13px; }
+  .md-editor .fence.open  { border-radius: 10px 10px 0 0; border-bottom: 0; }
+  .md-editor .fence.code  { border-top: 0; border-bottom: 0; }
+  .md-editor .fence.close { border-radius: 0 0 10px 10px; border-top: 0; }
+  /* The line being edited: its marks show, in the muted text colour
+     (--text-faint, today's token); the text keeps its formatting. */
+  .md-editor .mark { color: var(--text-faint); }
+  .md-editor .li.editing .mark.marker { position: absolute; left: 7px; top: 0; }
+  .md-editor .cursor { display: inline-block; width: 1.5px; height: 1.15em; margin-left: 1px; background: var(--text); vertical-align: -.18em; }
+</style>
+</head>
+<body>
+<style>
+  /* Reference staging only: the lower part of the room view on one page that
+     scrolls, with the two bar states one under the other. */
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  #app { height: auto; min-height: 100vh; align-items: stretch; }
+  #sidebar { height: auto; }
+  #roomList { overflow: visible; }
+  #main > #chatWrap { flex: none; overflow: visible; padding-top: 28px; }
+  #main > #composerWrap + #composerWrap { margin-top: 36px; }
+  #draftImages.show { display: flex; }
+</style>
+<div id="app">
+  <aside id="sidebar">
+    <a class="logo" id="homeLink" href="?home=1" aria-label="Parley home">
+      <svg width="30" height="30" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#555c6b" stroke-width="2"/><circle cx="16" cy="7" r="4" fill="#7aa2f7"/><circle cx="8" cy="22" r="4" fill="#e8845c"/><circle cx="24" cy="22" r="4" fill="#2fd6a8"/></svg>
+      <div><b>Parley <small class="fork-badge">YOURS</small></b><span id="tagline">Your shared workspace · 2 agents</span></div>
+    </a>
+    <button id="addRoomBtn" class="new-room-action" title="New room"><span aria-hidden="true">＋</span> New room</button>
+    <div class="side-label">Your rooms</div>
+    <nav id="roomList">
+      <div class="room-item active">
+        <button type="button" class="ropen"><span class="dot"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left">Parlay Product Evolution</span><span class="rmeta"><span class="rflag" title="Linked to a workspace folder"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span></span></button>
+        <button type="button" class="rmore" title="Room actions" aria-label="Actions for Parlay Product Evolution" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+      <div class="room-item">
+        <button type="button" class="ropen"><span class="dot"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left">Website redesign review</span><span class="rmeta"><span class="room-seats" title="claude, codex, gemini"><i>C</i><i>X</i><i>G</i></span></span></button>
+        <button type="button" class="rmore" title="Room actions" aria-label="Actions for Website redesign review" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+      <div class="room-item">
+        <button type="button" class="ropen"><span class="dot"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left">default</span><span class="rmeta"></span></button>
+        <button type="button" class="rmore" title="Room actions" aria-label="Actions for default" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+    </nav>
+    <details id="archivedRooms"><summary>Archived rooms <span id="archivedCount">2</span></summary><div id="archivedRoomList"></div></details>
+    <div class="side-foot">
+      <button id="openWs"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> <span id="openWsLabel">Open workspace</span></button>
+      <a id="dlTranscript" href="#"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg> Download transcript</a>
+      <button id="openRoomDir"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h6l2 2h8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 10h16"/></svg> Room folder</button>
+      <button id="settingsBtn2"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg> General settings</button>
+      <a href="https://github.com/rortegalizardo/parley#readme" target="_blank" rel="noreferrer noopener"><svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5V14M12 17h.01"/></svg> Docs</a>
+    </div>
+  </aside>
+
+  <div id="main">
+    <!-- One sent message, rendered by chat today (renderMD output; the code block keeps chat's language header and copy button). Source:
+         ## Plan for today
+         Two things before the **release check**:
+         - Rebuild the *smoke* sandbox
+         - Pin the vendor versions in `package.json`
+         ```sh
+         npm run test:smoke
+         ```
+         Reference: [Parley README](https://github.com/rortegalizardo/parley#readme) -->
+    <div id="chatWrap">
+      <div id="chat" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">
+        <div class="msg user">
+          <div class="meta"><span class="avatar user-avatar">Y</span><span class="who">You <span style="opacity:.65">→ @all</span></span><span title="2026-11-08 14:02">14:02</span></div>
+          <div class="bubble"><h2>Plan for today</h2><p>Two things before the <strong>release check</strong>:</p><ul><li>Rebuild the <em>smoke</em> sandbox</li><li>Pin the vendor versions in <code>package.json</code></li></ul><div class="codeblock"><div class="cb-head"><span>sh</span><button class="cb-copy">copy</button></div><pre><code>npm run test:smoke</code></pre></div><p>Reference: <a href="https://github.com/rortegalizardo/parley#readme" target="_blank" rel="noopener">Parley README</a></p></div>
+          <div class="heard"><span class="hdot claude live" title="fable heard this"></span><span class="hdot codex live" title="astra heard this"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The chat bar, typing. The editor is focused (card ring). Exactly one line is being edited: the second bullet, cursor at its end, its marks (`- ` and `**`) shown muted. Source:
+         ## Release check
+         Please review the **draft notes** before I send them.
+         - Changelog matches the tags
+         - Screenshots are from **this build**
+         ```bash
+         npm run test:smoke
+         ```
+         Notes: [release-notes.md](https://github.com/rortegalizardo/parley#readme) -->
+    <div id="composerWrap">
+      <div id="composer">
+        <div class="composer-card focused">
+        <div class="chips" id="chipsRow">
+          <button class="chip active" data-t="auto">Auto</button>
+          <span id="seatChips" style="display:contents"></span>
+          <span id="agentPickerWrap" class="agent-picker-wrap">
+            <button id="agentsBtn" class="chip agent-picker" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose one of 2 agents">
+              <span id="agentsBtnLabel">Agents</span> <b id="agentsBtnCount">2</b><svg class="picker-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+            </button>
+          </span>
+          <button class="chip" data-t="both" title="Send to all 2 agents" aria-label="Send to all 2 agents">@all</button>
+          <div id="discussionControls" class="discussion-controls">
+            <span id="discussionModeHint" class="discussion-scope" title="Applies when sending to all agents. Messages to one agent stay individual.">To all</span>
+            <div class="discussion-modes" role="radiogroup" aria-label="Response mode for all agents" aria-describedby="discussionModeHint">
+              <button type="button" data-discussion-mode="converge" role="radio" aria-checked="true" class="active" title="One agreed handoff from all agents">Converge</button>
+              <button type="button" data-discussion-mode="parallel" role="radio" aria-checked="false" title="Separate replies from each agent">Parallel</button>
+            </div>
+            <label id="convergenceRoundsWrap" class="convergence-rounds">Rounds <input id="convergenceRounds" type="number" min="1" step="1" value="2" inputmode="numeric" aria-label="Convergence review rounds"></label>
+          </div>
+        </div>
+
+        <div id="draftImages" class="show" aria-label="Attachments ready to send">
+          <div class="draft-image" title="Screenshot 2026-11-08.png"><img alt="Screenshot 2026-11-08.png" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 74 62'%3E%3Crect width='74' height='62' fill='%23f6f7f9'/%3E%3Crect x='0' y='0' width='18' height='62' fill='%23eef0f4'/%3E%3Crect x='3' y='5' width='12' height='3' rx='1' fill='%23176d55'/%3E%3Crect x='3' y='11' width='12' height='2' rx='1' fill='%23c5cad3'/%3E%3Crect x='3' y='15' width='12' height='2' rx='1' fill='%23c5cad3'/%3E%3Crect x='24' y='8' width='28' height='3' rx='1' fill='%235a6376'/%3E%3Crect x='24' y='15' width='44' height='2' rx='1' fill='%23c5cad3'/%3E%3Crect x='24' y='20' width='40' height='2' rx='1' fill='%23c5cad3'/%3E%3Crect x='24' y='28' width='46' height='14' rx='3' fill='%23ffffff' stroke='%23d5d9e0'/%3E%3Crect x='24' y='48' width='46' height='9' rx='3' fill='%23ffffff' stroke='%23d5d9e0'/%3E%3Crect x='56' y='50' width='12' height='5' rx='2' fill='%23176d55'/%3E%3C/svg%3E"><button type="button" title="Remove image">×</button></div>
+          <div class="draft-file" title="release-notes.md"><span class="draft-file-icon">📄</span><span class="draft-file-copy"><span class="draft-file-name">release-notes.md</span><span class="draft-file-size">4.2 KB</span></span><button type="button" title="Remove file">×</button></div>
+        </div>
+        <div class="box">
+          <input id="fileInput" type="file" multiple hidden aria-label="Choose files to attach">
+          <button id="attachBtn" type="button" title="Attach files (or drop / paste them)" aria-label="Attach files"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></svg></button>
+          <div id="input" class="md-editor" role="textbox" aria-multiline="true" aria-label="Message">
+<div class="ln h2">Release check</div>
+<div class="ln">Please review the <strong>draft notes</strong> before I send them.</div>
+<div class="ln li ul">Changelog matches the tags</div>
+<div class="ln li ul editing"><span class="mark marker">-</span>Screenshots are from <span class="mark">**</span><strong>this build</strong><span class="mark">**</span><span class="cursor" aria-hidden="true"></span></div>
+<div class="ln fence open">&#8203;</div>
+<div class="ln fence code">npm run test:smoke</div>
+<div class="ln fence close">&#8203;</div>
+<div class="ln">Notes: <a href="https://github.com/rortegalizardo/parley#readme">release-notes.md</a></div>
+</div>
+          <button id="sendBtn" title="Send (Enter)" aria-label="Send message"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+        </div>
+        </div>
+        <div class="composer-foot"><span id="routeHint">→ all 2 agents · Converge</span><div class="hint"><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <b>/help</b> commands</div></div>
+      </div>
+    </div>
+
+    <!-- The same bar, empty: the placeholder exactly as today (two spaces after the ellipsis), not focused. -->
+    <div id="composerWrap">
+      <div id="composer">
+        <div class="composer-card">
+        <div class="chips" id="chipsRow">
+          <button class="chip active" data-t="auto">Auto</button>
+          <span id="seatChips" style="display:contents"></span>
+          <span id="agentPickerWrap" class="agent-picker-wrap">
+            <button id="agentsBtn" class="chip agent-picker" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose one of 2 agents">
+              <span id="agentsBtnLabel">Agents</span> <b id="agentsBtnCount">2</b><svg class="picker-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+            </button>
+          </span>
+          <button class="chip" data-t="both" title="Send to all 2 agents" aria-label="Send to all 2 agents">@all</button>
+          <div id="discussionControls" class="discussion-controls">
+            <span id="discussionModeHint" class="discussion-scope" title="Applies when sending to all agents. Messages to one agent stay individual.">To all</span>
+            <div class="discussion-modes" role="radiogroup" aria-label="Response mode for all agents" aria-describedby="discussionModeHint">
+              <button type="button" data-discussion-mode="converge" role="radio" aria-checked="true" class="active" title="One agreed handoff from all agents">Converge</button>
+              <button type="button" data-discussion-mode="parallel" role="radio" aria-checked="false" title="Separate replies from each agent">Parallel</button>
+            </div>
+            <label id="convergenceRoundsWrap" class="convergence-rounds">Rounds <input id="convergenceRounds" type="number" min="1" step="1" value="2" inputmode="numeric" aria-label="Convergence review rounds"></label>
+          </div>
+        </div>
+        <div class="box">
+          <button id="attachBtn" type="button" title="Attach files (or drop / paste them)" aria-label="Attach files"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></svg></button>
+          <div id="input" class="md-editor" role="textbox" aria-multiline="true" aria-label="Message" aria-placeholder="Message the table…  type @ to choose an agent"><span class="placeholder">Message the table…  type @ to choose an agent</span></div>
+          <button id="sendBtn" title="Send (Enter)" aria-label="Send message"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+        </div>
+        </div>
+        <div class="composer-foot"><span id="routeHint">→ all 2 agents · Converge</span><div class="hint"><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <b>/help</b> commands</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
