@@ -3,7 +3,7 @@ id: PSTATE-INIT-0003
 type: product-state
 title: Product definition state for INIT-0003
 status: authoritative
-revision: 5
+revision: 6
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
@@ -12,12 +12,12 @@ initiative: INIT-0003
 phase: DECOMPOSITION
 phase_entered: 2026-11-08
 requester: Ricardo (decided in the room "Parlay Product Evolution"; relayed by his side session)
-next_action: "ROLE-product-manager: dispatch design-lead for the two reference frames (PD-0012 item 4) and des-recorder for DES-0003, then coherence round 1, accept REQ-0005 and REQ-0006, declare convergence (DECOMPOSITION)"
+next_action: "ROLE-product-manager: dispatch the planner for coherence round 1 (story-set-technical-coherence, round 1 of 2), fix non-blocking findings, accept REQ-0005 and REQ-0006, declare convergence (DECOMPOSITION)"
 blocked_by: []
 converged: false
 readiness_verdict: none
 stories: [REQ-0005, REQ-0006]
-design_refs: []
+design_refs: [DES-0003]
 decisions: [PD-0011, PD-0012, PD-0013]
 ---
 
@@ -156,6 +156,8 @@ within the requester's decided behaviour; none is requester-owned.
 | Date | Delegate role | Question | Answer / verdict | Recorded as |
 | --- | --- | --- | --- | --- |
 | 2026-11-08 | ROLE-planner (technical architect, `product-feasibility-assessment`) — vendor claude, model opus | Feasibility of Option A (one shared CodeMirror 6 editor, one prebuilt vendor file) for REQ-0005 and REQ-0006, with capability scan and system impact (size rule §9d.1) | A: feasible-with-constraints (multi-component); C-01..C-20; R-01..R-08; PC-01..PC-09 (PC-02 blocking as written: no text draft exists today); PR-1..PR-11 all pm-resolvable; no requester question; no cooling-period exception needed; 6 corrections to CAP-0003 | Consultation log; [technical/assessment.md](../technical/assessment.md), [capability-scan.md](../technical/capability-scan.md), [impact.md](../technical/impact.md); CAP-0003 revision 2; rulings to PD-0012 at SOLUTION_CONVERGENCE |
+| 2026-11-08 | ROLE-product-designer (design author, step 1b, one direction) — vendor claude, model fable | Draw the two reference frames PD-0012 item 4 names (Room settings Brief and Agents; chat bar) at 1440, light, from today's markup and `ui/styles.css` | Delivered both frames and renders (1440 scroll width, no console errors); no toolbar, toggle, preview or language header; fence lines as blank strips; marks on the edited line only; Agents tab without the Edit/Preview toggle; no Proposals that need scope; two pre-existing light-theme observations (image chip close mark, inline-code background) left unchanged | Design branch merged at `8a65ee2`; frames under `design/heroes/`; [DES-0003](../../../design/DES-0003-markdown-editor-reference-frames.md) |
+| 2026-11-08 | ROLE-product-designer (DES recorder, step 11, hero-frame record) — vendor claude, model sonnet | Record DES-0003 and its index row | DONE, commit `8d04ea3`; `local_export` the five files; requirements REQ-0005, REQ-0006 | [DES-0003](../../../design/DES-0003-markdown-editor-reference-frames.md), `design/index.md` row |
 
 ## Escalation log
 
@@ -166,8 +168,15 @@ within the requester's decided behaviour; none is requester-owned.
 
 | `REQ-` | Title | Status | `CAP-` | `DES-` | Sequencing note |
 | --- | --- | --- | --- | --- | --- |
-| REQ-0005 | The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type | draft | CAP-0001, CAP-0002 | none yet (DES-0003 at DECOMPOSITION) | `depends_on: [none]`; on the frontier; builds the shared editor and the vendor file; engineering starts only after PRL-6 is merged and green on `main` (PD-0011 item 10) |
-| REQ-0006 | The user types Markdown in the chat bar and sees it format as they type | draft | CAP-0003 | none yet (DES-0003 at DECOMPOSITION) | `depends_on: [REQ-0005]`; reuses the shared editor and the vendor file; same PRL-6 precondition |
+| REQ-0005 | The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type | draft | CAP-0001, CAP-0002 | DES-0003 | `depends_on: [none]`; on the frontier; builds the shared editor and the vendor file; engineering starts only after PRL-6 is merged and green on `main` (PD-0011 item 10) |
+| REQ-0006 | The user types Markdown in the chat bar and sees it format as they type | draft | CAP-0003 | DES-0003 | `depends_on: [REQ-0005]`; reuses the shared editor and the vendor file; same PRL-6 precondition |
+
+## Design coverage
+
+| `REQ-` | Coverage |
+| --- | --- |
+| REQ-0005 | needs-engineering (DES-0003 is a static reference frame; the shared editor, the vendor file and the replacement of the plain text boxes are built by engineering) |
+| REQ-0006 | needs-engineering (DES-0003 is a static reference frame; the chat bar editor is built by engineering) |
 
 ## Phase log
 
@@ -230,6 +239,9 @@ within the requester's decided behaviour; none is requester-owned.
   as today" and "Enter exactly as today" are kept by describing what exists
   today; the one real change is Enter during an open composition, which sends
   nothing (PD-0013 item 11). Solution Contract accepted.
+- 2026-11-08 — Dispatch log. DECOMPOSITION | ROLE-product-designer (design author, step 1b; one dispatch for both frames) | claude | fable | M | ledger run `ae666f070d55b9e2d` | `design/heroes/` (two frames, two renders, `approach.md`), commit `40aee93`, merged to main at `8a65ee2`.
+- 2026-11-08 — Dispatch log. DECOMPOSITION | ROLE-product-designer (DES recorder, step 11) | claude | sonnet | S | ledger run `ad4bba8359e160a06` | DES-0003 and its index row, commit `8d04ea3`. The recorder was briefed for a hero-frame record (the code-DES steps do not apply to Parley); `manifest.yaml` design counter bumped to 3 by the PM.
+- 2026-11-08 — PM validation of the frames against the raw request, PD-0013 and the stories (the PNGs and `approach.md` read, not the report): no toolbar, toggle, preview or extra button; Goal unfocused shows no marks; Rules focused shows the edited line's marks only and the fence lines as blank strips with no language header; closed bullets show a bullet and numbers as typed; the agent instructions have no Edit/Preview toggle and keep Expand editor; the chat bar frame has the chips, the sent message for comparison and the exact placeholder; 1440 scroll width on both. Nothing needs a new requirement; the two light-theme observations are existing behaviour, outside this initiative.
 
 > Every product-side session updates this file before ending — **including
 > sessions that failed**, which record the failure in `next_action` and do not

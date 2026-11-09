@@ -26,7 +26,7 @@ acceptance:
   - "The existing smoke run (test/smoke.mjs, as repaired by PRL-6) and the existing browser suites pass after the change, updated only where they read the old text box"
   - "composition: at 1440 wide, light theme, the chat bar holding 20,000 characters over many lines with an image attachment, a file attachment and the agent chips shows the send control, the attachment chips and the agent chips in full, with no truncation, clipping, ellipsis or horizontal scroll of the page; the text scrolls inside the bar"
 capabilities: [CAP-0003]
-design_refs: []
+design_refs: [DES-0003]
 decisions: [PD-0011, PD-0012, PD-0013]
 depends_on: [REQ-0005]
 constraints: []
@@ -228,5 +228,7 @@ the requester restarts or rebuilds them; engineering never does
   paste work; Enter, Shift+Enter and an `@` mention work). No new unit or smoke
   suites (PD-0011 item 8).
 - Current behavior: [CAP-0003](../../../capabilities/CAP-0003-chat-bar-message-composing.md).
-- Design: the look is the existing chat Markdown style; the design reference
-  is recorded at DECOMPOSITION.
+- Design: the look is the existing chat Markdown style; the design reference is
+  [DES-0003](../../../design/DES-0003-markdown-editor-reference-frames.md), the
+  frame `markdown-editor-chat-bar` (its sample text is illustrative; where the frame and
+  this story differ, the story wins).

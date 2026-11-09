@@ -27,7 +27,7 @@ acceptance:
   - "ui/vendor/ holds one prebuilt editor file with its license text, each pinned version and the one command that regenerates it; the page loads it from the local server and, with the network blocked, loads and the editor works; the only server change is the entry that lets it serve the file; no other build step, bundler or install is added"
   - "composition: at 1440 wide, light theme, the Brief tab with a 2,000-character Goal and an 8,000-character Rules, an agent's instructions at its length, and a 120-character unbroken link, shows every label, the Expand editor button and the character counts in full, with no truncation, clipping, ellipsis or horizontal scroll of the dialog or page; long text wraps inside its field and the field scrolls inside itself"
 capabilities: [CAP-0001, CAP-0002]
-design_refs: []
+design_refs: [DES-0003]
 decisions: [PD-0011, PD-0012, PD-0013]
 depends_on: [none]
 constraints: []
@@ -290,5 +290,7 @@ the requester restarts or rebuilds them; engineering never does
   unit or smoke suites (PD-0011 item 8).
 - Current behavior: [CAP-0001](../../../capabilities/CAP-0001-room-shared-context.md),
   [CAP-0002](../../../capabilities/CAP-0002-room-creation-and-setup.md).
-- Design: the look is the existing chat Markdown style; the design reference
-  is recorded at DECOMPOSITION.
+- Design: the look is the existing chat Markdown style; the design reference is
+  [DES-0003](../../../design/DES-0003-markdown-editor-reference-frames.md), the
+  frame `markdown-editor-settings` (its sample text is illustrative; where the frame and
+  this story differ, the story wins).
