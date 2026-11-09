@@ -3,7 +3,7 @@ id: REQ-0005
 type: requirement
 title: The user types Markdown in Room Settings and the New Room and Clone dialogs and sees it format as they type
 status: draft
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
@@ -16,7 +16,7 @@ acceptance:
   - "Click a link → the cursor is placed in the text and nothing opens; Cmd+click the link (Ctrl+click on Windows and Linux) → it opens in a new browser tab"
   - "Select text across three formatted lines → every selected line shows its marks; put the cursor inside a fenced code block → both fence lines show, and move it out → they are hidden and the block keeps its height; click out of the field → the marks of every closed element are hidden, including on the line last edited"
   - "Paste Markdown → it formats at once; select all and copy → the clipboard holds the Markdown exactly as typed; press Cmd+C and Cmd+X with nothing selected → nothing is copied and nothing is cut"
-  - "In Goal and Rules, type and save text with trailing spaces, a tab, lines indented four spaces, and press Enter on a list line and type ( [ and a quote → the saved text equals the typed text character for character and the editor inserted no list marker, no closing character and no indentation of its own"
+  - "In Goal and Rules, type and save text with trailing spaces, a pasted tab character, lines indented four spaces, and press Enter on a list line and type ( [ and a quote → the saved text equals the typed text character for character and the editor inserted no list marker, no closing character and no indentation of its own"
   - "Close and reopen Room settings, and reload the page → Goal, Rules and agent instructions equal what was saved (agent instructions are trimmed at both ends when saved, as today); a room whose saved Rules has indented lines loads intact and saving without edits leaves the text unchanged"
   - "At the 2,000-character limit of Goal and the 8,000-character limit of Rules (and of the same fields in New Room and Create room's instructions), type more and paste more → no more characters, and a paste is cut at the limit, as the text box did; a part saved above its limit loads in full, can be shortened, can grow back only up to the length it was saved at, and keeps its note and counter; agent instructions in Room settings can be typed past 8,000 characters and Save shows the same refusal as today"
   - "Open agent instructions in Room settings → Agents and in Create room → the field is the live editor, there is no Edit/Preview toggle, and Expand editor opens and closes the expanded editor with the text unchanged"
@@ -25,6 +25,8 @@ acceptance:
   - "Save the Brief → the save request has the same fields as before, the What agents see preview shows the saved text exactly, and every character count equals the text length as before"
   - "Type in Goal, press Cmd+Z → the last typing is undone; press Cmd+Shift+Z → it is redone; type an accented letter by composition inside **bold** → the text and the cursor position are intact"
   - "ui/vendor/ holds one prebuilt editor file with its license text, each pinned version and the one command that regenerates it; the page loads it from the local server and, with the network blocked, loads and the editor works; the only server change is the entry that lets it serve the file; no other build step, bundler or install is added"
+  - "Drop a text file on Goal, on Rules and on an agent's instructions → none of the file's text is written into the field and the file is handled as it is when dropped on a text box today"
+  - "The existing smoke run (test/smoke.mjs) and the existing browser suites pass after the change, updated only where they read a field this story replaces"
   - "composition: at 1440 wide, light theme, the Brief tab with a 2,000-character Goal and an 8,000-character Rules, an agent's instructions at its length, and a 120-character unbroken link, shows every label, the Expand editor button and the character counts in full, with no truncation, clipping, ellipsis or horizontal scroll of the dialog or page; long text wraps inside its field and the field scrolls inside itself"
 capabilities: [CAP-0001, CAP-0002]
 design_refs: [DES-0003]
@@ -115,7 +117,9 @@ The editor's rules, which REQ-0006 reuses unchanged:
 6. **The saved text is exactly what was typed.** The editor never rewrites
    Markdown and inserts no character the user did not type: no list marker
    after Enter, no closing bracket or quote, no automatic indentation, no
-   smart typography, no trimming. Existing saved text loads and saves intact,
+   smart typography, no trimming. A file dropped on the editor inserts nothing; the page's drop
+   handling treats it as it does on today's text box. Existing saved text loads
+   and saves intact,
    including indentation and trailing spaces. Saving without an edit changes
    nothing. What Parley itself does with the text stays as today: it trims the
    leading and trailing whitespace of a sent message and of an agent's
@@ -179,7 +183,7 @@ The editor's rules, which REQ-0006 reuses unchanged:
 - [ ] Paste Markdown → it formats at once; select all and copy → the clipboard
       holds the Markdown exactly as typed; press Cmd+C and Cmd+X with nothing
       selected → nothing is copied and nothing is cut
-- [ ] In Goal and Rules, type and save text with trailing spaces, a tab, lines
+- [ ] In Goal and Rules, type and save text with trailing spaces, a pasted tab character, lines
       indented four spaces, and press Enter on a list line and type `(`, `[`
       and a quote → the saved text equals the typed text character for
       character and the editor inserted no list marker, no closing character
@@ -218,6 +222,12 @@ The editor's rules, which REQ-0006 reuses unchanged:
       it from the local server and, with the network blocked, loads and the
       editor works; the only server change is the entry that lets it serve the
       file; no other build step, bundler or install is added
+- [ ] Drop a text file on Goal, on Rules and on an agent's instructions → none
+      of the file's text is written into the field and the file is handled as
+      it is when dropped on a text box today
+- [ ] The existing smoke run (`test/smoke.mjs`) and the existing browser
+      suites pass after the change, updated only where they read a field
+      this story replaces
 - [ ] composition: at 1440 wide, light theme, the Brief tab with a
       2,000-character Goal and an 8,000-character Rules, an agent's
       instructions at its length, and a 120-character unbroken link, shows
@@ -257,10 +267,11 @@ item 3. Sources and line numbers are in the assessment._
 | C-14 | Copy and Cut with nothing selected do nothing. |
 | C-15 | Every field keeps its accessible name, required state and description; its label focuses it; spellcheck, autocorrect and capitalisation as today; Tab leaves the field; Escape still closes the dialog; the focus trap counts it. |
 | C-16 | Every visible CSS rule on `textarea`, `:focus`, `::placeholder`, `.expanded textarea` and `resize` applies to the editor, including the drag handle where it exists today; the Markdown look reuses chat's values. |
-| C-17 | 35 test lines in 9 files that read the old field are updated; no new suite; the smoke sandbox has no vendor file and must not fail for that reason; PRL-6 is merged and green first. |
+| C-17 | The test lines that read the fields this story replaces (17 lines in 4 files, counted on `main` at `31ec463`) are updated; the 18 lines in 8 files that read `#input` are REQ-0006's; no new suite; the smoke sandbox has no vendor file and must not fail for that reason; PRL-6 is merged and green first. |
 | C-18 | Verification runs on an isolated port with a copied room store, never ports 4142 or 4141. |
 | C-19 | Links open only on Cmd+click (Ctrl+click elsewhere), only `http` and `https`, in a new tab, with no opener and no referrer. No anchor is built from typed text. |
 | C-20 | No new runtime network request and no new stored data. |
+| C-21 | A file dropped on the editor inserts nothing. The library's default writes a dropped file's text into the field, so it is switched off; the page's window-wide drop handling treats the file as it does on the text box today (coherence round 1, defect 1; no story or assessment constraint named it before). |
 
 Watch-list for the focused browser check (assessment R-01 to R-04, R-08): the
 CodeMirror behaviour is documented, not yet run, so real accent or IME
@@ -268,8 +279,10 @@ composition on a line holding hidden marks is the most fragile; a click on a
 formatted line reveals its marks and shifts the text under the pointer; editors
 mounted while hidden (closed dialogs, inactive Settings panes) can measure
 wrong; every re-render site must release its old editor; a single very long
-unbroken line is the weak case. If one fails, PD-0011 item 5 applies: stop and
-report.
+unbroken line is the weak case. The repository's browser harness runs Chromium
+only (also the engine Workbench uses), so the focused check records which
+browsers it covered; the composition rules apply in every browser regardless.
+If one fails, PD-0011 item 5 applies: stop and report.
 
 ## Observability
 

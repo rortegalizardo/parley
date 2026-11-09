@@ -3,7 +3,7 @@ id: REQ-0006
 type: requirement
 title: The user types Markdown in the chat bar and sees it format as they type
 status: draft
-revision: 2
+revision: 3
 owner_role: ROLE-product-manager
 created: 2026-11-08
 updated: 2026-11-08
@@ -24,6 +24,7 @@ acceptance:
   - "Type an accented letter by composition in the middle of **bold** and type the closing marks → the text is intact, the cursor is not moved and the composition is not interrupted"
   - "With the bar empty → the placeholder Message the table…  type @ to choose an agent shows; the bar grows with its text up to its present maximum height of 200 pixels and scrolls inside itself beyond it; it is disabled whenever it is disabled today"
   - "The existing smoke run (test/smoke.mjs, as repaired by PRL-6) and the existing browser suites pass after the change, updated only where they read the old text box"
+  - "Drop a text file on the chat bar → it becomes an attachment as today and none of its text is written into the bar"
   - "composition: at 1440 wide, light theme, the chat bar holding 20,000 characters over many lines with an image attachment, a file attachment and the agent chips shows the send control, the attachment chips and the agent chips in full, with no truncation, clipping, ellipsis or horizontal scroll of the page; the text scrolls inside the bar"
 capabilities: [CAP-0003]
 design_refs: [DES-0003]
@@ -54,10 +55,11 @@ and redo, long text and large pastes, accent and IME typing
 - The chat bar's text box, replaced by the shared editor of REQ-0005, with the
   editor behavior of REQ-0005 Behavior 1–8 and 10 unchanged.
 - Everything around it that reads or writes the text box: Enter and Shift+Enter,
-  the `@` picker, slash commands, the draft, paste of text, images and files,
-  attachments, the placeholder, its height and its disabled state.
-- Not in this story: the editor itself and the vendor file (REQ-0005), and every
-  field in Room settings and the dialogs.
+  the `@` picker, slash commands, the draft, paste of text and of images, dropped
+  files and the attach button, attachments, the placeholder, its height and its disabled state.
+- Not in this story: building the editor and the vendor file (REQ-0005); this
+  story adds to the shared editor only what the bar needs (C-10), and every
+  field in Room settings and the dialogs stays as REQ-0005 left it.
 
 ## Non-goals
 
@@ -100,7 +102,8 @@ chat bar:
    today (PD-0013 item 7).
 5. **Paste.** Text pastes as typed text and formats at once; pasting an image
    makes an attachment, as today. Attachments and sending with them work as
-   today.
+   today. A file dropped on the bar becomes an attachment as today and none
+   of its text is written into the bar.
 6. **Undo and redo** work across typing and paste. When Parley's own code writes
    the bar (send clears it, a mention is inserted, a starter chip fills it), undo
    cannot bring back the text sent or replaced (PD-0013 item 13).
@@ -165,6 +168,8 @@ chat bar:
 - [ ] The existing smoke run (`test/smoke.mjs`, as repaired by PRL-6) and the
       existing browser suites pass after the change, updated only where they
       read the old text box
+- [ ] Drop a text file on the chat bar → it becomes an attachment as today and
+      none of its text is written into the bar
 - [ ] composition: at 1440 wide, light theme, the chat bar holding 20,000
       characters over many lines with an image attachment, a file attachment
       and the agent chips shows the send control, the attachment chips and the
@@ -198,17 +203,20 @@ this story adds or must hold in the chat bar:_
 | C-14 | Copy and Cut with nothing selected do nothing. |
 | C-15 | The bar keeps its accessible name and spellcheck, autocorrect and capitalisation settings; Tab and Escape behave as today. |
 | C-16 | The CSS on the bar (size, focus ring on the composer card, placeholder with its ellipsis, 200-pixel maximum height, `resize: none`, no horizontal overflow) applies to the editor. |
-| C-17 | The test lines that read `#input` (35 lines in 9 files, including `test/smoke.mjs`'s stub of `$("input")`) are updated; no new suite; PRL-6 first. |
+| C-17 | The test lines that read `#input` (18 lines in 8 files, counted on `main` at `31ec463`, and `test/smoke.mjs`'s stub of `$("input")`) are updated; the 17 lines that read the settings and dialog fields were REQ-0005's; no new suite; PRL-6 first. |
 | C-18 | Verification on an isolated port with a copied room store, never ports 4142 or 4141. |
 | C-19 | Links open only on Cmd+click (Ctrl+click elsewhere), `http` and `https`, new tab, no opener, no referrer. |
 | C-20 | No new runtime network request and no new stored data. |
+| C-21 | A file dropped on the bar inserts nothing; the library's default is switched off in the shared editor (REQ-0005 C-21) and the page's window-wide drop handling attaches the file as today. |
 
 The picker uses only the text before the caret and a settable caret, never a
 caret pixel position, so the editor need not supply one. Per-keystroke work on
 the whole text (autosize, route hint, `@` check) is the cost to watch with
 20,000 characters; a single 20,000-character unbroken line is the weak case
-(assessment R-08). If any behaviour above does not work, the story is not
-merged and engineering reports (PD-0011 items 5 and 7).
+(assessment R-08). The repository's browser harness runs Chromium only (also the
+engine Workbench uses), so the focused check records which browsers it covered;
+the Enter guard applies in every browser regardless. If any behaviour above does
+not work, the story is not merged and engineering reports (PD-0011 items 5 and 7).
 
 ## Observability
 
