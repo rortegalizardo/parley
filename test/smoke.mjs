@@ -766,12 +766,11 @@ async function checkFolderPickerUi() {
     getBoundingClientRect() { return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }; }
   }
   const el = (id, attrs) => { const e = new El(id, attrs); if (id) byId.set(id, e); return e; };
-  // The picker buttons keep their real shape: a label span the "Choosing…"
-  // swap may touch, and — on the new-room button — a live value span that
-  // other code writes to while the dialog is open.
+  // The picker buttons keep their real label span; the editable project path
+  // is a separate input in the current form.
   const newRoomProj = el("newRoomProj");
-  newRoomProj.appendChild(new El(null, { "data-picker-label": "" }));
-  newRoomProj.appendChild(el("newRoomProjVal"));
+  const pickerLabel = new El(null, { "data-picker-label": "" });
+  newRoomProj.appendChild(pickerLabel);
   el("s_browse").appendChild(new El(null, { "data-picker-label": "" }));
   const roomTemplateLabel = new El(null);
   const chips = ["auto", "claude", "codex", "both"].map((target) => {
@@ -935,7 +934,7 @@ async function checkFolderPickerUi() {
   const openWhileReset = probe.openPicker();
   try { probe.resetForm(); } catch (e) { crash = e; }
   ok("folder picker UI: resetting the form mid-pick doesn't destroy the button's contents",
-    !crash, crash && crash.message);
+    !crash && newRoomProj.querySelector("[data-picker-label]") === pickerLabel, crash && crash.message);
   ok("new-room UI: opening the form uses the native modal dialog",
     probe.dialogState().open && probe.dialogState().showModalCount === 1, JSON.stringify(probe.dialogState()));
 
